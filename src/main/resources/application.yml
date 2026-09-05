@@ -1,0 +1,31 @@
+﻿spring:
+  application:
+    name: house-rental-management
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/rental_management_db
+    username: postgres
+    password: rootpassword
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.spatial.dialect.postgis.PostgisPGDialect
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.rental: DEBUG
+    org.hibernate.SQL: INFO
