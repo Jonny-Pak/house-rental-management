@@ -3,7 +3,7 @@
     name: house-rental-management
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/rental_management_db
+    url: jdbc:postgresql://localhost:5433/rental_management_db
     username: postgres
     password: rootpassword
     driver-class-name: org.postgresql.Driver
@@ -13,7 +13,6 @@
       ddl-auto: validate
     properties:
       hibernate:
-        dialect: org.hibernate.spatial.dialect.postgis.PostgisPGDialect
         format_sql: true
     show-sql: false
 
