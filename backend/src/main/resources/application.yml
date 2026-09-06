@@ -1,9 +1,9 @@
-﻿spring:
+spring:
   application:
     name: house-rental-management
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/rental_management_db
+    url: jdbc:postgresql://127.0.0.1:5433/rental_management_db
     username: postgres
     password: rootpassword
     driver-class-name: org.postgresql.Driver
@@ -21,6 +21,18 @@
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: thuanln1907@gmail.com
+    password: gzvz diko sfwk wdvk
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   port: 8080
 
@@ -28,3 +40,11 @@ logging:
   level:
     com.rental: DEBUG
     org.hibernate.SQL: INFO
+
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    access-expiration: 86400000   # 1 day in ms
+    refresh-expiration: 604800000 # 7 days in ms
+  google:
+    client-id: 123456789-example.apps.googleusercontent.com
