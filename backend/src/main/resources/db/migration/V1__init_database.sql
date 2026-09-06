@@ -11,8 +11,8 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     google_id VARCHAR(100) UNIQUE,
     avatar_url VARCHAR(255),
-    role VARCHAR(10) NOT NULL CHECK (role IN ('user', 'admin')),
-    status VARCHAR(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'locked')),
+    role VARCHAR(10) NOT NULL CHECK (role IN ('USER', 'ADMIN')),
+    status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'LOCKED')),
     is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
@@ -46,13 +46,13 @@ CREATE TABLE listings (
     approved_by BIGINT REFERENCES users(user_id),
     title VARCHAR(200) NOT NULL,
     description TEXT,
-    listing_type VARCHAR(15) NOT NULL CHECK (listing_type IN ('whole_house', 'boarding_room', 'shared_room')),
+    listing_type VARCHAR(15) NOT NULL CHECK (listing_type IN ('WHOLE_HOUSE', 'BOARDING_ROOM', 'SHARED_ROOM')),
     rent_price DECIMAL(12,2) NOT NULL,
     area_sqm DECIMAL(6,2),
     address VARCHAR(255),
     location geometry(POINT, 4326), -- Hệ tọa độ WGS 84
-    approval_status VARCHAR(15) NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
-    rental_status VARCHAR(15) NOT NULL DEFAULT 'available' CHECK (rental_status IN ('available', 'rented')),
+    approval_status VARCHAR(15) NOT NULL DEFAULT 'PENDING' CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    rental_status VARCHAR(15) NOT NULL DEFAULT 'AVAILABLE' CHECK (rental_status IN ('AVAILABLE', 'RENTED')),
     rejection_reason VARCHAR(255),
     is_vip BOOLEAN DEFAULT FALSE,
     vip_expires_at TIMESTAMP,
@@ -111,7 +111,7 @@ CREATE TABLE contracts (
     end_date DATE NOT NULL,
     monthly_rent DECIMAL(12,2) NOT NULL,
     deposit_amount DECIMAL(12,2),
-    status VARCHAR(15) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'terminated')),
+    status VARCHAR(15) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'EXPIRED', 'TERMINATED')),
     contract_file_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -137,7 +137,7 @@ CREATE TABLE user_subscriptions (
     remaining_vip_quota SMALLINT,
     remaining_refresh_quota SMALLINT,
     quota_reset_at TIMESTAMP,
-    status VARCHAR(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired'))
+    status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'EXPIRED'))
 );
 
 -- 12. Table payment_transactions
@@ -148,7 +148,7 @@ CREATE TABLE payment_transactions (
     amount DECIMAL(12,2) NOT NULL,
     payment_method VARCHAR(20) DEFAULT 'VNPAY',
     vnpay_transaction_ref VARCHAR(100),
-    status VARCHAR(15) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed')),
+    status VARCHAR(15) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
     transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -173,7 +173,7 @@ CREATE TABLE contact_messages (
     email VARCHAR(150),
     subject VARCHAR(150),
     content TEXT,
-    status VARCHAR(15) DEFAULT 'new' CHECK (status IN ('new', 'resolved')),
+    status VARCHAR(15) DEFAULT 'NEW' CHECK (status IN ('NEW', 'RESOLVED')),
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -191,7 +191,7 @@ CREATE TABLE system_content (
 CREATE TABLE qr_login_sessions (
     session_id UUID PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
-    status VARCHAR(15) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'scanned', 'confirmed', 'expired')),
+    status VARCHAR(15) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SCANNED', 'CONFIRMED', 'EXPIRED')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP
 );
