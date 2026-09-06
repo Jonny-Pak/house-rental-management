@@ -43,13 +43,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("Login successful.", authResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công.", authResponse));
     }
 
     @PostMapping("/google-login")
     public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request) {
         AuthResponse authResponse = authService.googleLogin(request);
-        return ResponseEntity.ok(ApiResponse.success("Google login successful.", authResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập bằng Google thành công.", authResponse));
     }
 }
