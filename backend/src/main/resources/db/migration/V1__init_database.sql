@@ -1,10 +1,5 @@
--- ============================================================
--- RENTAL PROPERTY MANAGEMENT SYSTEM - DB MIGRATION
--- V1__init_database.sql
--- Run by Flyway to create 16 tables based on the DBML schema
--- ============================================================
 
--- Bật extension PostGIS (cần thiết cho kiểu geometry)
+-- Bật extension PostGIS 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 1. Table users
