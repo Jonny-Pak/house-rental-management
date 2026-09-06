@@ -19,12 +19,12 @@ public class EmailService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(toEmail);
-            message.setSubject("[Rental Management] Your OTP Verification Code");
-            message.setText("Your OTP code is: " + otp + "\n\nThis code will expire in 5 minutes.\nDo not share this code with anyone.");
+            message.setSubject("[Rental Management] Mã OTP của bạn");
+            message.setText("Mã OTP của bạn là: " + otp + "\n\nMã này sẽ hết hạn sau 5 phút.\nKhông chia sẻ mã này với bất kỳ ai.");
             mailSender.send(message);
-            log.info("OTP email sent successfully to: {}", toEmail);
+            log.info("Mã OTP đã được gửi thành công đến {}: {}", toEmail, otp);
         } catch (Exception e) {
-            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+            log.error("Không thể gửi mã OTP đến {}: {}", toEmail, e.getMessage());
         }
     }
 }

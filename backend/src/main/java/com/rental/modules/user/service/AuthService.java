@@ -19,7 +19,7 @@ public class AuthService {
 
     public String register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+            throw new IllegalArgumentException("Email " + request.getEmail() + " đã được sử dụng. Vui lòng chọn một email khác.");
         }
 
         User user = User.builder()
@@ -37,6 +37,6 @@ public class AuthService {
         String otp = otpService.generateAndStoreOtp(request.getEmail());
         emailService.sendOtpEmail(request.getEmail(), otp);
 
-        return "Registration successful. Please check your email for the OTP verification code.";
+        return "Đăng ký thành công. Vui lòng kiểm tra email của bạn để nhận mã xác minh.";
     }
 }
