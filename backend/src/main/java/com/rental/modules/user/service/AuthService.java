@@ -1,18 +1,29 @@
 ﻿package com.rental.modules.user.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.rental.core.security.JwtService;
 import com.rental.modules.user.domain.entity.User;
+import com.rental.modules.user.domain.enums.Role;
 import com.rental.modules.user.domain.enums.UserStatus;
+import com.rental.modules.user.dto.request.GoogleLoginRequest;
 import com.rental.modules.user.dto.request.LoginRequest;
 import com.rental.modules.user.dto.request.RegisterRequest;
 import com.rental.modules.user.dto.request.VerifyOtpRequest;
 import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +35,9 @@ public class AuthService {
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+
+    @Value("${app.google.client-id}")
+    private String googleClientId;
 
     // ── Register ─────────────────────────────────────────────────────────────
 
@@ -77,11 +91,79 @@ public class AuthService {
             throw new IllegalStateException("Account not verified. Please verify your email with the OTP code.");
         }
 
-        // Authenticate credentials via Spring Security (throws on bad credentials)
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
+        String accessToken  = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .userId(user.getUserId())
+                .role(user.getRole().name())
+                .build();
+    }
+
+    // ── Google Login ─────────────────────────────────────────────────────────
+
+    public AuthResponse googleLogin(GoogleLoginRequest request) {
+        // 1. Verify the Google ID Token
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
+
+        GoogleIdToken idToken;
+        try {
+            idToken = verifier.verify(request.getIdToken());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to verify Google ID Token: " + e.getMessage());
+        }
+
+        if (idToken == null) {
+            throw new IllegalArgumentException("Invalid Google ID Token.");
+        }
+
+        // 2. Extract user info from payload
+        Payload payload   = idToken.getPayload();
+        String email      = payload.getEmail();
+        String name       = (String) payload.get("name");
+        String googleId   = payload.getSubject();
+        String avatarUrl  = (String) payload.get("picture");
+
+        // 3. Find or create user
+        Optional<User> existingUser = userRepository.findByEmail(email);
+        User user;
+
+        if (existingUser.isPresent()) {
+            // Update googleId and avatarUrl if they are currently null
+            user = existingUser.get();
+            if (user.getGoogleId() == null) {
+                user.setGoogleId(googleId);
+            }
+            if (user.getAvatarUrl() == null) {
+                user.setAvatarUrl(avatarUrl);
+            }
+            user.setIsVerified(true);
+            userRepository.save(user);
+        } else {
+            // Create a brand-new OAuth user
+            user = User.builder()
+                    .email(email)
+                    .fullName(name)
+                    .googleId(googleId)
+                    .avatarUrl(avatarUrl)
+                    .passwordHash(null)
+                    .role(Role.USER)
+                    .status(UserStatus.ACTIVE)
+                    .isVerified(true)
+                    .build();
+            userRepository.save(user);
+        }
+
+        // 4. Generate tokens and return
         String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
