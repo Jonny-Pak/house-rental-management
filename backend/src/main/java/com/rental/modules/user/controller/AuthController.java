@@ -1,7 +1,10 @@
 ﻿package com.rental.modules.user.controller;
 
+import com.rental.modules.user.dto.request.LoginRequest;
 import com.rental.modules.user.dto.request.RegisterRequest;
+import com.rental.modules.user.dto.request.VerifyOtpRequest;
 import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,5 +29,19 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(message));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<String>> verifyOtp(
+            @Valid @RequestBody VerifyOtpRequest request) {
+        String message = authService.verifyOtp(request);
+        return ResponseEntity.ok(ApiResponse.success(message));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request) {
+        AuthResponse authResponse = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success("Login successful.", authResponse));
     }
 }
