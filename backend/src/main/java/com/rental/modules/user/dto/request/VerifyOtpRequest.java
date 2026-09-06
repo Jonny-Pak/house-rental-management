@@ -7,10 +7,10 @@ import lombok.Data;
 @Data
 public class VerifyOtpRequest {
 
-    @Email(message = "Email must be a valid email address")
-    @NotBlank(message = "Email is required")
+    @Email(message = "Email không hợp lệ")
+    @NotBlank(message = "Email không được để trống")
     private String email;
 
-    @NotBlank(message = "OTP is required")
+    @NotBlank(message = "OTP không được để trống")
     private String otp;
 }

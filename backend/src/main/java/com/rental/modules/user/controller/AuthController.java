@@ -1,5 +1,6 @@
 ﻿package com.rental.modules.user.controller;
 
+import com.rental.modules.user.dto.request.GoogleLoginRequest;
 import com.rental.modules.user.dto.request.LoginRequest;
 import com.rental.modules.user.dto.request.RegisterRequest;
 import com.rental.modules.user.dto.request.VerifyOtpRequest;
@@ -43,5 +44,12 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful.", authResponse));
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request) {
+        AuthResponse authResponse = authService.googleLogin(request);
+        return ResponseEntity.ok(ApiResponse.success("Google login successful.", authResponse));
     }
 }
