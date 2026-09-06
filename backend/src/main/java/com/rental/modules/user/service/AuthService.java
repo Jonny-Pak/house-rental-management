@@ -43,7 +43,7 @@ public class AuthService {
 
     public String register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+            throw new IllegalArgumentException("Email " + request.getEmail() + "đã được sử dụng. Vui lòng sử dụng email khác.");
         }
 
         User user = User.builder()
@@ -61,7 +61,7 @@ public class AuthService {
         String otp = otpService.generateAndStoreOtp(request.getEmail());
         emailService.sendOtpEmail(request.getEmail(), otp);
 
-        return "Registration successful. Please check your email for the OTP verification code.";
+        return "Đăng ký thành công. Vui lòng kiểm tra email của bạn để nhận mã xác minh.";
     }
 
     // ── Verify OTP ───────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ public class AuthService {
     public String verifyOtp(VerifyOtpRequest request) {
         boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (!valid) {
-            throw new IllegalArgumentException("Invalid or expired OTP.");
+            throw new IllegalArgumentException("Mã xác minh không hợp lệ hoặc đã hết hạn.");
         }
 
         User user = userRepository.findByEmail(request.getEmail())
@@ -78,17 +78,17 @@ public class AuthService {
         user.setIsVerified(true);
         userRepository.save(user);
 
-        return "Account verified successfully. You can now log in.";
+        return "Tài khoản đã được xác minh thành công. Bạn có thể đăng nhập ngay bây giờ.";
     }
 
     // ── Login ────────────────────────────────────────────────────────────────
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + request.getEmail()));
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại với email: " + request.getEmail()));
 
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
-            throw new IllegalStateException("Account not verified. Please verify your email with the OTP code.");
+            throw new IllegalStateException("Tài khoản chưa được xác minh. Vui lòng xác minh email của bạn bằng mã OTP.");
         }
 
         authenticationManager.authenticate(
@@ -119,11 +119,11 @@ public class AuthService {
         try {
             idToken = verifier.verify(request.getIdToken());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to verify Google ID Token: " + e.getMessage());
+            throw new IllegalArgumentException("Thất bại khi xác minh Google ID Token: " + e.getMessage());
         }
 
         if (idToken == null) {
-            throw new IllegalArgumentException("Invalid Google ID Token.");
+            throw new IllegalArgumentException("Token Google ID không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.");
         }
 
         // 2. Extract user info from payload
