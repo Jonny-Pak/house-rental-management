@@ -1,6 +1,7 @@
 ﻿package com.rental.modules.user.controller;
 
 import com.rental.modules.user.dto.request.UpdateProfileRequest;
+import com.rental.modules.user.dto.request.UserPreferenceDto;
 import com.rental.modules.user.dto.response.ApiResponse;
 import com.rental.modules.user.dto.response.UserProfileResponse;
 import com.rental.modules.user.service.UserService;
@@ -21,7 +22,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
         String email = principal.getName();
         UserProfileResponse profileResponse = userService.getMyProfile(email);
-        return ResponseEntity.ok(ApiResponse.success("Truy vấn hồ sơ người dùng thành công.", profileResponse));
+        return ResponseEntity.ok(ApiResponse.success("User profile fetched successfully.", profileResponse));
     }
 
     @PutMapping("/me")
@@ -30,6 +31,22 @@ public class UserController {
             @RequestBody UpdateProfileRequest request) {
         String email = principal.getName();
         UserProfileResponse profileResponse = userService.updateMyProfile(email, request);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật hồ sơ người dùng thành công.", profileResponse));
+        return ResponseEntity.ok(ApiResponse.success("User profile updated successfully.", profileResponse));
+    }
+
+    @GetMapping("/me/preferences")
+    public ResponseEntity<ApiResponse<UserPreferenceDto>> getMyPreferences(Principal principal) {
+        String email = principal.getName();
+        UserPreferenceDto preferencesResponse = userService.getMyPreferences(email);
+        return ResponseEntity.ok(ApiResponse.success("User preferences fetched successfully.", preferencesResponse));
+    }
+
+    @PutMapping("/me/preferences")
+    public ResponseEntity<ApiResponse<UserPreferenceDto>> updateMyPreferences(
+            Principal principal,
+            @RequestBody UserPreferenceDto request) {
+        String email = principal.getName();
+        UserPreferenceDto preferencesResponse = userService.updateMyPreferences(email, request);
+        return ResponseEntity.ok(ApiResponse.success("User preferences updated successfully.", preferencesResponse));
     }
 }
