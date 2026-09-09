@@ -3,3 +3,7 @@ ALTER TABLE administrative_areas ADD COLUMN IF NOT EXISTS code VARCHAR(20);
 ALTER TABLE administrative_areas ADD COLUMN IF NOT EXISTS parent_id BIGINT REFERENCES administrative_areas(area_id);
 CREATE INDEX IF NOT EXISTS idx_areas_parent_id ON administrative_areas(parent_id);
 CREATE INDEX IF NOT EXISTS idx_areas_type ON administrative_areas(area_type);
+
+
+
+-- Lưu ý: Nếu tên bảng trong DB của bạn khác (ví dụ: province, district, ward không có chữ 's' ở cuối), hãy sửa lại tên bảng ở các dòng INSERT INTO cho khớp nhé.

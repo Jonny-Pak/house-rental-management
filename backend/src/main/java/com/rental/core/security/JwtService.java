@@ -27,7 +27,7 @@ public class JwtService {
     @Value("${app.jwt.refresh-expiration}")
     private long refreshExpiration;
 
-    // ── Token Generation ──────────────────────────────────────────────────────
+    // Token Generation
 
     public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
@@ -49,7 +49,7 @@ public class JwtService {
                 .compact();
     }
 
-    // ── Token Validation ──────────────────────────────────────────────────────
+    // Token Validation
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
@@ -60,7 +60,7 @@ public class JwtService {
         return extractClaim(token, Claims::getExpiration).before(new Date());
     }
 
-    // ── Claims Extraction ─────────────────────────────────────────────────────
+    // Claims Extraction
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -79,7 +79,7 @@ public class JwtService {
                 .getPayload();
     }
 
-    // ── Key ───────────────────────────────────────────────────────────────────
+    // Key
 
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
