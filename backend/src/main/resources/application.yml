@@ -48,3 +48,9 @@ app:
     refresh-expiration: 604800000 # 7 days in ms
   google:
     client-id: 123456789-example.apps.googleusercontent.com
+
+# Cloudinary Config
+cloudinary:
+  cloud-name: v1x0tuyr
+  api-key: 187976335718292
+  api-secret: -gim-97HxFGYJD6yBmCGeCEw23s
