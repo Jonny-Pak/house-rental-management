@@ -1,10 +1,11 @@
-﻿package com.rental.modules.property.dto.request;
+package com.rental.modules.property.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class PropertyRequest {
@@ -28,4 +29,6 @@ public class PropertyRequest {
 
     private BigDecimal electricityPrice;
     private BigDecimal waterPrice;
+
+    private List<String> imageUrls;
 }
