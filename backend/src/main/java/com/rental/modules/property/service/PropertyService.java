@@ -1,4 +1,4 @@
-package com.rental.modules.property.service;
+﻿package com.rental.modules.property.service;
 
 import com.rental.modules.property.domain.entity.Property;
 import com.rental.modules.property.dto.request.PropertyRequest;
