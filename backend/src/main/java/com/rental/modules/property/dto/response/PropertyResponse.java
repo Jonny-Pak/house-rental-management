@@ -1,9 +1,10 @@
-﻿package com.rental.modules.property.dto.response;
+package com.rental.modules.property.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -19,4 +20,5 @@ public class PropertyResponse {
     private BigDecimal electricityPrice;
     private BigDecimal waterPrice;
     private String status;
+    private List<String> imageUrls;
 }
