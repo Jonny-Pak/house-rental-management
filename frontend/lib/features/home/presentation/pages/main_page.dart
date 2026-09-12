@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../user/presentation/pages/profile_page.dart';
+import '../../../property/presentation/pages/create_property_page.dart';
+import 'home_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -12,7 +14,7 @@ class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const Center(child: Text('Home', style: TextStyle(fontSize: 24))),
+    const HomePage(),
     const Center(child: Text('Saved', style: TextStyle(fontSize: 24))),
     const ProfilePage(),
   ];
@@ -21,6 +23,16 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_currentIndex],
+      floatingActionButton: _currentIndex == 0 ? FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CreatePropertyPage()),
+          );
+        },
+        child: const Icon(Icons.add),
+        tooltip: 'Đăng tin mới',
+      ) : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {

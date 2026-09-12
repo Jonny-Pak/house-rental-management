@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import '../storage/token_storage.dart';
 
 class ApiClient {
@@ -26,7 +26,7 @@ class ApiClient {
     );
   }
 
-  Future<Response> post(String path, Map<String, dynamic> data) async {
+  Future<Response> post(String path, dynamic data) async {
     return _dio.post(path, data: data);
   }
 
