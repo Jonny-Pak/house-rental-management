@@ -39,4 +39,10 @@ public class PropertyController {
         PropertyResponse response = propertyService.getPropertyById(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin khu trọ thành công", response));
     }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<PropertyResponse>>> getAllProperties() {
+        List<PropertyResponse> properties = propertyService.getAllProperties();
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tất cả khu trọ thành công", properties));
+    }
 }

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/api_client.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
@@ -6,7 +6,12 @@ import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 
+import 'package:get_it/get_it.dart';
+
 void main() {
+  // Register DI
+  GetIt.I.registerLazySingleton<ApiClient>(() => ApiClient());
+  
   runApp(const MyApp());
 }
 
@@ -15,8 +20,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── Dependency Wiring ──────────────────────────────────────────────────
-    final apiClient = ApiClient();
+    // Dependency Wiring
+    final apiClient = GetIt.I<ApiClient>();
     final remoteDataSource = AuthRemoteDataSourceImpl(apiClient);
     final authRepository = AuthRepositoryImpl(remoteDataSource);
 

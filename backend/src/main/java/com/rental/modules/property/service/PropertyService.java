@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.service;
+package com.rental.modules.property.service;
 
 import com.rental.modules.property.domain.entity.Property;
 import com.rental.modules.property.domain.entity.PropertyImage;
@@ -71,6 +71,13 @@ public class PropertyService {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khu trọ với ID: " + id));
         return mapToResponse(property);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PropertyResponse> getAllProperties() {
+        return propertyRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     private PropertyResponse mapToResponse(Property property) {
