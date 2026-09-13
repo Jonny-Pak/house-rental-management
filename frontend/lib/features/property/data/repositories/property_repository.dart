@@ -41,8 +41,8 @@ class PropertyRepository {
     }
   }
 
-  Future<List<PropertyModel>> fetchProperties() async {
-    final response = await _apiClient.get('/properties');
+  Future<List<PropertyModel>> fetchProperties({Map<String, dynamic>? filters}) async {
+    final response = await _apiClient.get('/properties', queryParams: filters);
     if (response.statusCode == 200 && response.data['success'] == true) {
       return (response.data['data'] as List)
           .map((json) => PropertyModel.fromJson(json))

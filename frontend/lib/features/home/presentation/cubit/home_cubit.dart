@@ -1,4 +1,4 @@
-﻿import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../property/data/repositories/property_repository.dart';
 import 'home_state.dart';
 
@@ -9,10 +9,10 @@ class HomeCubit extends Cubit<HomeState> {
     fetchProperties();
   }
 
-  Future<void> fetchProperties() async {
-    emit(state.copyWith(status: HomeStatus.loading));
+  Future<void> fetchProperties([Map<String, dynamic>? filters]) async {
+    emit(state.copyWith(status: HomeStatus.loading, filters: filters));
     try {
-      final properties = await _repository.fetchProperties();
+      final properties = await _repository.fetchProperties(filters: filters);
       emit(state.copyWith(
         status: HomeStatus.success,
         properties: properties,
