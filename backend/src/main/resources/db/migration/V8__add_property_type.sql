@@ -1,0 +1,1 @@
+﻿ALTER TABLE properties ADD COLUMN property_type VARCHAR(50) DEFAULT 'BOARDING_HOUSE';

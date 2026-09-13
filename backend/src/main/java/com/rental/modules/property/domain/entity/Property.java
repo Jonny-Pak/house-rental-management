@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.domain.entity;
+package com.rental.modules.property.domain.entity;
 
 import com.rental.modules.user.domain.entity.User;
 import jakarta.persistence.*;
@@ -48,8 +48,14 @@ public class Property {
     @Column(name = "water_price")
     private BigDecimal waterPrice;
 
+    @Column(name = "property_type", length = 50)
+    private String propertyType;
+
     @Column(length = 50)
     private String status;
+
+    @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<Room> rooms;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

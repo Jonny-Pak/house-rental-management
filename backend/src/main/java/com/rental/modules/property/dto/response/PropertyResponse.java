@@ -19,6 +19,7 @@ public class PropertyResponse {
     private Long wardId;
     private BigDecimal electricityPrice;
     private BigDecimal waterPrice;
+    private String propertyType;
     private String status;
     private List<String> imageUrls;
 }
