@@ -5,6 +5,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../property/data/repositories/property_repository.dart';
 import '../../../property/data/models/property_model.dart';
 import '../../../property/presentation/pages/property_detail_page.dart';
+import '../widgets/property_filter_bottom_sheet.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
 
@@ -39,22 +40,62 @@ class HomeView extends StatelessWidget {
           preferredSize: const Size.fromHeight(60.0),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              readOnly: true,
-              decoration: InputDecoration(
-                hintText: 'Tìm kiếm khu vực, tên đường...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm khu vực...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
+                    onTap: () {
+                      // TODO: Navigate to Search Page
+                    },
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-              onTap: () {
-                // TODO: Navigate to Search Page
-              },
+                const SizedBox(width: 8),
+                BlocBuilder<HomeCubit, HomeState>(
+                  builder: (context, state) {
+                    final hasFilter = state.filters != null && state.filters!.isNotEmpty;
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: hasFilter ? Colors.indigo.shade100 : Colors.grey[200],
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.tune, color: hasFilter ? Colors.indigo : Colors.black87),
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<HomeCubit>(),
+                              child: FractionallySizedBox(
+                                heightFactor: 0.85,
+                                child: PropertyFilterBottomSheet(
+                                  initialFilters: state.filters,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),
