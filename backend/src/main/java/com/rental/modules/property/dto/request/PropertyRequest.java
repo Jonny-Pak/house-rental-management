@@ -27,6 +27,8 @@ public class PropertyRequest {
     @NotNull(message = "Phường/Xã không được để trống")
     private Long wardId;
 
+    private String propertyType;
+
     private BigDecimal electricityPrice;
     private BigDecimal waterPrice;
 

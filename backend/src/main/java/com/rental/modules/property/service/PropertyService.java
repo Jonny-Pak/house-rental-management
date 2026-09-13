@@ -36,6 +36,7 @@ public class PropertyService {
                 .provinceId(request.getProvinceId())
                 .districtId(request.getDistrictId())
                 .wardId(request.getWardId())
+                .propertyType(request.getPropertyType())
                 .electricityPrice(request.getElectricityPrice())
                 .waterPrice(request.getWaterPrice())
                 .build();
@@ -74,8 +75,22 @@ public class PropertyService {
     }
 
     @Transactional(readOnly = true)
-    public List<PropertyResponse> getAllProperties() {
-        return propertyRepository.findAll().stream()
+    public List<PropertyResponse> getAllProperties(
+            Long provinceId,
+            Long districtId,
+            Long wardId,
+            String propertyType,
+            java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice) {
+            
+        org.springframework.data.jpa.domain.Specification<Property> spec = org.springframework.data.jpa.domain.Specification.where(
+                com.rental.modules.property.specification.PropertySpecification.hasProvinceId(provinceId))
+                .and(com.rental.modules.property.specification.PropertySpecification.hasDistrictId(districtId))
+                .and(com.rental.modules.property.specification.PropertySpecification.hasWardId(wardId))
+                .and(com.rental.modules.property.specification.PropertySpecification.hasPropertyType(propertyType))
+                .and(com.rental.modules.property.specification.PropertySpecification.hasRoomPriceBetween(minPrice, maxPrice));
+
+        return propertyRepository.findAll(spec).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -96,6 +111,7 @@ public class PropertyService {
                 .wardId(property.getWardId())
                 .electricityPrice(property.getElectricityPrice())
                 .waterPrice(property.getWaterPrice())
+                .propertyType(property.getPropertyType())
                 .status(property.getStatus())
                 .imageUrls(imageUrls)
                 .build();

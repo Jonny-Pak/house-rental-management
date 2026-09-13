@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.controller;
+package com.rental.modules.property.controller;
 
 import com.rental.modules.property.dto.request.PropertyRequest;
 import com.rental.modules.property.dto.response.PropertyResponse;
@@ -41,8 +41,16 @@ public class PropertyController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PropertyResponse>>> getAllProperties() {
-        List<PropertyResponse> properties = propertyService.getAllProperties();
+    public ResponseEntity<ApiResponse<List<PropertyResponse>>> getAllProperties(
+            @RequestParam(required = false) Long provinceId,
+            @RequestParam(required = false) Long districtId,
+            @RequestParam(required = false) Long wardId,
+            @RequestParam(required = false) String propertyType,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice) {
+            
+        List<PropertyResponse> properties = propertyService.getAllProperties(
+                provinceId, districtId, wardId, propertyType, minPrice, maxPrice);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tất cả khu trọ thành công", properties));
     }
 }
