@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../preferences/data/models/area_models.dart';
 import '../../../property/data/repositories/property_repository.dart';
-import '../cubit/home_cubit.dart';
 
 class PropertyFilterBottomSheet extends StatefulWidget {
   final Map<String, dynamic>? initialFilters;
@@ -125,8 +123,7 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
     if (priceRange.start > 0) filters['minPrice'] = priceRange.start;
     if (priceRange.end < 15000000) filters['maxPrice'] = priceRange.end;
 
-    context.read<HomeCubit>().fetchProperties(filters.isEmpty ? null : filters);
-    Navigator.pop(context);
+    Navigator.pop(context, filters);
   }
 
   void _clearFilter() {
