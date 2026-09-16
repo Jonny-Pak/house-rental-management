@@ -72,24 +72,27 @@ class HomeView extends StatelessWidget {
                       ),
                       child: IconButton(
                         icon: Icon(Icons.tune, color: hasFilter ? Colors.indigo : Colors.black87),
-                        onPressed: () {
-                          showModalBottomSheet(
+                        onPressed: () async {
+                          final filters = await showModalBottomSheet<Map<String, dynamic>?>(
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.white,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                             ),
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<HomeCubit>(),
-                              child: FractionallySizedBox(
-                                heightFactor: 0.85,
-                                child: PropertyFilterBottomSheet(
-                                  initialFilters: state.filters,
-                                ),
+                            builder: (_) => FractionallySizedBox(
+                              heightFactor: 0.85,
+                              child: PropertyFilterBottomSheet(
+                                initialFilters: state.filters,
                               ),
                             ),
                           );
+                          
+                          if (filters != null) {
+                             if (context.mounted) {
+                               context.read<HomeCubit>().fetchProperties(filters.isEmpty ? null : filters);
+                             }
+                          }
                         },
                       ),
                     );
