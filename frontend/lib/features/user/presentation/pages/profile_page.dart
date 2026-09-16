@@ -7,6 +7,7 @@ import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
 import '../../../preferences/presentation/pages/preferences_page.dart';
+import '../../../favorites/presentation/pages/saved_properties_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -104,6 +105,17 @@ class ProfileView extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const PreferencesPage()),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.favorite, color: Colors.red),
+                  title: const Text('Tin đã lưu'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SavedPropertiesPage()),
                     );
                   },
                 ),
