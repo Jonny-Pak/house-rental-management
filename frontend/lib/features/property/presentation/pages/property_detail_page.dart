@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/api_client.dart';
@@ -248,13 +250,59 @@ class PropertyDetailView extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () {
-                          // TODO: Implement contact action
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chức năng liên hệ đang phát triển')));
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final phone = state.property?.landlordPhone ?? '';
+                          if (phone.isNotEmpty) {
+                            await Clipboard.setData(ClipboardData(text: phone));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Đã sao chép số điện thoại: $phone')),
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Chủ nhà chưa cung cấp số điện thoại')),
+                              );
+                            }
+                          }
                         },
-                        icon: const Icon(Icons.phone),
-                        label: const Text('Liên hệ Chủ nhà'),
+                        icon: const Icon(Icons.copy, color: Colors.green),
+                        label: const Text('Sao chép số', style: TextStyle(color: Colors.green)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(color: Colors.green),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          final phone = state.property?.landlordPhone ?? '';
+                          if (phone.isNotEmpty) {
+                            final url = Uri.parse('https://zalo.me/$phone');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Không thể mở Zalo')),
+                                );
+                              }
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Chủ nhà chưa cung cấp số điện thoại')),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.chat),
+                        label: const Text('Chat Zalo'),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -8,6 +8,7 @@ class PropertyModel {
   final double electricityPrice;
   final double waterPrice;
   final String status;
+  final String? landlordPhone;
 
   PropertyModel({
     required this.id,
@@ -19,6 +20,7 @@ class PropertyModel {
     required this.electricityPrice,
     required this.waterPrice,
     required this.status,
+    this.landlordPhone,
   });
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class PropertyModel {
       electricityPrice: (json['electricityPrice'] as num?)?.toDouble() ?? 0.0,
       waterPrice: (json['waterPrice'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'AVAILABLE',
+      landlordPhone: json['landlordPhone'] as String?,
     );
   }
 }
