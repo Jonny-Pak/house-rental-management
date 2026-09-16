@@ -21,5 +21,6 @@ public class PropertyResponse {
     private BigDecimal waterPrice;
     private String propertyType;
     private String status;
+    private String landlordPhone;
     private List<String> imageUrls;
 }

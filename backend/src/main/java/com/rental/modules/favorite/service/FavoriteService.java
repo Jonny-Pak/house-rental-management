@@ -84,6 +84,7 @@ public class FavoriteService {
                 .waterPrice(property.getWaterPrice())
                 .propertyType(property.getPropertyType())
                 .status(property.getStatus())
+                .landlordPhone(property.getLandlord().getPhoneNumber())
                 .imageUrls(imageUrls)
                 .build();
     }
