@@ -27,3 +27,4 @@ class FavoriteRepository {
     throw Exception('Failed to load favorite properties');
   }
 }
+
