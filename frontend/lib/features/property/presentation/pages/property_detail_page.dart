@@ -5,6 +5,8 @@ import '../../../../core/network/api_client.dart';
 import '../../data/repositories/property_repository.dart';
 import '../cubit/property_detail_cubit.dart';
 import '../cubit/property_detail_state.dart';
+import '../../../favorites/data/repositories/favorite_repository.dart';
+import '../../../favorites/presentation/widgets/favorite_button.dart';
 
 class PropertyDetailPage extends StatelessWidget {
   final int propertyId;
@@ -56,6 +58,14 @@ class PropertyDetailView extends StatelessWidget {
                 SliverAppBar(
                   expandedHeight: 300,
                   pinned: true,
+                  actions: [
+                    FavoriteButton(
+                      propertyId: property.id,
+                      repository: FavoriteRepository(GetIt.I<ApiClient>()),
+                      initialIsFavorite: false,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   flexibleSpace: FlexibleSpaceBar(
                     background: property.imageUrls.isNotEmpty
                         ? PageView.builder(

@@ -5,6 +5,8 @@ import '../../../../core/network/api_client.dart';
 import '../../../property/data/repositories/property_repository.dart';
 import '../../../property/data/models/property_model.dart';
 import '../../../property/presentation/pages/property_detail_page.dart';
+import '../../../favorites/data/repositories/favorite_repository.dart';
+import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../widgets/property_filter_bottom_sheet.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
@@ -170,21 +172,34 @@ class PropertyCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
-            SizedBox(
-              height: 200,
-              width: double.infinity,
-              child: hasImage
-                  ? Image.network(
-                      property.imageUrls.first,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                    )
-                  : Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.home, size: 50, color: Colors.grey),
-                    ),
+            // Image with Favorite button overlay
+            Stack(
+              children: [
+                SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: hasImage
+                      ? Image.network(
+                          property.imageUrls.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                        )
+                      : Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.home, size: 50, color: Colors.grey),
+                        ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: FavoriteButton(
+                    propertyId: property.id,
+                    repository: FavoriteRepository(GetIt.I<ApiClient>()),
+                    initialIsFavorite: false,
+                  ),
+                ),
+              ],
             ),
             
             // Details
