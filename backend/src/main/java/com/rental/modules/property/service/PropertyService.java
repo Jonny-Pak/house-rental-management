@@ -113,6 +113,7 @@ public class PropertyService {
                 .waterPrice(property.getWaterPrice())
                 .propertyType(property.getPropertyType())
                 .status(property.getStatus())
+                .landlordName(property.getLandlord().getFullName())
                 .landlordPhone(property.getLandlord().getPhoneNumber())
                 .imageUrls(imageUrls)
                 .build();

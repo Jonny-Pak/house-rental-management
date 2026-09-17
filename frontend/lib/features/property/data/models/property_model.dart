@@ -8,6 +8,7 @@ class PropertyModel {
   final double electricityPrice;
   final double waterPrice;
   final String status;
+  final String? landlordName;
   final String? landlordPhone;
 
   PropertyModel({
@@ -20,6 +21,7 @@ class PropertyModel {
     required this.electricityPrice,
     required this.waterPrice,
     required this.status,
+    this.landlordName,
     this.landlordPhone,
   });
 
@@ -34,6 +36,7 @@ class PropertyModel {
       electricityPrice: (json['electricityPrice'] as num?)?.toDouble() ?? 0.0,
       waterPrice: (json['waterPrice'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'AVAILABLE',
+      landlordName: json['landlordName'] as String?,
       landlordPhone: json['landlordPhone'] as String?,
     );
   }

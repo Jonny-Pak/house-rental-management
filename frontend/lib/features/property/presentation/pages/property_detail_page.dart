@@ -156,6 +156,23 @@ class PropertyDetailView extends StatelessWidget {
                           property.description,
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Text('Thông tin Chủ nhà', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.grey.shade200,
+                            child: const Icon(Icons.person, color: Colors.grey),
+                          ),
+                          title: Text(
+                            property.landlordName ?? 'Đang cập nhật',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: const Text('Chủ nhà'),
+                        ),
                         const SizedBox(height: 24),
                         Text('Danh sách phòng (${state.rooms.length})', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 16),
