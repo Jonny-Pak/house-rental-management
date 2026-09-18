@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/api_client.dart';
@@ -8,7 +9,18 @@ import 'features/auth/presentation/pages/login_page.dart';
 
 import 'package:get_it/get_it.dart';
 
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = MyHttpOverrides();
+  
   // Register DI
   GetIt.I.registerLazySingleton<ApiClient>(() => ApiClient());
   
