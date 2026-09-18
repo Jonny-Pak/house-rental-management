@@ -1,7 +1,8 @@
-﻿package com.rental.modules.user.service;
+package com.rental.modules.user.service;
 
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.domain.entity.UserPreference;
+import com.rental.modules.user.dto.request.UpdateAvatarRequest;
 import com.rental.modules.user.dto.request.UpdateProfileRequest;
 import com.rental.modules.user.dto.request.UserPreferenceDto;
 import com.rental.modules.user.dto.response.UserProfileResponse;
@@ -38,6 +39,17 @@ public class UserService {
         if (StringUtils.hasText(request.getAvatarUrl())) {
             user.setAvatarUrl(request.getAvatarUrl());
         }
+
+        User updatedUser = userRepository.save(user);
+
+        return mapToUserProfileResponse(updatedUser);
+    }
+
+    public UserProfileResponse updateAvatar(String email, UpdateAvatarRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        user.setAvatarUrl(request.getAvatarUrl());
 
         User updatedUser = userRepository.save(user);
 
