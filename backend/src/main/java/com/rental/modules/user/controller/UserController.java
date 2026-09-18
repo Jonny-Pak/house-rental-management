@@ -1,11 +1,13 @@
-﻿package com.rental.modules.user.controller;
+package com.rental.modules.user.controller;
 
+import com.rental.modules.user.dto.request.UpdateAvatarRequest;
 import com.rental.modules.user.dto.request.UpdateProfileRequest;
 import com.rental.modules.user.dto.request.UserPreferenceDto;
 import com.rental.modules.user.dto.response.ApiResponse;
 import com.rental.modules.user.dto.response.UserProfileResponse;
 import com.rental.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +49,15 @@ public class UserController {
             @RequestBody UserPreferenceDto request) {
         String email = principal.getName();
         UserPreferenceDto preferencesResponse = userService.updateMyPreferences(email, request);
-        return ResponseEntity.ok(ApiResponse.success("User preferences updated successfully.", preferencesResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật sở thích người dùng thành công.", preferencesResponse));
+    }
+
+    @PatchMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyAvatar(
+            Principal principal,
+            @Valid @RequestBody UpdateAvatarRequest request) {
+        String email = principal.getName();
+        UserProfileResponse profileResponse = userService.updateAvatar(email, request);
+        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật avatar thành công.", profileResponse));
     }
 }

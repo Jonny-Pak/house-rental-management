@@ -9,6 +9,14 @@ import '../bloc/profile_state.dart';
 import '../../../preferences/presentation/pages/preferences_page.dart';
 import '../../../favorites/presentation/pages/saved_properties_page.dart';
 
+// ─── Design System Colors ─────────────────────────────────────────────
+const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryAccent = Color(0xFFD85D15);
+const kBackground    = Color(0xFFFAF8F5);
+const kBorderColor   = Color(0xFFE8DED1);
+const kSubText       = Color(0xFF64748B);
+// ──────────────────────────────────────────────────────────────────────
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -34,22 +42,45 @@ class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackground,
       appBar: AppBar(
-        title: const Text('Cá nhân'),
+        backgroundColor: kBackground,
+        elevation: 0,
+        title: const Text(
+          'Tài khoản',
+          style: TextStyle(
+            color: kPrimaryDark,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
+      body: BlocConsumer<ProfileBloc, ProfileState>(
+        listener: (context, state) {
+          if (state is ProfileAvatarUploadError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Colors.redAccent),
+            );
+          } else if (state is ProfileLoaded && state is! ProfileAvatarUploading && state is! ProfileAvatarUploadError) {
+            // Optional: Show success message when avatar successfully uploaded? 
+            // We can just rely on the UI update.
+          }
+        },
         builder: (context, state) {
           if (state is ProfileLoading || state is ProfileInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: kPrimaryAccent));
           } else if (state is ProfileError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Lỗi: ${state.message}', style: const TextStyle(color: Colors.red)),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                  const SizedBox(height: 16),
+                  Text('Lỗi: ${state.message}', style: const TextStyle(color: kSubText)),
                   const SizedBox(height: 16),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: kPrimaryAccent, foregroundColor: Colors.white),
                     onPressed: () => context.read<ProfileBloc>().add(FetchProfileEvent()),
                     child: const Text('Thử lại'),
                   ),
@@ -58,80 +89,238 @@ class ProfileView extends StatelessWidget {
             );
           } else if (state is ProfileLoaded) {
             final profile = state.profile;
-            return ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                const SizedBox(height: 24),
-                Center(
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundImage: profile.avatarUrl != null
-                        ? NetworkImage(profile.avatarUrl!)
-                        : null,
-                    child: profile.avatarUrl == null
-                        ? const Icon(Icons.person, size: 50)
-                        : null,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(
-                    profile.fullName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // --- User Info Card ---
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: kBorderColor),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x05000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
                         ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    profile.email,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            if (state is! ProfileAvatarUploading) {
+                              context.read<ProfileBloc>().add(ChangeAvatarEvent());
+                            }
+                          },
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: kPrimaryAccent.withValues(alpha: 0.3), width: 2),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 48,
+                                  backgroundColor: kPrimaryAccent.withValues(alpha: 0.1),
+                                  backgroundImage: profile.avatarUrl != null
+                                      ? NetworkImage(profile.avatarUrl!)
+                                      : null,
+                                  child: profile.avatarUrl == null
+                                      ? const Icon(Icons.person, size: 48, color: kPrimaryAccent)
+                                      : null,
+                                ),
+                              ),
+                              if (state is ProfileAvatarUploading)
+                                Container(
+                                  width: 104,
+                                  height: 104,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(color: Colors.white),
+                                  ),
+                                ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: kPrimaryAccent,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          profile.fullName,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: kPrimaryDark,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          profile.email,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: kSubText,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: kBackground,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.phone_iphone, size: 16, color: kPrimaryDark),
+                              const SizedBox(width: 8),
+                              Text(
+                                profile.phoneNumber ?? 'Chưa cập nhật SĐT',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: kPrimaryDark,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.phone),
-                  title: const Text('Số điện thoại'),
-                  subtitle: Text(profile.phoneNumber ?? 'Chưa cập nhật'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings_suggest),
-                  title: const Text('Sở thích của tôi'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PreferencesPage()),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.favorite, color: Colors.red),
-                  title: const Text('Tin đã lưu'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SavedPropertiesPage()),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
-                  onTap: () {
-                    // Implement logout logic
-                  },
-                ),
-              ],
+                  const SizedBox(height: 32),
+                  
+                  // --- Menu Items ---
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8, bottom: 12),
+                    child: Text(
+                      'Cài đặt chung',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: kPrimaryDark,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: kBorderColor),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildMenuItem(
+                          icon: Icons.favorite_border,
+                          iconColor: Colors.redAccent,
+                          title: 'Tin đã lưu',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const SavedPropertiesPage()),
+                            );
+                          },
+                        ),
+                        const Divider(color: kBorderColor, height: 1, indent: 56),
+                        _buildMenuItem(
+                          icon: Icons.tune_rounded,
+                          iconColor: Colors.blueAccent,
+                          title: 'Sở thích tìm kiếm',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const PreferencesPage()),
+                            );
+                          },
+                        ),
+                        const Divider(color: kBorderColor, height: 1, indent: 56),
+                        _buildMenuItem(
+                          icon: Icons.shield_outlined,
+                          iconColor: Colors.green,
+                          title: 'Đổi mật khẩu',
+                          onTap: () {
+                            // TODO: Change password
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // --- Logout Button ---
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      // Implement logout logic
+                    },
+                    icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                    label: const Text(
+                      'Đăng xuất',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Colors.redAccent),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             );
           }
           return const SizedBox.shrink();
         },
       ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: iconColor, size: 22),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: kPrimaryDark,
+        ),
+      ),
+      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: kSubText),
+      onTap: onTap,
     );
   }
 }

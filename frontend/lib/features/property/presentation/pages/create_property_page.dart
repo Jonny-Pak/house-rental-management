@@ -7,6 +7,14 @@ import '../../data/repositories/property_repository.dart';
 import '../cubit/create_property_cubit.dart';
 import '../cubit/create_property_state.dart';
 
+// ─── Design System Colors ─────────────────────────────────────────────
+const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryAccent = Color(0xFFD85D15);
+const kBackground    = Color(0xFFFAF8F5);
+const kBorderColor   = Color(0xFFE8DED1);
+const kSubText       = Color(0xFF64748B);
+// ──────────────────────────────────────────────────────────────────────
+
 class CreatePropertyPage extends StatelessWidget {
   const CreatePropertyPage({super.key});
 
@@ -61,23 +69,172 @@ class _CreatePropertyViewState extends State<CreatePropertyView> {
     }
   }
 
+  Widget _buildSectionTitle(String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(icon, color: kPrimaryAccent, size: 22),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: kPrimaryDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: kPrimaryDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          style: const TextStyle(fontSize: 15, color: kPrimaryDark),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: const TextStyle(color: kSubText, fontSize: 14),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
+            ),
+          ),
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required String label,
+    required String hintText,
+    required T? value,
+    required List<T> items,
+    required String Function(T) itemLabel,
+    required void Function(T?)? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: kPrimaryDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        InputDecorator(
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              isExpanded: true,
+              value: value,
+              icon: const Icon(Icons.expand_more, color: kSubText),
+              hint: Text(hintText, style: const TextStyle(color: kSubText, fontSize: 14)),
+              style: const TextStyle(fontSize: 15, color: kPrimaryDark, fontWeight: FontWeight.w500),
+              items: items.map((T item) {
+                return DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemLabel(item)),
+                );
+              }).toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackground,
       appBar: AppBar(
-        title: const Text('Đăng tin cho thuê'),
+        backgroundColor: kBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: kPrimaryDark, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Đăng tin cho thuê',
+          style: TextStyle(
+            color: kPrimaryDark,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: BlocConsumer<CreatePropertyCubit, CreatePropertyState>(
         listener: (context, state) {
           if (state.status == CreatePropertyStatus.success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Tạo khu trọ thành công!')),
+              const SnackBar(
+                content: Text('Đăng tin thành công!'),
+                backgroundColor: Colors.green,
+              ),
             );
             Navigator.pop(context);
           } else if (state.status == CreatePropertyStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage ?? 'Đã xảy ra lỗi')),
+              SnackBar(
+                content: Text(state.errorMessage ?? 'Đã xảy ra lỗi'),
+                backgroundColor: Colors.redAccent,
+              ),
             );
           }
         },
@@ -88,16 +245,15 @@ class _CreatePropertyViewState extends State<CreatePropertyView> {
           return Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(20.0),
               children: [
-                // Thông tin cơ bản
-                Text('Thông tin cơ bản', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 16),
+                // ─── THÔNG TIN CƠ BẢN ───
+                _buildSectionTitle('Thông tin cơ bản', Icons.info_outline),
                 
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'WHOLE_HOUSE', label: Text('Nhà nguyên căn')),
-                    ButtonSegment(value: 'BOARDING_HOUSE', label: Text('Khu trọ')),
+                    ButtonSegment(value: 'WHOLE_HOUSE', label: Text('Nhà nguyên căn', style: TextStyle(fontSize: 13))),
+                    ButtonSegment(value: 'BOARDING_HOUSE', label: Text('Khu trọ', style: TextStyle(fontSize: 13))),
                   ],
                   selected: {_propertyType},
                   onSelectionChanged: (Set<String> newSelection) {
@@ -105,193 +261,182 @@ class _CreatePropertyViewState extends State<CreatePropertyView> {
                       _propertyType = newSelection.first;
                     });
                   },
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Tên khu trọ / Nhà',
-                    border: OutlineInputBorder(),
+                  style: SegmentedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    selectedBackgroundColor: kPrimaryAccent.withValues(alpha: 0.1),
+                    selectedForegroundColor: kPrimaryAccent,
+                    side: const BorderSide(color: kBorderColor),
                   ),
+                ),
+                const SizedBox(height: 20),
+
+                _buildTextField(
+                  label: 'Tên khu trọ / Nhà',
+                  hintText: 'Nhập tên khu trọ...',
+                  controller: _nameController,
                   validator: (v) => v!.isEmpty ? 'Vui lòng nhập tên' : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-                TextFormField(
+                _buildTextField(
+                  label: 'Mô tả chi tiết',
+                  hintText: 'Nhập mô tả về khu trọ, tiện ích xung quanh...',
                   controller: _descController,
-                  decoration: const InputDecoration(
-                    labelText: 'Mô tả',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
+                  maxLines: 4,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Vị trí
-                Text('Vị trí', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 16),
+                // ─── VỊ TRÍ ───
+                _buildSectionTitle('Vị trí', Icons.location_on_outlined),
                 
-                InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Tỉnh/Thành phố',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<Province>(
-                      isExpanded: true,
-                      value: state.selectedProvince,
-                      hint: const Text('Chọn Tỉnh/Thành'),
-                      items: state.provinces.map((p) {
-                        return DropdownMenuItem(value: p, child: Text(p.name));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) context.read<CreatePropertyCubit>().onProvinceChanged(val);
-                      },
-                    ),
-                  ),
+                _buildDropdown<Province>(
+                  label: 'Tỉnh/Thành phố',
+                  hintText: 'Chọn Tỉnh/Thành',
+                  value: state.selectedProvince,
+                  items: state.provinces,
+                  itemLabel: (p) => p.name,
+                  onChanged: (val) {
+                    if (val != null) context.read<CreatePropertyCubit>().onProvinceChanged(val);
+                  },
                 ),
                 const SizedBox(height: 16),
 
-                InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Quận/Huyện',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<District>(
-                      isExpanded: true,
-                      value: state.selectedDistrict,
-                      hint: const Text('Chọn Quận/Huyện'),
-                      items: state.districts.map((d) {
-                        return DropdownMenuItem(value: d, child: Text(d.name));
-                      }).toList(),
-                      onChanged: state.districts.isEmpty
-                          ? null
-                          : (val) {
-                              if (val != null) context.read<CreatePropertyCubit>().onDistrictChanged(val);
-                            },
-                    ),
-                  ),
+                _buildDropdown<District>(
+                  label: 'Quận/Huyện',
+                  hintText: 'Chọn Quận/Huyện',
+                  value: state.selectedDistrict,
+                  items: state.districts,
+                  itemLabel: (d) => d.name,
+                  onChanged: state.districts.isEmpty
+                      ? null
+                      : (val) {
+                          if (val != null) context.read<CreatePropertyCubit>().onDistrictChanged(val);
+                        },
                 ),
                 const SizedBox(height: 16),
 
-                InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Phường/Xã',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<Ward>(
-                      isExpanded: true,
-                      value: state.selectedWard,
-                      hint: const Text('Chọn Phường/Xã'),
-                      items: state.wards.map((w) {
-                        return DropdownMenuItem(value: w, child: Text(w.name));
-                      }).toList(),
-                      onChanged: state.wards.isEmpty
-                          ? null
-                          : (val) {
-                              if (val != null) context.read<CreatePropertyCubit>().onWardChanged(val);
-                            },
-                    ),
-                  ),
+                _buildDropdown<Ward>(
+                  label: 'Phường/Xã',
+                  hintText: 'Chọn Phường/Xã',
+                  value: state.selectedWard,
+                  items: state.wards,
+                  itemLabel: (w) => w.name,
+                  onChanged: state.wards.isEmpty
+                      ? null
+                      : (val) {
+                          if (val != null) context.read<CreatePropertyCubit>().onWardChanged(val);
+                        },
                 ),
                 const SizedBox(height: 16),
 
-                TextFormField(
+                _buildTextField(
+                  label: 'Số nhà, tên đường',
+                  hintText: 'Ví dụ: 123 Đường Nguyễn Văn Linh...',
                   controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Số nhà, tên đường',
-                    border: OutlineInputBorder(),
-                  ),
                   validator: (v) => v!.isEmpty ? 'Vui lòng nhập địa chỉ' : null,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Giá cơ bản
-                Text('Chi phí mặc định', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 16),
+                // ─── CHI PHÍ MẶC ĐỊNH ───
+                _buildSectionTitle('Chi phí mặc định', Icons.payments_outlined),
                 
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: TextFormField(
+                      child: _buildTextField(
+                        label: 'Giá điện',
+                        hintText: 'VD: 3500',
                         controller: _elecPriceController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Giá điện (VNĐ/kWh)',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) => v!.isEmpty ? 'Nhập giá điện' : null,
+                        validator: (v) => v!.isEmpty ? 'Bắt buộc' : null,
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _waterPriceController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Giá nước (VNĐ/khối)',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) => v!.isEmpty ? 'Nhập giá nước' : null,
-                      ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 40),
+                      child: Text('đ/kWh', style: TextStyle(color: kSubText, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        label: 'Giá nước',
+                        hintText: 'VD: 20000',
+                        controller: _waterPriceController,
+                        keyboardType: TextInputType.number,
+                        validator: (v) => v!.isEmpty ? 'Bắt buộc' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 40),
+                      child: Text('đ/khối', style: TextStyle(color: kSubText, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
 
-                // Hình ảnh
+                // ─── HÌNH ẢNH ───
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Hình ảnh', style: Theme.of(context).textTheme.titleLarge),
-                    TextButton.icon(
-                      onPressed: isLoading ? null : () => context.read<CreatePropertyCubit>().pickImages(),
-                      icon: const Icon(Icons.add_photo_alternate),
-                      label: const Text('Thêm ảnh'),
-                    ),
+                    _buildSectionTitle('Hình ảnh', Icons.photo_library_outlined),
+                    if (state.images.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: isLoading ? null : () => context.read<CreatePropertyCubit>().pickImages(),
+                        icon: const Icon(Icons.add, color: kPrimaryAccent),
+                        label: const Text('Thêm ảnh', style: TextStyle(color: kPrimaryAccent)),
+                      ),
                   ],
                 ),
-                const SizedBox(height: 8),
-
+                
                 if (state.images.isNotEmpty)
                   SizedBox(
-                    height: 100,
+                    height: 120,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: state.images.length,
                       itemBuilder: (context, index) {
                         return Stack(
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8.0, top: 8.0),
+                            Container(
+                              margin: const EdgeInsets.only(right: 12.0, top: 8.0, bottom: 8.0),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: kBorderColor),
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 2)),
+                                ],
+                              ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
                                   state.images[index].path,
-                                  height: 90,
-                                  width: 90,
+                                  height: 104,
+                                  width: 104,
                                   fit: BoxFit.cover,
                                 ),
                               ),
                             ),
                             Positioned(
                               top: 0,
-                              right: 0,
+                              right: 4,
                               child: GestureDetector(
                                 onTap: isLoading ? null : () => context.read<CreatePropertyCubit>().removeImage(index),
                                 child: Container(
-                                  padding: const EdgeInsets.all(2),
+                                  padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(
-                                    color: Colors.red,
+                                    color: Colors.white,
                                     shape: BoxShape.circle,
+                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
                                   ),
-                                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                  child: const Icon(Icons.close, size: 16, color: Colors.redAccent),
                                 ),
                               ),
                             ),
@@ -301,44 +446,59 @@ class _CreatePropertyViewState extends State<CreatePropertyView> {
                     ),
                   )
                 else
-                  Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Center(
-                      child: Text('Chưa có ảnh nào được chọn', style: TextStyle(color: Colors.grey)),
+                  GestureDetector(
+                    onTap: isLoading ? null : () => context.read<CreatePropertyCubit>().pickImages(),
+                    child: Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: kPrimaryAccent.withValues(alpha: 0.5), style: BorderStyle.solid),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate_outlined, size: 40, color: kPrimaryAccent),
+                          SizedBox(height: 8),
+                          Text('Tải ảnh lên từ thiết bị', style: TextStyle(color: kPrimaryAccent, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                     ),
                   ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 48),
 
-                // Submit
+                // ─── NÚT ĐĂNG TIN ───
                 SizedBox(
-                  height: 50,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimaryAccent,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 0,
                     ),
                     child: isLoading
                         ? Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                               ),
                               const SizedBox(width: 12),
-                              Text(state.status == CreatePropertyStatus.uploadingImages
-                                  ? 'Đang tải ảnh lên...'
-                                  : 'Đang xử lý...'),
+                              Text(
+                                state.status == CreatePropertyStatus.uploadingImages
+                                    ? 'Đang tải ảnh...'
+                                    : 'Đang xử lý...',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                             ],
                           )
-                        : const Text('ĐĂNG TIN CHO THUÊ', style: TextStyle(fontSize: 16)),
+                        : const Text('ĐĂNG TIN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                   ),
                 ),
                 const SizedBox(height: 32),

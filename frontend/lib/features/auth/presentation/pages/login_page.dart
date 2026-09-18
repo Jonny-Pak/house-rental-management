@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../home/presentation/pages/main_page.dart';
@@ -7,6 +7,14 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'register_page.dart';
+
+// ─── Design System Colors ─────────────────────────────────────────────
+const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryAccent = Color(0xFFD85D15);
+const kBackground    = Color(0xFFFAF8F5);
+const kBorderColor   = Color(0xFFE8DED1);
+const kSubText       = Color(0xFF64748B);
+// ──────────────────────────────────────────────────────────────────────
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -55,10 +63,9 @@ class _LoginPageState extends State<LoginPage> {
         Text(
           label,
           style: const TextStyle(
-            color: Color(0xFF4A3E3D),
+            color: kPrimaryDark,
             fontSize: 14,
-            fontWeight: FontWeight.w500,
-            height: 1.6,
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
@@ -66,42 +73,40 @@ class _LoginPageState extends State<LoginPage> {
           controller: controller,
           keyboardType: keyboardType,
           obscureText: isPassword ? _obscurePassword : false,
+          style: const TextStyle(fontSize: 15, color: kPrimaryDark),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: const TextStyle(
-              color: Color(0xFF757575),
+              color: kSubText,
               fontSize: 14,
               fontWeight: FontWeight.w400,
             ),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE8DED1)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorderColor),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFE8DED1)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kBorderColor),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFD85D15)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
             ),
             suffixIcon: isPassword
-                ? TextButton(
+                ? IconButton(
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
                       });
                     },
-                    child: Text(
-                      _obscurePassword ? 'Hiển thị' : 'Ẩn',
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: kSubText,
+                      size: 20,
                     ),
                   )
                 : null,
@@ -115,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFBF7),
+      backgroundColor: kBackground,
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) async {
@@ -123,12 +128,19 @@ class _LoginPageState extends State<LoginPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               );
             } else if (state is AuthAuthenticated) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đăng nhập thành công!')),
+                SnackBar(
+                  content: const Text('Đăng nhập thành công!'),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               );
               await TokenStorage.saveToken(state.data.accessToken);
               if (context.mounted) {
@@ -143,60 +155,56 @@ class _LoginPageState extends State<LoginPage> {
             final isLoading = state is AuthLoading;
             return Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 500),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE8DED1)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0C000000),
-                        blurRadius: 10,
-                        offset: Offset(0, 8),
-                        spreadRadius: -6,
-                      ),
-                      BoxShadow(
-                        color: Color(0x0C000000),
-                        blurRadius: 25,
-                        offset: Offset(0, 10),
-                        spreadRadius: -5,
-                      )
-                    ],
-                  ),
+                  constraints: const BoxConstraints(maxWidth: 400),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // App Logo or Icon
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: kPrimaryAccent.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.home_work_rounded,
+                              size: 48,
+                              color: kPrimaryAccent,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                         const Text(
                           'Đăng nhập',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF2C1D11),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            height: 1.3,
+                            color: kPrimaryDark,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
                           ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Chào mừng bạn quay trở lại. Hãy đăng nhập vào tài khoản của bạn.',
+                          'Chào mừng bạn quay trở lại.\nHãy đăng nhập để tiếp tục.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            height: 1.6,
+                            color: kSubText,
+                            fontSize: 15,
+                            height: 1.4,
                           ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 40),
+                        
                         _buildTextField(
-                          label: 'Địa chỉ email',
-                          hintText: 'Ví dụ: name@gmail.com',
+                          label: 'Email',
+                          hintText: 'Nhập địa chỉ email...',
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) => v == null || v.isEmpty || !v.contains('@') ? 'Email không hợp lệ' : null,
@@ -204,85 +212,121 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 20),
                         _buildTextField(
                           label: 'Mật khẩu',
-                          hintText: 'Mật khẩu',
+                          hintText: 'Nhập mật khẩu...',
                           controller: _passwordCtrl,
                           isPassword: true,
                           validator: (v) => v == null || v.length < 8 ? 'Mật khẩu ít nhất 8 ký tự' : null,
                         ),
-                        const SizedBox(height: 32),
+                        
+                        // Forgot Password Link
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              // TODO: Quên mật khẩu
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text(
+                              'Quên mật khẩu?',
+                              style: TextStyle(
+                                color: kPrimaryAccent,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Login Button
                         ElevatedButton(
                           onPressed: isLoading ? null : () => _onLogin(context),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFD85D15),
+                            backgroundColor: kPrimaryAccent,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 0,
                           ),
                           child: isLoading
                               ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
+                                  height: 24,
+                                  width: 24,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                                 )
                               : const Text(
                                   'Đăng nhập',
                                   style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 32),
+
+                        // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: Colors.grey[300])),
+                            Expanded(child: Divider(color: kBorderColor, thickness: 1)),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
-                                'Hoặc đăng nhập bằng',
+                                'Hoặc',
                                 style: TextStyle(
-                                  color: Color(0xFF8C7E76),
-                                  fontSize: 13.5,
+                                  color: kSubText,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: Colors.grey[300])),
+                            Expanded(child: Divider(color: kBorderColor, thickness: 1)),
                           ],
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 32),
+
+                        // Google Sign In
                         OutlinedButton.icon(
                           onPressed: () {
                             // TODO: Implement Google Sign-In
                           },
-                          icon: const Icon(Icons.g_mobiledata, size: 32, color: Colors.blue),
+                          icon: Image.network(
+                            'https://img.icons8.com/color/48/000000/google-logo.png',
+                            height: 24,
+                          ),
                           label: const Text(
-                            'Đăng nhập bằng Google',
+                            'Tiếp tục với Google',
                             style: TextStyle(
-                              color: Color(0xFF3C4043),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                              color: kPrimaryDark,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            side: const BorderSide(color: Color(0xFFDADCE0)),
+                            side: const BorderSide(color: kBorderColor),
+                            elevation: 0,
                           ),
                         ),
                         const SizedBox(height: 32),
+
+                        // Register Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
                               'Chưa có tài khoản? ',
                               style: TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 14,
+                                color: kSubText,
+                                fontSize: 15,
                               ),
                             ),
                             InkWell(
@@ -291,11 +335,11 @@ class _LoginPageState extends State<LoginPage> {
                                 MaterialPageRoute(builder: (_) => const RegisterPage()),
                               ),
                               child: const Text(
-                                'Đăng ký ngay',
+                                'Đăng ký',
                                 style: TextStyle(
-                                  color: Color(0xFFD85D15),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                                  color: kPrimaryAccent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
