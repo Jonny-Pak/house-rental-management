@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../../../core/network/api_client.dart';
 import '../../data/datasources/user_remote_data_source.dart';
 import '../../data/repositories/user_repository.dart';
@@ -112,9 +116,38 @@ class ProfileView extends StatelessWidget {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap: () {
+                          onTap: () async {
                             if (state is! ProfileAvatarUploading) {
-                              context.read<ProfileBloc>().add(ChangeAvatarEvent());
+                              final picker = ImagePicker();
+                              final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                              
+                              if (pickedFile != null && context.mounted) {
+                                // image_cropper does not support Windows/Linux desktop natively yet.
+                                if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+                                  _showConfirmationDialog(context, XFile(pickedFile.path));
+                                } else {
+                                  final croppedFile = await ImageCropper().cropImage(
+                                    sourcePath: pickedFile.path,
+                                    uiSettings: [
+                                      AndroidUiSettings(
+                                        toolbarTitle: 'Căn chỉnh ảnh',
+                                        toolbarColor: kPrimaryAccent,
+                                        toolbarWidgetColor: Colors.white,
+                                        initAspectRatio: CropAspectRatioPreset.square,
+                                        lockAspectRatio: false,
+                                      ),
+                                      IOSUiSettings(
+                                        title: 'Căn chỉnh ảnh',
+                                        aspectRatioLockEnabled: false,
+                                      ),
+                                    ],
+                                  );
+                                  
+                                  if (croppedFile != null && context.mounted) {
+                                    _showConfirmationDialog(context, XFile(croppedFile.path));
+                                  }
+                                }
+                              }
                             }
                           },
                           child: Stack(
@@ -222,12 +255,13 @@ class ProfileView extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                  Material(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: kBorderColor),
+                      side: const BorderSide(color: kBorderColor),
                     ),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         _buildMenuItem(
@@ -321,6 +355,44 @@ class ProfileView extends StatelessWidget {
       ),
       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: kSubText),
       onTap: onTap,
+    );
+  }
+
+  void _showConfirmationDialog(BuildContext context, XFile imageFile) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Xác nhận ảnh đại diện', style: TextStyle(color: kPrimaryDark, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Bạn có muốn sử dụng ảnh này làm ảnh đại diện không?', style: TextStyle(color: kSubText)),
+              const SizedBox(height: 16),
+              CircleAvatar(
+                radius: 60,
+                backgroundImage: kIsWeb 
+                    ? NetworkImage(imageFile.path) as ImageProvider
+                    : FileImage(File(imageFile.path)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Hủy', style: TextStyle(color: kSubText)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: kPrimaryAccent, foregroundColor: Colors.white),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.read<ProfileBloc>().add(ChangeAvatarEvent(imageFile));
+              },
+              child: const Text('Xác nhận'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

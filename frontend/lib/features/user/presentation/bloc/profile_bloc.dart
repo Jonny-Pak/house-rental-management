@@ -1,13 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../data/repositories/user_repository.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final UserRepository _userRepository;
-  final ImagePicker _imagePicker = ImagePicker();
 
   ProfileBloc(this._userRepository) : super(ProfileInitial()) {
     on<FetchProfileEvent>(_onFetchProfile);
@@ -36,12 +34,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final currentState = state as ProfileLoaded;
     
     try {
-      final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
-      if (pickedFile == null) return;
-      
       emit(ProfileAvatarUploading(currentState.profile));
       
-      final uploadedUrl = await _userRepository.uploadImage(pickedFile);
+      final uploadedUrl = await _userRepository.uploadImage(event.file);
       final updatedProfile = await _userRepository.updateAvatar(uploadedUrl);
       
       emit(ProfileLoaded(updatedProfile));
