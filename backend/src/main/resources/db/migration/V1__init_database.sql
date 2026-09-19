@@ -1,5 +1,4 @@
-
--- Bật extension PostGIS 
+-- Bt extension PostGIS
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 1. Table users
@@ -21,9 +20,11 @@ CREATE TABLE users (
 -- 2. Table user_preferences
 CREATE TABLE user_preferences (
     preference_id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    preference_group VARCHAR(50) NOT NULL,
-    preference_value VARCHAR(100) NOT NULL
+    user_id BIGINT NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
+    min_budget DOUBLE PRECISION,
+    max_budget DOUBLE PRECISION,
+    has_pet BOOLEAN,
+    preferred_area VARCHAR(150)
 );
 
 -- 3. Table administrative_areas (PostGIS)
@@ -31,14 +32,91 @@ CREATE TABLE administrative_areas (
     area_id BIGSERIAL PRIMARY KEY,
     area_name VARCHAR(150) NOT NULL,
     area_type VARCHAR(10),
-    boundary geometry(POLYGON, 4326), -- Hệ tọa độ WGS 84 (chuẩn Google Maps)
+    boundary geometry(POLYGON, 4326), -- H ta  WGS 84 (chun Google Maps)
+    code VARCHAR(20),
+    parent_id BIGINT REFERENCES administrative_areas(area_id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tạo GiST index cho boundary
+-- To GiST index cho boundary
 CREATE INDEX idx_areas_boundary ON administrative_areas USING GIST (boundary);
+CREATE INDEX idx_areas_parent_id ON administrative_areas(parent_id);
+CREATE INDEX idx_areas_type ON administrative_areas(area_type);
 
--- 4. Table listings (PostGIS)
+-- 3.1. Seed administrative_areas
+INSERT INTO administrative_areas (area_id, area_name, area_type, code) VALUES (1, 'Thnh ph H Ch Minh', 'PROVINCE', 'SG');
+
+INSERT INTO administrative_areas (area_id, area_name, area_type, code, parent_id) VALUES 
+(2, 'Qun 1', 'DISTRICT', 'Q1', 1),
+(3, 'Qun 7', 'DISTRICT', 'Q7', 1),
+(4, 'Thnh ph Th c', 'DISTRICT', 'TD', 1),
+(5, 'Qun Bnh Thnh', 'DISTRICT', 'BT', 1);
+
+INSERT INTO administrative_areas (area_id, area_name, area_type, code, parent_id) VALUES 
+(6, 'Phng Bn Ngh', 'WARD', 'BN', 2),
+(7, 'Phng Bn Thnh', 'WARD', 'BTH', 2),
+(8, 'Phng a Kao', 'WARD', 'DK', 2);
+
+SELECT setval('administrative_areas_area_id_seq', 8);
+
+-- 4. Table properties
+CREATE TABLE properties (
+    id BIGSERIAL PRIMARY KEY,
+    landlord_id BIGINT NOT NULL REFERENCES users(user_id),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    address VARCHAR(255) NOT NULL,
+    province_id BIGINT NOT NULL REFERENCES administrative_areas(area_id),
+    district_id BIGINT NOT NULL REFERENCES administrative_areas(area_id),
+    ward_id BIGINT NOT NULL REFERENCES administrative_areas(area_id),
+    electricity_price DECIMAL(10,2),
+    water_price DECIMAL(10,2),
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+    property_type VARCHAR(50) DEFAULT 'BOARDING_HOUSE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_properties_landlord_id ON properties(landlord_id);
+
+-- 5. Table rooms
+CREATE TABLE rooms (
+    id BIGSERIAL PRIMARY KEY,
+    property_id BIGINT NOT NULL REFERENCES properties(id),
+    name VARCHAR(255) NOT NULL,
+    area DOUBLE PRECISION NOT NULL,
+    price DECIMAL(12,2) NOT NULL,
+    max_capacity INT NOT NULL,
+    status VARCHAR(50) DEFAULT 'AVAILABLE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_rooms_property_id ON rooms(property_id);
+
+-- 6. Table property_images
+CREATE TABLE property_images (
+    id BIGSERIAL PRIMARY KEY,
+    property_id BIGINT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    image_url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_property_images_property_id ON property_images(property_id);
+
+-- 7. Table favorite_properties
+CREATE TABLE favorite_properties (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    property_id BIGINT NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_user_property UNIQUE (user_id, property_id)
+);
+
+CREATE INDEX idx_favorites_user_id     ON favorite_properties(user_id);
+CREATE INDEX idx_favorites_property_id ON favorite_properties(property_id);
+
+-- 8. Table listings (PostGIS)
 CREATE TABLE listings (
     listing_id BIGSERIAL PRIMARY KEY,
     owner_id BIGINT NOT NULL REFERENCES users(user_id),
@@ -50,7 +128,7 @@ CREATE TABLE listings (
     rent_price DECIMAL(12,2) NOT NULL,
     area_sqm DECIMAL(6,2),
     address VARCHAR(255),
-    location geometry(POINT, 4326), -- Hệ tọa độ WGS 84
+    location geometry(POINT, 4326), -- H ta  WGS 84
     approval_status VARCHAR(15) NOT NULL DEFAULT 'PENDING' CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED')),
     rental_status VARCHAR(15) NOT NULL DEFAULT 'AVAILABLE' CHECK (rental_status IN ('AVAILABLE', 'RENTED')),
     rejection_reason VARCHAR(255),
@@ -62,13 +140,12 @@ CREATE TABLE listings (
     updated_at TIMESTAMP
 );
 
--- Các index cơ bản và GiST index cho location
 CREATE INDEX idx_listings_area_id ON listings(area_id);
 CREATE INDEX idx_listings_owner_id ON listings(owner_id);
 CREATE INDEX idx_listings_status ON listings(approval_status);
 CREATE INDEX idx_listings_location ON listings USING GIST (location);
 
--- 5. Table listing_images
+-- 9. Table listing_images
 CREATE TABLE listing_images (
     image_id BIGSERIAL PRIMARY KEY,
     listing_id BIGINT NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
@@ -77,7 +154,7 @@ CREATE TABLE listing_images (
     sort_order SMALLINT DEFAULT 0
 );
 
--- 6. Table furniture
+-- 10. Table furniture
 CREATE TABLE furniture (
     furniture_id BIGSERIAL PRIMARY KEY,
     furniture_name VARCHAR(100) NOT NULL,
@@ -85,7 +162,7 @@ CREATE TABLE furniture (
     icon_url VARCHAR(255)
 );
 
--- 7. Table listing_furniture
+-- 11. Table listing_furniture
 CREATE TABLE listing_furniture (
     listing_id BIGINT NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
     furniture_id BIGINT NOT NULL REFERENCES furniture(furniture_id) ON DELETE CASCADE,
@@ -93,7 +170,7 @@ CREATE TABLE listing_furniture (
     PRIMARY KEY (listing_id, furniture_id)
 );
 
--- 8. Table followed_listings
+-- 12. Table followed_listings
 CREATE TABLE followed_listings (
     user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     listing_id BIGINT NOT NULL REFERENCES listings(listing_id) ON DELETE CASCADE,
@@ -101,7 +178,7 @@ CREATE TABLE followed_listings (
     PRIMARY KEY (user_id, listing_id)
 );
 
--- 9. Table contracts
+-- 13. Table contracts
 CREATE TABLE contracts (
     contract_id BIGSERIAL PRIMARY KEY,
     listing_id BIGINT NOT NULL REFERENCES listings(listing_id),
@@ -116,7 +193,7 @@ CREATE TABLE contracts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. Table membership_packages
+-- 14. Table membership_packages
 CREATE TABLE membership_packages (
     package_id SMALLSERIAL PRIMARY KEY,
     package_name VARCHAR(20) NOT NULL,
@@ -127,7 +204,7 @@ CREATE TABLE membership_packages (
     description VARCHAR(255)
 );
 
--- 11. Table user_subscriptions
+-- 15. Table user_subscriptions
 CREATE TABLE user_subscriptions (
     subscription_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(user_id),
@@ -140,7 +217,7 @@ CREATE TABLE user_subscriptions (
     status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'EXPIRED'))
 );
 
--- 12. Table payment_transactions
+-- 16. Table payment_transactions
 CREATE TABLE payment_transactions (
     transaction_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(user_id),
@@ -152,7 +229,7 @@ CREATE TABLE payment_transactions (
     transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 13. Table notifications
+-- 17. Table notifications
 CREATE TABLE notifications (
     notification_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(user_id),
@@ -165,7 +242,7 @@ CREATE TABLE notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 14. Table contact_messages
+-- 18. Table contact_messages
 CREATE TABLE contact_messages (
     message_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
@@ -177,7 +254,7 @@ CREATE TABLE contact_messages (
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 15. Table system_content
+-- 19. Table system_content
 CREATE TABLE system_content (
     content_id SMALLSERIAL PRIMARY KEY,
     page_key VARCHAR(50) NOT NULL UNIQUE,
@@ -187,7 +264,7 @@ CREATE TABLE system_content (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 16. Table qr_login_sessions
+-- 20. Table qr_login_sessions
 CREATE TABLE qr_login_sessions (
     session_id UUID PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
