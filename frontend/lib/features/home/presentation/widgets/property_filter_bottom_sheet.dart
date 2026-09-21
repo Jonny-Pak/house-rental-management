@@ -176,21 +176,21 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
                   else ...[
                     DropdownButtonFormField<Province>(
                       decoration: const InputDecoration(labelText: 'Tỉnh/Thành phố', border: OutlineInputBorder()),
-                      value: selectedProvince,
+                      initialValue: selectedProvince,
                       items: provinces.map((p) => DropdownMenuItem(value: p, child: Text(p.name))).toList(),
                       onChanged: _onProvinceChanged,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<District>(
                       decoration: const InputDecoration(labelText: 'Quận/Huyện', border: OutlineInputBorder()),
-                      value: selectedDistrict,
+                      initialValue: selectedDistrict,
                       items: districts.map((d) => DropdownMenuItem(value: d, child: Text(d.name))).toList(),
                       onChanged: _onDistrictChanged,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<Ward>(
                       decoration: const InputDecoration(labelText: 'Phường/Xã', border: OutlineInputBorder()),
-                      value: selectedWard,
+                      initialValue: selectedWard,
                       items: wards.map((w) => DropdownMenuItem(value: w, child: Text(w.name))).toList(),
                       onChanged: (w) => setState(() => selectedWard = w),
                     ),
