@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
@@ -6,6 +6,14 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'login_page.dart';
+
+// --- Design System Colors ---
+const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryAccent = Color(0xFFD85D15);
+const kBackground    = Color(0xFFFAF8F5);
+const kBorderColor   = Color(0xFFE8DED1);
+const kSubText       = Color(0xFF64748B);
+// ----------------------------
 
 class OtpPage extends StatefulWidget {
   final String email;
@@ -42,9 +50,20 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Xác thực OTP')),
+      backgroundColor: kBackground,
+      appBar: AppBar(
+        title: const Text(
+          'Xác thực OTP',
+          style: TextStyle(color: kPrimaryDark, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: kBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: kPrimaryDark, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) {
@@ -52,13 +71,14 @@ class _OtpPageState extends State<OtpPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
-                  backgroundColor: theme.colorScheme.error,
+                  backgroundColor: Colors.redAccent,
                 ),
               );
             } else if (state is AuthUnauthenticated) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Xác thực thành công! Vui lòng đăng nhập.'),
+                  backgroundColor: Colors.green,
                 ),
               );
               Navigator.pushAndRemoveUntil(
@@ -72,68 +92,110 @@ class _OtpPageState extends State<OtpPage> {
             final isLoading = state is AuthLoading;
             return Center(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.mark_email_read_outlined,
-                      size: 72,
-                      color: theme.colorScheme.primary,
+                      size: 80,
+                      color: kPrimaryAccent,
                     ),
-                    const SizedBox(height: 20),
-                    Text(
+                    const SizedBox(height: 24),
+                    const Text(
                       'Kiểm tra email của bạn',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: kPrimaryDark,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Text(
                       'Chúng tôi đã gửi mã OTP 6 chữ số đến\n${widget.email}',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: kSubText,
+                        height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 40),
-                    TextFormField(
-                      controller: _otpCtrl,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      maxLength: 6,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        letterSpacing: 12,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 48),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
                       ),
-                      decoration: const InputDecoration(
-                        labelText: 'Mã OTP',
-                        border: OutlineInputBorder(),
-                        counterText: '',
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    FilledButton(
-                      onPressed: isLoading ? null : () => _onVerify(context),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _otpCtrl,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            maxLength: 6,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            style: const TextStyle(
+                              fontSize: 28,
+                              letterSpacing: 12,
+                              fontWeight: FontWeight.bold,
+                              color: kPrimaryDark,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Nhập mã OTP',
+                              labelStyle: const TextStyle(color: kSubText, fontSize: 14, letterSpacing: 0),
+                              floatingLabelAlignment: FloatingLabelAlignment.center,
+                              alignLabelWithHint: true,
+                              filled: true,
+                              fillColor: kBackground,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: kBorderColor),
                               ),
-                            )
-                          : const Text('Xác thực', style: TextStyle(fontSize: 16)),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: kBorderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
+                              ),
+                              counterText: '',
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: isLoading ? null : () => _onVerify(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kPrimaryAccent,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Xác thực ngay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

@@ -28,7 +28,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
-  String _role = 'USER'; // Default role
 
   @override
   void dispose() {
@@ -48,7 +47,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 email: _emailCtrl.text.trim(),
                 password: _passwordCtrl.text,
                 phoneNumber: _phoneCtrl.text.trim(),
-                role: _role,
+                role: 'USER',
               ),
             ),
           );
@@ -123,58 +122,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _buildRoleDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Bạn là ai?',
-          style: TextStyle(
-            color: kPrimaryDark,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InputDecorator(
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kBorderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kBorderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _role,
-              isExpanded: true,
-              icon: const Icon(Icons.expand_more, color: kSubText),
-              style: const TextStyle(fontSize: 15, color: kPrimaryDark, fontWeight: FontWeight.w500),
-              items: const [
-                DropdownMenuItem(value: 'USER', child: Text('Người thuê phòng')),
-                DropdownMenuItem(value: 'OWNER', child: Text('Chủ cho thuê')),
-              ],
-              onChanged: (val) {
-                if (val != null) setState(() => _role = val);
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
+    @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
@@ -273,9 +221,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           isPassword: true,
                           validator: (v) => v == null || v.length < 8 ? 'Mật khẩu ít nhất 8 ký tự' : null,
                         ),
-                        const SizedBox(height: 20),
-                        
-                        _buildRoleDropdown(),
                         const SizedBox(height: 32),
 
                         // Register Button
@@ -391,3 +336,4 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
+

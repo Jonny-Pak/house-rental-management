@@ -1,4 +1,4 @@
--- Bt extension PostGIS
+-- Bật extension PostGIS
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 1. Table users
@@ -10,7 +10,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     google_id VARCHAR(100) UNIQUE,
     avatar_url VARCHAR(255),
-    role VARCHAR(10) NOT NULL CHECK (role IN ('USER', 'ADMIN')),
+    role VARCHAR(10) NOT NULL CHECK (role IN ('USER', 'OWNER', 'ADMIN')),
     status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'LOCKED')),
     is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -32,30 +32,30 @@ CREATE TABLE administrative_areas (
     area_id BIGSERIAL PRIMARY KEY,
     area_name VARCHAR(150) NOT NULL,
     area_type VARCHAR(10),
-    boundary geometry(POLYGON, 4326), -- H ta  WGS 84 (chun Google Maps)
+    boundary geometry(POLYGON, 4326), -- Hệ tọa độ WGS 84 (chuẩn Google Maps)
     code VARCHAR(20),
     parent_id BIGINT REFERENCES administrative_areas(area_id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- To GiST index cho boundary
+-- Tạo GiST index cho boundary
 CREATE INDEX idx_areas_boundary ON administrative_areas USING GIST (boundary);
 CREATE INDEX idx_areas_parent_id ON administrative_areas(parent_id);
 CREATE INDEX idx_areas_type ON administrative_areas(area_type);
 
 -- 3.1. Seed administrative_areas
-INSERT INTO administrative_areas (area_id, area_name, area_type, code) VALUES (1, 'Thnh ph H Ch Minh', 'PROVINCE', 'SG');
+INSERT INTO administrative_areas (area_id, area_name, area_type, code) VALUES (1, 'Thành phố Hồ Chí Minh', 'PROVINCE', 'SG');
 
 INSERT INTO administrative_areas (area_id, area_name, area_type, code, parent_id) VALUES 
-(2, 'Qun 1', 'DISTRICT', 'Q1', 1),
-(3, 'Qun 7', 'DISTRICT', 'Q7', 1),
-(4, 'Thnh ph Th c', 'DISTRICT', 'TD', 1),
-(5, 'Qun Bnh Thnh', 'DISTRICT', 'BT', 1);
+(2, 'Quận 1', 'DISTRICT', 'Q1', 1),
+(3, 'Quận 7', 'DISTRICT', 'Q7', 1),
+(4, 'Thành phố Thủ Đức', 'DISTRICT', 'TD', 1),
+(5, 'Quận Bình Thạnh', 'DISTRICT', 'BT', 1);
 
 INSERT INTO administrative_areas (area_id, area_name, area_type, code, parent_id) VALUES 
-(6, 'Phng Bn Ngh', 'WARD', 'BN', 2),
-(7, 'Phng Bn Thnh', 'WARD', 'BTH', 2),
-(8, 'Phng a Kao', 'WARD', 'DK', 2);
+(6, 'Phường Bến Nghé', 'WARD', 'BN', 2),
+(7, 'Phường Bến Thành', 'WARD', 'BTH', 2),
+(8, 'Phường Đa Kao', 'WARD', 'DK', 2);
 
 SELECT setval('administrative_areas_area_id_seq', 8);
 
@@ -128,7 +128,7 @@ CREATE TABLE listings (
     rent_price DECIMAL(12,2) NOT NULL,
     area_sqm DECIMAL(6,2),
     address VARCHAR(255),
-    location geometry(POINT, 4326), -- H ta  WGS 84
+    location geometry(POINT, 4326), -- Hệ tọa độ WGS 84
     approval_status VARCHAR(15) NOT NULL DEFAULT 'PENDING' CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED')),
     rental_status VARCHAR(15) NOT NULL DEFAULT 'AVAILABLE' CHECK (rental_status IN ('AVAILABLE', 'RENTED')),
     rejection_reason VARCHAR(255),
