@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../membership/presentation/pages/membership_page.dart';
+import '../../../contract/presentation/pages/my_contracts_page.dart';
 import '../../../property/presentation/pages/property_browse_page.dart';
 
 // --- Design System Colors ---
@@ -155,9 +157,13 @@ class HomePage extends StatelessWidget {
                             }),
                             _buildFeatureItem(FontAwesomeIcons.plus, 'Đăng tin', Colors.teal, onTap: () {}),
                             _buildFeatureItem(FontAwesomeIcons.houseUser, 'Quản lý', Colors.deepOrange, onTap: () {}),
-                            _buildFeatureItem(FontAwesomeIcons.fileSignature, 'Hợp đồng', Colors.green, onTap: () {}),
+                            _buildFeatureItem(FontAwesomeIcons.fileSignature, 'Hợp đồng', Colors.green, onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const MyContractsPage(isLandlord: true)));
+                            }),
                             _buildFeatureItem(FontAwesomeIcons.fileInvoiceDollar, 'Hóa đơn', Colors.red, onTap: () {}),
-                            _buildFeatureItem(FontAwesomeIcons.gem, 'Dịch vụ', Colors.purple, onTap: () {}),
+                            _buildFeatureItem(FontAwesomeIcons.gem, 'Dịch vụ', Colors.purple, onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const MembershipPage()));
+                            }),
                             _buildFeatureItem(FontAwesomeIcons.solidHeart, 'Yêu thích', Colors.pink, onTap: () {}),
                           ],
                         ),
