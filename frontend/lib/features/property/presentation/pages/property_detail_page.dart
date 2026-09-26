@@ -29,13 +29,14 @@ class PropertyDetailPage extends StatelessWidget {
       create: (context) => PropertyDetailCubit(
         PropertyRepository(GetIt.I<ApiClient>()),
       )..fetchPropertyDetails(propertyId),
-      child: const PropertyDetailView(),
+      child: PropertyDetailView(propertyId: propertyId),
     );
   }
 }
 
 class PropertyDetailView extends StatelessWidget {
-  const PropertyDetailView({super.key});
+  final int propertyId;
+  const PropertyDetailView({super.key, required this.propertyId});
 
   String _propertyTypeLabel(String type) {
     switch (type) {
@@ -69,7 +70,7 @@ class PropertyDetailView extends StatelessWidget {
                     style: ElevatedButton.styleFrom(backgroundColor: kPrimaryAccent, foregroundColor: Colors.white),
                     onPressed: () => context
                         .read<PropertyDetailCubit>()
-                        .fetchPropertyDetails(context.read<PropertyDetailCubit>().state.property?.id ?? 0),
+                        .fetchPropertyDetails(propertyId),
                     child: const Text('Thử lại'),
                   ),
                 ],

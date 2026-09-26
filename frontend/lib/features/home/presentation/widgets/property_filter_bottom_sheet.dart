@@ -54,23 +54,23 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
         }
 
         if (init['provinceId'] != null) {
-          selectedProvince = provinces.firstWhere(
-            (p) => p.id == init['provinceId'],
-            orElse: () => provinces.first,
+          selectedProvince = provinces.cast<Province?>().firstWhere(
+            (p) => p?.id == init['provinceId'],
+            orElse: () => provinces.isNotEmpty ? provinces.first : null,
           );
           await _onProvinceChanged(selectedProvince);
           
           if (init['districtId'] != null) {
-            selectedDistrict = districts.firstWhere(
-              (d) => d.id == init['districtId'],
-              orElse: () => districts.first,
+            selectedDistrict = districts.cast<District?>().firstWhere(
+              (d) => d?.id == init['districtId'],
+              orElse: () => districts.isNotEmpty ? districts.first : null,
             );
             await _onDistrictChanged(selectedDistrict);
             
             if (init['wardId'] != null) {
-              selectedWard = wards.firstWhere(
-                (w) => w.id == init['wardId'],
-                orElse: () => wards.first,
+              selectedWard = wards.cast<Ward?>().firstWhere(
+                (w) => w?.id == init['wardId'],
+                orElse: () => wards.isNotEmpty ? wards.first : null,
               );
             }
           }
