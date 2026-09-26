@@ -261,7 +261,10 @@ class _HeroHeaderSliver extends StatelessWidget {
                           if (filters != null && context.mounted) {
                             context
                                 .read<HomeCubit>()
-                                .fetchProperties(filters.isEmpty ? null : filters);
+                                .fetchProperties(
+                                  filters: filters.isEmpty ? null : filters,
+                                  clearFilters: filters.isEmpty,
+                                );
                           }
                         },
                         child: Container(

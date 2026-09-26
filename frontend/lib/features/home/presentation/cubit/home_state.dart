@@ -21,12 +21,13 @@ class HomeState extends Equatable {
     List<PropertyModel>? properties,
     String? errorMessage,
     Map<String, dynamic>? filters,
+    bool clearFilters = false,
   }) {
     return HomeState(
       status: status ?? this.status,
       properties: properties ?? this.properties,
       errorMessage: errorMessage,
-      filters: filters ?? this.filters,
+      filters: clearFilters ? null : (filters ?? this.filters),
     );
   }
 

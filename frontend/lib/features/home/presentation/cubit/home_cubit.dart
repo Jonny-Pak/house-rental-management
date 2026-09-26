@@ -9,10 +9,16 @@ class HomeCubit extends Cubit<HomeState> {
     fetchProperties();
   }
 
-  Future<void> fetchProperties([Map<String, dynamic>? filters]) async {
-    emit(state.copyWith(status: HomeStatus.loading, filters: filters));
+  Future<void> fetchProperties({Map<String, dynamic>? filters, bool clearFilters = false}) async {
+    emit(state.copyWith(
+      status: HomeStatus.loading, 
+      filters: filters, 
+      clearFilters: clearFilters,
+      errorMessage: null, // Clear error on retry
+    ));
     try {
-      final properties = await _repository.fetchProperties(filters: filters);
+      final currentFilters = clearFilters ? null : (filters ?? state.filters);
+      final properties = await _repository.fetchProperties(filters: currentFilters);
       emit(state.copyWith(
         status: HomeStatus.success,
         properties: properties,

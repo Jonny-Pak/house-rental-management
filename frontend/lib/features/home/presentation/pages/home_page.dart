@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../membership/presentation/pages/membership_page.dart';
 import '../../../contract/presentation/pages/my_contracts_page.dart';
+import '../../../map/presentation/pages/map_page.dart';
 import '../../../property/presentation/pages/property_browse_page.dart';
 
 // --- Design System Colors ---
@@ -150,7 +151,7 @@ class HomePage extends StatelessWidget {
                           crossAxisSpacing: 8,
                           children: [
                             _buildFeatureItem(FontAwesomeIcons.house, 'Thuê nhà', Colors.blue, onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PropertyBrowsePage(propertyType: 'HOUSE', title: 'Thuê nhà')));
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const PropertyBrowsePage(propertyType: 'WHOLE_HOUSE', title: 'Thuê nhà')));
                             }),
                             _buildFeatureItem(FontAwesomeIcons.building, 'Thuê phòng trọ', Colors.orange, onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const PropertyBrowsePage(propertyType: 'BOARDING_HOUSE', title: 'Thuê phòng trọ')));
@@ -164,7 +165,9 @@ class HomePage extends StatelessWidget {
                             _buildFeatureItem(FontAwesomeIcons.gem, 'Dịch vụ', Colors.purple, onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const MembershipPage()));
                             }),
-                            _buildFeatureItem(FontAwesomeIcons.solidHeart, 'Yêu thích', Colors.pink, onTap: () {}),
+                            _buildFeatureItem(FontAwesomeIcons.map, 'Bản đồ', Colors.teal, onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const MapPage()));
+                            }),
                           ],
                         ),
                       ),
