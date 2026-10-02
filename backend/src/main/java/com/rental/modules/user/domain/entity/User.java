@@ -1,4 +1,4 @@
-﻿package com.rental.modules.user.domain.entity;
+package com.rental.modules.user.domain.entity;
 
 import com.rental.modules.user.domain.enums.Role;
 import com.rental.modules.user.domain.enums.UserStatus;

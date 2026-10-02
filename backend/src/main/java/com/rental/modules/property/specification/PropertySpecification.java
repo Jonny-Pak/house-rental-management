@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.specification;
+package com.rental.modules.property.specification;
 
 import com.rental.modules.property.domain.entity.Property;
 import com.rental.modules.property.domain.entity.Room;

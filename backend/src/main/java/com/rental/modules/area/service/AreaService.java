@@ -1,4 +1,4 @@
-﻿package com.rental.modules.area.service;
+package com.rental.modules.area.service;
 
 import com.rental.modules.area.domain.entity.AdministrativeArea;
 import com.rental.modules.area.dto.DistrictDto;

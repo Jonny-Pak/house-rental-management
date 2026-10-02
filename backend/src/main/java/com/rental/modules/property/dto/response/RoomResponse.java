@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.dto.response;
+package com.rental.modules.property.dto.response;
 
 import lombok.Builder;
 import lombok.Data;

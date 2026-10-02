@@ -1,4 +1,4 @@
-﻿package com.rental.modules.area.domain.entity;
+package com.rental.modules.area.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

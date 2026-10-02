@@ -1,4 +1,4 @@
-﻿package com.rental.modules.area.dto;
+package com.rental.modules.area.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

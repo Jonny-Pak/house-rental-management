@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.repository;
+package com.rental.modules.property.repository;
 
 import com.rental.modules.property.domain.entity.Room;
 import org.springframework.data.jpa.repository.JpaRepository;

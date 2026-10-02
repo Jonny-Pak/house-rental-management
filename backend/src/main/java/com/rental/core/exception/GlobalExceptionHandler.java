@@ -1,4 +1,4 @@
-﻿package com.rental.core.exception;
+package com.rental.core.exception;
 
 import com.rental.modules.user.dto.response.ApiResponse;
 import org.springframework.http.HttpStatus;
