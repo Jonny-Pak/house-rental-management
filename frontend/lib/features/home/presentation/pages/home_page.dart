@@ -4,6 +4,7 @@ import '../../../membership/presentation/pages/membership_page.dart';
 import '../../../contract/presentation/pages/my_contracts_page.dart';
 import '../../../map/presentation/pages/map_page.dart';
 import '../../../property/presentation/pages/property_browse_page.dart';
+import '../../../listing/presentation/pages/create_listing_page.dart';
 
 // --- Design System Colors ---
 const kPrimaryDark   = Color(0xFF2C1D11); // Brown
@@ -156,7 +157,9 @@ class HomePage extends StatelessWidget {
                             _buildFeatureItem(FontAwesomeIcons.building, 'Thuê phòng trọ', Colors.orange, onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const PropertyBrowsePage(propertyType: 'BOARDING_HOUSE', title: 'Thuê phòng trọ')));
                             }),
-                            _buildFeatureItem(FontAwesomeIcons.plus, 'Đăng tin', Colors.teal, onTap: () {}),
+                            _buildFeatureItem(FontAwesomeIcons.plus, 'Đăng tin', Colors.teal, onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateListingPage()));
+                            }),
                             _buildFeatureItem(FontAwesomeIcons.houseUser, 'Quản lý', Colors.deepOrange, onTap: () {}),
                             _buildFeatureItem(FontAwesomeIcons.fileSignature, 'Hợp đồng', Colors.green, onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const MyContractsPage(isLandlord: true)));

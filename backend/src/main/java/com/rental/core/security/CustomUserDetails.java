@@ -1,4 +1,4 @@
-﻿package com.rental.core.security;
+package com.rental.core.security;
 
 import com.rental.modules.user.domain.entity.User;
 import lombok.RequiredArgsConstructor;

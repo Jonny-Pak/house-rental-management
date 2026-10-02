@@ -1,4 +1,4 @@
-﻿package com.rental.modules.media.controller;
+package com.rental.modules.media.controller;
 
 import com.rental.modules.media.service.ImageService;
 import com.rental.modules.user.dto.response.ApiResponse;

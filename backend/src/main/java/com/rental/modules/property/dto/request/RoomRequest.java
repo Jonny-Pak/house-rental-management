@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.dto.request;
+package com.rental.modules.property.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

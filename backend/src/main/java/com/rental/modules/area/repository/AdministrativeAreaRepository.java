@@ -1,4 +1,4 @@
-﻿package com.rental.modules.area.repository;
+package com.rental.modules.area.repository;
 
 import com.rental.modules.area.domain.entity.AdministrativeArea;
 import org.springframework.data.jpa.repository.JpaRepository;

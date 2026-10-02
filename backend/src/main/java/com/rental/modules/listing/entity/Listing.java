@@ -58,6 +58,33 @@ public class Listing {
     @Column(columnDefinition = "geometry(Point,4326)")
     private Point location;
 
+    @Column(name = "house_type", length = 50)
+    private String houseType;
+
+    @Column(name = "bedrooms")
+    private Integer bedrooms;
+
+    @Column(name = "bathrooms")
+    private Integer bathrooms;
+
+    @Column(name = "total_floors")
+    private Integer totalFloors;
+
+    @Column(name = "door_direction", length = 50)
+    private String doorDirection;
+
+    @Column(name = "legal_documents", length = 100)
+    private String legalDocuments;
+
+    @Column(name = "furniture_status", length = 50)
+    private String furnitureStatus;
+
+    @Column(name = "deposit_amount", precision = 12, scale = 2)
+    private BigDecimal depositAmount;
+
+    @Column(name = "poster_type", length = 20)
+    private String posterType;
+
     @Column(name = "approval_status", nullable = false, length = 15)
     @Builder.Default
     private String approvalStatus = "PENDING";

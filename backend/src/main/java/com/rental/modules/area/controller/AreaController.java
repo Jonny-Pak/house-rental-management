@@ -1,4 +1,4 @@
-﻿package com.rental.modules.area.controller;
+package com.rental.modules.area.controller;
 
 import com.rental.modules.area.dto.DistrictDto;
 import com.rental.modules.area.dto.ProvinceDto;

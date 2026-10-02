@@ -7,6 +7,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.rental.modules.listing.dto.request.CreateListingRequest;
+import com.rental.modules.listing.dto.response.ListingResponse;
+import com.rental.modules.user.domain.entity.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/listings")
@@ -32,5 +37,13 @@ public class ListingController {
                 minLat, minLng, maxLat, maxLng);
 
         return ResponseEntity.ok(results);
+    }
+    @PostMapping
+    public ResponseEntity<ListingResponse> createListing(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody CreateListingRequest request) {
+        
+        ListingResponse response = listingService.createListing(user.getId(), request);
+        return ResponseEntity.status(201).body(response);
     }
 }

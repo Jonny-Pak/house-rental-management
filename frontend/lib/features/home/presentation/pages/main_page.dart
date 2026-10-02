@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../user/presentation/pages/profile_page.dart';
+import '../../../listing/presentation/pages/create_listing_page.dart';
 import 'home_page.dart';
 
 // --- Design System Colors ---
@@ -32,17 +33,17 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       backgroundColor: kBackground,
       body: _pages[_currentIndex],
-      // floatingActionButton: _currentIndex == 0 ? FloatingActionButton(
-      //   onPressed: () {
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(builder: (context) => const CreatePropertyPage()),
-      //     );
-      //   },
-      //   tooltip: 'Đăng tin mới',
-      //   backgroundColor: kPrimaryAccent,
-      //   child: const FaIcon(FontAwesomeIcons.plus, color: Colors.white),
-      // ) : null,
+      floatingActionButton: _currentIndex == 0 ? FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CreateListingPage()),
+          );
+        },
+        tooltip: 'Đăng tin mới',
+        backgroundColor: kPrimaryAccent,
+        child: const FaIcon(FontAwesomeIcons.plus, color: Colors.white),
+      ) : null,
       bottomNavigationBar: _buildCustomBottomNav(),
     );
   }

@@ -1,4 +1,4 @@
-﻿package com.rental.modules.property.controller;
+package com.rental.modules.property.controller;
 
 import com.rental.modules.property.dto.request.RoomRequest;
 import com.rental.modules.property.dto.response.RoomResponse;
