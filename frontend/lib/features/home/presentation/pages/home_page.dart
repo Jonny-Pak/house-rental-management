@@ -64,8 +64,10 @@ class HomePage extends StatelessWidget {
             children: [
               // Menu button
               GestureDetector(
-                onTap: () {},
-                child: const Icon(Icons.menu, color: Colors.white, size: 28),
+                onTap: () {
+                  Scaffold.of(context).openDrawer();
+                },
+                child: const Icon(Symbols.menu, color: Colors.white, size: 28, weight: 600),
               ),
               const SizedBox(width: 12),
               // Search bar
@@ -133,7 +135,10 @@ class HomePage extends StatelessWidget {
           // Orange background top portion
           Container(
             height: 60,
-            color: kOrange,
+            decoration: const BoxDecoration(
+              color: kOrange,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+            ),
           ),
           // White card
           Container(

@@ -26,17 +26,8 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) {
-        // Typically dependencies are injected via get_it or similar, but for simplicity:
-        final apiClient = ApiClient();
-        final remoteDataSource = UserRemoteDataSourceImpl(apiClient);
-        final repository = UserRepositoryImpl(remoteDataSource);
-        
-        return ProfileBloc(repository)..add(FetchProfileEvent());
-      },
-      child: const ProfileView(),
-    );
+    // ProfileBloc is now provided globally from MainPage
+    return const ProfileView();
   }
 }
 

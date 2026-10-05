@@ -8,15 +8,28 @@ import '../../data/repositories/membership_repository.dart';
 import '../bloc/membership_cubit.dart';
 import '../bloc/membership_state.dart';
 
+import '../../../payment/data/repositories/payment_repository.dart';
+import '../../../payment/presentation/cubit/payment_cubit.dart';
+import '../../../payment/presentation/cubit/payment_state.dart';
+
 class MembershipPage extends StatelessWidget {
   const MembershipPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => MembershipCubit(
-        repository: MembershipRepository(ApiClient()),
-      )..fetchPackages(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => MembershipCubit(
+            repository: MembershipRepository(ApiClient()),
+          )..fetchPackages(),
+        ),
+        BlocProvider(
+          create: (context) => PaymentCubit(
+            repository: PaymentRepository(ApiClient()),
+          ),
+        ),
+      ],
       child: const MembershipView(),
     );
   }
@@ -42,36 +55,61 @@ class MembershipView extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: kPrimaryDark),
       ),
-      body: BlocBuilder<MembershipCubit, MembershipState>(
-        builder: (context, state) {
-          if (state is MembershipLoading || state is MembershipInitial) {
-            return const Center(child: CircularProgressIndicator(color: kAccentOrange));
-          } else if (state is MembershipError) {
-            return Center(child: Text('Lỗi: ${state.message}', style: const TextStyle(color: Colors.red)));
-          } else if (state is MembershipLoaded) {
-            final packages = state.packages;
-            if (packages.isEmpty) {
-              return const Center(child: Text('Chưa có gói dịch vụ nào.'));
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: packages.length,
-              itemBuilder: (context, index) {
-                final package = packages[index];
-                final isVip = package.packageName.toLowerCase().contains('vip') || package.packageName.toLowerCase().contains('pro');
-                
-                return _buildPackageCard(package, isVip, kPrimaryDark, kAccentOrange);
-              },
+      body: BlocConsumer<PaymentCubit, PaymentState>(
+        listener: (context, state) {
+          if (state is PaymentError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message, style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red),
             );
+          } else if (state is PaymentSuccess) {
+             // You can show a message or wait for deep link
           }
-          return const SizedBox.shrink();
+        },
+        builder: (context, paymentState) {
+          return Stack(
+            children: [
+              BlocBuilder<MembershipCubit, MembershipState>(
+                builder: (context, state) {
+                  if (state is MembershipLoading || state is MembershipInitial) {
+                    return const Center(child: CircularProgressIndicator(color: kAccentOrange));
+                  } else if (state is MembershipError) {
+                    return Center(child: Text('Lỗi: ${state.message}', style: const TextStyle(color: Colors.red)));
+                  } else if (state is MembershipLoaded) {
+                    final packages = state.packages;
+                    if (packages.isEmpty) {
+                      return const Center(child: Text('Chưa có gói dịch vụ nào.'));
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: packages.length,
+                      itemBuilder: (context, index) {
+                        final package = packages[index];
+                        final isVip = package.packageName.toLowerCase().contains('vip') || package.packageName.toLowerCase().contains('pro');
+                        
+                        return _buildPackageCard(context, package, isVip, kPrimaryDark, kAccentOrange);
+                      },
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              if (paymentState is PaymentLoading)
+                Container(
+                  color: Colors.black54,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: kAccentOrange),
+                  ),
+                ),
+            ],
+          );
         },
       ),
     );
   }
 
   Widget _buildPackageCard(
+    BuildContext context,
     MembershipPackage package, 
     bool isVip, 
     Color primaryDark, 
@@ -87,7 +125,7 @@ class MembershipView extends StatelessWidget {
         border: isVip ? Border.all(color: accentOrange, width: 2) : Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -147,7 +185,7 @@ class MembershipView extends StatelessWidget {
                       elevation: 0,
                     ),
                     onPressed: () {
-                      // Handle buy action
+                      context.read<PaymentCubit>().initiatePayment(package.id);
                     },
                     child: const Text(
                       'Mua ngay',
