@@ -6,9 +6,9 @@ import com.rental.modules.listing.dto.response.MapListingResponse;
 import com.rental.modules.listing.entity.Listing;
 import com.rental.modules.listing.repository.ListingRepository;
 import com.rental.modules.area.domain.entity.AdministrativeArea;
-import com.rental.modules.area.domain.repository.AdministrativeAreaRepository;
+import com.rental.modules.area.repository.AdministrativeAreaRepository;
 import com.rental.modules.user.domain.entity.User;
-import com.rental.modules.user.domain.repository.UserRepository;
+import com.rental.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -129,8 +129,8 @@ public class ListingService {
                 .address(listing.getAddress())
                 .latitude(listing.getLocation() != null ? listing.getLocation().getY() : null)
                 .longitude(listing.getLocation() != null ? listing.getLocation().getX() : null)
-                .ownerId(listing.getOwner().getId())
-                .areaId(listing.getArea().getId())
+                .ownerId(listing.getOwner().getUserId())
+                .areaId(listing.getArea().getAreaId())
                 .approvalStatus(listing.getApprovalStatus())
                 .rentalStatus(listing.getRentalStatus())
                 .isVip(listing.getIsVip())
