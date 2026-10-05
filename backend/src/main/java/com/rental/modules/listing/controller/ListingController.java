@@ -43,7 +43,7 @@ public class ListingController {
             @AuthenticationPrincipal User user,
             @Valid @RequestBody CreateListingRequest request) {
         
-        ListingResponse response = listingService.createListing(user.getId(), request);
+        ListingResponse response = listingService.createListing(user.getUserId(), request);
         return ResponseEntity.status(201).body(response);
     }
 }

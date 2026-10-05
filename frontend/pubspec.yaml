@@ -48,6 +48,7 @@ dependencies:
   font_awesome_flutter: ^11.0.0
   geolocator: ^14.1.1
   geocoding: ^5.0.0
+  material_symbols_icons: ^4.2960.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
