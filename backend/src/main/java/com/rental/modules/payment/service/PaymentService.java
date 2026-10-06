@@ -47,13 +47,39 @@ public class PaymentService {
                 .amount(membershipPackage.getPrice())
                 .vnpayTransactionRef(vnp_TxnRef)
                 .status("PENDING")
-                .paymentMethod("VNPAY")
+                .paymentMethod(membershipPackage.getPrice().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : "VNPAY")
                 .transactionDate(LocalDateTime.now())
                 .build();
         
         paymentTransactionRepository.save(transaction);
 
         long amount = membershipPackage.getPrice().multiply(new BigDecimal(100)).longValue();
+
+        if (amount == 0) {
+            // Free package, grant immediately
+            transaction.setStatus("SUCCESS");
+            paymentTransactionRepository.save(transaction);
+            
+            UserSubscription subscription = userSubscriptionRepository.findByUser(user)
+                    .orElse(new UserSubscription());
+            subscription.setUser(user);
+            subscription.setMembershipPackage(membershipPackage);
+            subscription.setPurchasedAt(LocalDateTime.now());
+            subscription.setRemainingStandardQuota(
+                    (subscription.getRemainingStandardQuota() != null ? subscription.getRemainingStandardQuota() : 0)
+                            + membershipPackage.getStandardPostQuota());
+            subscription.setRemainingVipQuota(
+                    (subscription.getRemainingVipQuota() != null ? subscription.getRemainingVipQuota() : 0)
+                            + membershipPackage.getVipPostQuota());
+            subscription.setRemainingRefreshQuota(
+                    (subscription.getRemainingRefreshQuota() != null ? subscription.getRemainingRefreshQuota() : 0)
+                            + membershipPackage.getRefreshQuota());
+            subscription.setStatus("ACTIVE");
+            subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
+            userSubscriptionRepository.save(subscription);
+
+            return "FREE_SUCCESS";
+        }
 
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", "2.1.0");
@@ -62,7 +88,6 @@ public class PaymentService {
         vnp_Params.put("vnp_Amount", String.valueOf(amount));
         vnp_Params.put("vnp_CurrCode", "VND");
         
-        // Use vnp_TxnRef as both Bank and Transaction Ref
         vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
         vnp_Params.put("vnp_OrderInfo", "Payment for Package ID " + packageId + " by User " + user.getUserId());
         vnp_Params.put("vnp_OrderType", "other");
@@ -88,25 +113,29 @@ public class PaymentService {
         Collections.sort(fieldNames);
         StringBuilder hashData = new StringBuilder();
         StringBuilder query = new StringBuilder();
-        Iterator<String> itr = fieldNames.iterator();
-        while (itr.hasNext()) {
-            String fieldName = itr.next();
-            String fieldValue = vnp_Params.get(fieldName);
-            if ((fieldValue != null) && (fieldValue.length() > 0)) {
-                hashData.append(fieldName);
-                hashData.append('=');
-                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                
-                query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII));
-                query.append('=');
-                query.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                if (itr.hasNext()) {
-                    query.append('&');
-                    hashData.append('&');
+        try {
+            Iterator<String> itr = fieldNames.iterator();
+            while (itr.hasNext()) {
+                String fieldName = itr.next();
+                String fieldValue = vnp_Params.get(fieldName);
+                if ((fieldValue != null) && (fieldValue.length() > 0)) {
+                    hashData.append(fieldName);
+                    hashData.append('=');
+                    hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                    
+                    query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()));
+                    query.append('=');
+                    query.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                    if (itr.hasNext()) {
+                        query.append('&');
+                        hashData.append('&');
+                    }
                 }
             }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        
+
         String queryUrl = query.toString();
         String vnp_SecureHash = vnPayConfig.hmacSHA512(vnPayConfig.getVnp_HashSecret(), hashData.toString());
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
@@ -115,86 +144,76 @@ public class PaymentService {
     }
 
     @Transactional
-    public boolean processVnPayReturn(Map<String, String> fields) {
-        String vnp_SecureHash = fields.remove("vnp_SecureHash");
-        fields.remove("vnp_SecureHashType");
+    public boolean processVnPayReturn(Map<String, String> vnpayParams) {
+        String vnp_SecureHash = vnpayParams.get("vnp_SecureHash");
+        vnpayParams.remove("vnp_SecureHash");
+        vnpayParams.remove("vnp_SecureHashType");
 
-        List<String> fieldNames = new ArrayList<>(fields.keySet());
+        List<String> fieldNames = new ArrayList<>(vnpayParams.keySet());
         Collections.sort(fieldNames);
         StringBuilder hashData = new StringBuilder();
-        Iterator<String> itr = fieldNames.iterator();
-        while (itr.hasNext()) {
-            String fieldName = itr.next();
-            String fieldValue = fields.get(fieldName);
-            if ((fieldValue != null) && (fieldValue.length() > 0)) {
-                hashData.append(fieldName);
-                hashData.append('=');
-                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                if (itr.hasNext()) {
-                    hashData.append('&');
+        try {
+            Iterator<String> itr = fieldNames.iterator();
+            while (itr.hasNext()) {
+                String fieldName = itr.next();
+                String fieldValue = vnpayParams.get(fieldName);
+                if ((fieldValue != null) && (fieldValue.length() > 0)) {
+                    hashData.append(fieldName);
+                    hashData.append('=');
+                    hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+                    if (itr.hasNext()) {
+                        hashData.append('&');
+                    }
                 }
             }
+        } catch (Exception e) {
+            return false;
         }
-        
+
         String signValue = vnPayConfig.hmacSHA512(vnPayConfig.getVnp_HashSecret(), hashData.toString());
         if (!signValue.equals(vnp_SecureHash)) {
             return false;
         }
 
-        String txnRef = fields.get("vnp_TxnRef");
-        String responseCode = fields.get("vnp_ResponseCode");
+        String vnp_TxnRef = vnpayParams.get("vnp_TxnRef");
+        PaymentTransaction transaction = paymentTransactionRepository.findByVnpayTransactionRef(vnp_TxnRef)
+                .orElse(null);
 
-        PaymentTransaction transaction = paymentTransactionRepository.findByVnpayTransactionRef(txnRef)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
-
-        if (!"PENDING".equals(transaction.getStatus())) {
-            return "00".equals(responseCode) && "SUCCESS".equals(transaction.getStatus());
+        if (transaction == null) {
+            return false;
         }
 
+        String responseCode = vnpayParams.get("vnp_ResponseCode");
         if ("00".equals(responseCode)) {
             transaction.setStatus("SUCCESS");
-            
-            // Extract packageId from txnRef: packageId_userId_timestamp
-            String[] parts = txnRef.split("_");
-            Short packageId = Short.parseShort(parts[0]);
-            
-            MembershipPackage membershipPackage = membershipPackageRepository.findById(packageId)
-                    .orElseThrow(() -> new RuntimeException("Package not found"));
-            
-            User user = transaction.getUser();
-            
-            UserSubscription subscription = userSubscriptionRepository.findByUser(user).orElse(null);
-            
-            if (subscription == null) {
-                subscription = UserSubscription.builder()
-                        .user(user)
-                        .membershipPackage(membershipPackage)
-                        .remainingStandardQuota(membershipPackage.getStandardPostQuota())
-                        .remainingVipQuota(membershipPackage.getVipPostQuota())
-                        .remainingRefreshQuota(membershipPackage.getRefreshQuota())
-                        .status("ACTIVE")
-                        .purchasedAt(LocalDateTime.now())
-                        .quotaResetAt(LocalDateTime.now().plusDays(30))
-                        .build();
-            } else {
-                subscription.setMembershipPackage(membershipPackage);
-                
-                short std = subscription.getRemainingStandardQuota() != null ? subscription.getRemainingStandardQuota() : 0;
-                short vip = subscription.getRemainingVipQuota() != null ? subscription.getRemainingVipQuota() : 0;
-                short ref = subscription.getRemainingRefreshQuota() != null ? subscription.getRemainingRefreshQuota() : 0;
-                
-                subscription.setRemainingStandardQuota((short) (std + membershipPackage.getStandardPostQuota()));
-                subscription.setRemainingVipQuota((short) (vip + membershipPackage.getVipPostQuota()));
-                subscription.setRemainingRefreshQuota((short) (ref + membershipPackage.getRefreshQuota()));
-                subscription.setStatus("ACTIVE");
-                subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
-                subscription.setPurchasedAt(LocalDateTime.now());
-            }
-            
-            userSubscriptionRepository.save(subscription);
-            transaction.setSubscription(subscription);
             paymentTransactionRepository.save(transaction);
             
+            String[] parts = vnp_TxnRef.split("_");
+            if (parts.length >= 2) {
+                Short packageId = Short.parseShort(parts[0]);
+                MembershipPackage pkg = membershipPackageRepository.findById(packageId).orElse(null);
+                if (pkg != null) {
+                    UserSubscription subscription = userSubscriptionRepository.findByUser(transaction.getUser())
+                            .orElse(new UserSubscription());
+                    subscription.setUser(transaction.getUser());
+                    subscription.setMembershipPackage(pkg);
+                    subscription.setPurchasedAt(LocalDateTime.now());
+                    
+                    subscription.setRemainingStandardQuota(
+                            (subscription.getRemainingStandardQuota() != null ? subscription.getRemainingStandardQuota() : 0)
+                                    + pkg.getStandardPostQuota());
+                    subscription.setRemainingVipQuota(
+                            (subscription.getRemainingVipQuota() != null ? subscription.getRemainingVipQuota() : 0)
+                                    + pkg.getVipPostQuota());
+                    subscription.setRemainingRefreshQuota(
+                            (subscription.getRemainingRefreshQuota() != null ? subscription.getRemainingRefreshQuota() : 0)
+                                    + pkg.getRefreshQuota());
+                                    
+                    subscription.setStatus("ACTIVE");
+                    subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
+                    userSubscriptionRepository.save(subscription);
+                }
+            }
             return true;
         } else {
             transaction.setStatus("FAILED");

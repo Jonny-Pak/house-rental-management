@@ -10,9 +10,8 @@ String get _baseUrl {
     return 'http://localhost:8080/api/v1';
   }
   if (defaultTargetPlatform == TargetPlatform.android) {
-    // 10.0.2.2 only works for Android Emulator. 
-    // Using your current Wi-Fi IP (192.168.100.72) for physical device (Mi Note 10 Lite)
-    return 'http://192.168.100.72:8080/api/v1';
+    // Sử dụng 127.0.0.1 kết hợp với adb reverse để không lo bị tường lửa hay đổi IP Wi-Fi chặn
+    return 'http://127.0.0.1:8080/api/v1';
   }
   return 'http://localhost:8080/api/v1';
 }

@@ -26,6 +26,14 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
 
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = [
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+  ];
+
   final List<Widget> _pages = [
     const HomePage(),
     const Center(child: Text('Yêu thích', style: TextStyle(fontSize: 24, color: _kBlack))),
@@ -34,25 +42,52 @@ class _MainPageState extends State<MainPage> {
     const ProfilePage(),
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) {
-        final apiClient = GetIt.I<ApiClient>();
-        final remoteDataSource = UserRemoteDataSourceImpl(apiClient);
-        final repository = UserRepositoryImpl(remoteDataSource);
-        return ProfileBloc(repository)..add(FetchProfileEvent());
+  Widget _buildNavigator(int index) {
+    return Navigator(
+      key: _navigatorKeys[index],
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(builder: (context) => _pages[index]);
       },
-      child: Scaffold(
-        extendBody: true,
-        backgroundColor: const Color(0xFFF5F5F5),
-        drawer: _buildDrawer(context),
-        body: _pages[_currentIndex],
-        bottomNavigationBar: _buildBottomNav(),
-      ),
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final isFirstRouteInCurrentTab = !await _navigatorKeys[_currentIndex].currentState!.maybePop();
+        if (isFirstRouteInCurrentTab) {
+          if (_currentIndex != 0) {
+            setState(() {
+              _currentIndex = 0;
+            });
+          } else {
+            // Let system handle exit
+          }
+        }
+      },
+      child: BlocProvider(
+        create: (context) {
+          final apiClient = GetIt.I<ApiClient>();
+          final remoteDataSource = UserRemoteDataSourceImpl(apiClient);
+          final repository = UserRepositoryImpl(remoteDataSource);
+          return ProfileBloc(repository)..add(FetchProfileEvent());
+        },
+        child: Scaffold(
+          extendBody: true,
+          backgroundColor: const Color(0xFFF5F5F5),
+          drawer: _buildDrawer(context),
+          body: IndexedStack(
+            index: _currentIndex,
+            children: List.generate(5, (index) => _buildNavigator(index)),
+          ),
+          bottomNavigationBar: _buildBottomNav(),
+        ),
+      ),
+    );
+  }
   Widget _buildDrawerItem({
     required BuildContext context,
     required IconData icon,

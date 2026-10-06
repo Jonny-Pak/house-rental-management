@@ -40,21 +40,11 @@ class MembershipView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const kPrimaryDark = Color(0xFF2C1D11);
-    const kAccentOrange = Color(0xFFD85D15);
-    const kBackground = Color(0xFFFAF8F5);
+    const kAccentOrange = Color(0xFFF67522);
+    const kBackground = Color(0xFFF9F9F9);
 
     return Scaffold(
       backgroundColor: kBackground,
-      appBar: AppBar(
-        title: const Text(
-          'Bảng giá dịch vụ',
-          style: TextStyle(color: kPrimaryDark, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: kBackground,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: kPrimaryDark),
-      ),
       body: BlocConsumer<PaymentCubit, PaymentState>(
         listener: (context, state) {
           if (state is PaymentError) {
@@ -62,37 +52,74 @@ class MembershipView extends StatelessWidget {
               SnackBar(content: Text(state.message, style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red),
             );
           } else if (state is PaymentSuccess) {
-             // You can show a message or wait for deep link
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Đăng ký gói thành công!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
+            );
+            if (state.paymentUrl == 'FREE_SUCCESS') {
+              Future.delayed(const Duration(seconds: 1), () {
+                if (context.mounted) Navigator.pop(context);
+              });
+            }
           }
         },
         builder: (context, paymentState) {
           return Stack(
             children: [
-              BlocBuilder<MembershipCubit, MembershipState>(
-                builder: (context, state) {
-                  if (state is MembershipLoading || state is MembershipInitial) {
-                    return const Center(child: CircularProgressIndicator(color: kAccentOrange));
-                  } else if (state is MembershipError) {
-                    return Center(child: Text('Lỗi: ${state.message}', style: const TextStyle(color: Colors.red)));
-                  } else if (state is MembershipLoaded) {
-                    final packages = state.packages;
-                    if (packages.isEmpty) {
-                      return const Center(child: Text('Chưa có gói dịch vụ nào.'));
-                    }
+              Column(
+                children: [
+                  _buildHeader(context, kAccentOrange),
+                  Expanded(
+                    child: BlocBuilder<MembershipCubit, MembershipState>(
+                      builder: (context, state) {
+                        if (state is MembershipLoading || state is MembershipInitial) {
+                          return const Center(child: CircularProgressIndicator(color: kAccentOrange));
+                        } else if (state is MembershipError) {
+                          return Center(child: Text('Lỗi: ${state.message}', style: const TextStyle(color: Colors.red)));
+                        } else if (state is MembershipLoaded) {
+                          final uniquePackages = <int, MembershipPackage>{};
+                          for (var p in state.packages) {
+                            uniquePackages[p.id] = p;
+                          }
+                          final packages = uniquePackages.values.toList()..sort((a, b) => a.price.compareTo(b.price));
+                          if (packages.isEmpty) {
+                            return const Center(child: Text('Chưa có gói dịch vụ nào.'));
+                          }
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(16.0),
-                      itemCount: packages.length,
-                      itemBuilder: (context, index) {
-                        final package = packages[index];
-                        final isVip = package.packageName.toLowerCase().contains('vip') || package.packageName.toLowerCase().contains('pro');
-                        
-                        return _buildPackageCard(context, package, isVip, kPrimaryDark, kAccentOrange);
+                          return ListView(
+                            padding: EdgeInsets.zero,
+                            children: [
+                              const SizedBox(height: 24),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                child: RichText(
+                                  textAlign: TextAlign.center,
+                                  text: const TextSpan(
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      height: 1.4,
+                                    ),
+                                    children: [
+                                      TextSpan(text: 'Nâng cấp để tận hưởng nhiều đặc\nquyền và quyền lợi hơn của '),
+                                      TextSpan(text: 'NhaTot', style: TextStyle(color: kAccentOrange)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ...packages.map((package) {
+                                return _buildPackageCard(context, package, kAccentOrange);
+                              }),
+                              const SizedBox(height: 40),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
                       },
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
+                    ),
+                  ),
+                ],
               ),
               if (paymentState is PaymentLoading)
                 Container(
@@ -108,131 +135,147 @@ class MembershipView extends StatelessWidget {
     );
   }
 
-  Widget _buildPackageCard(
-    BuildContext context,
-    MembershipPackage package, 
-    bool isVip, 
-    Color primaryDark, 
-    Color accentOrange,
-  ) {
-    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-
+  Widget _buildHeader(BuildContext context, Color accentOrange) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isVip ? Border.all(color: accentOrange, width: 2) : Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 20,
+        left: 16,
+        right: 16,
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      decoration: BoxDecoration(
+        color: accentOrange,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  package.packageName,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isVip ? accentOrange : primaryDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  currencyFormatter.format(package.price),
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: primaryDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (package.description != null && package.description!.isNotEmpty) ...[
-                  Text(
-                    package.description!,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                const Divider(),
-                const SizedBox(height: 16),
-                _buildFeatureRow('Tin thường: ${package.standardPostQuota} tin', accentOrange),
-                const SizedBox(height: 12),
-                _buildFeatureRow('Tin VIP: ${package.vipPostQuota} tin', accentOrange),
-                const SizedBox(height: 12),
-                _buildFeatureRow('Lượt làm mới: ${package.refreshQuota} lượt', accentOrange),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isVip ? accentOrange : primaryDark,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      context.read<PaymentCubit>().initiatePayment(package.id);
-                    },
-                    child: const Text(
-                      'Mua ngay',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           ),
-          if (isVip)
-            Positioned(
-              top: -12,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accentOrange,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Phổ biến',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          const Expanded(
+            child: Text(
+              'Gói dịch vụ',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
+          ),
+          const SizedBox(width: 28),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureRow(String text, Color iconColor) {
-    return Row(
-      children: [
-        Icon(Icons.check_circle_rounded, color: iconColor, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 15, color: Colors.black87),
-          ),
+  Widget _buildPackageCard(
+    BuildContext context,
+    MembershipPackage package, 
+    Color accentOrange,
+  ) {
+    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentOrange, width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              package.packageName,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${currencyFormatter.format(package.price)} / vĩnh viễn',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Divider(color: accentOrange, thickness: 1.5),
+            const SizedBox(height: 16),
+            const Text(
+              'Quyền lợi:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (package.standardPostQuota > 0)
+              _buildFeatureRow('${package.standardPostQuota} tin đăng thường'),
+            if (package.vipPostQuota > 0)
+              _buildFeatureRow('${package.vipPostQuota} tin đăng VIP'),
+            if (package.refreshQuota > 0)
+              _buildFeatureRow('${package.refreshQuota} lượt làm mới tin'),
+            if (package.description != null && package.description!.isNotEmpty)
+              _buildFeatureRow(package.description!),
+            const SizedBox(height: 32),
+            Center(
+              child: SizedBox(
+                width: 180,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentOrange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    context.read<PaymentCubit>().initiatePayment(package.id);
+                  },
+                  child: const Text(
+                    'Đăng ký ngay',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
