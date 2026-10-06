@@ -1,4 +1,4 @@
-package com.rental.modules.payment.controller;
+﻿package com.rental.modules.payment.controller;
 
 import com.rental.modules.payment.service.PaymentService;
 import com.rental.modules.user.domain.entity.User;
@@ -21,10 +21,20 @@ public class PaymentController {
     @PostMapping("/create")
     public ResponseEntity<Map<String, String>> createPayment(
             @AuthenticationPrincipal User user,
-            @RequestBody Map<String, Short> requestBody,
+            @RequestBody Map<String, Object> requestBody,
             HttpServletRequest request) {
         
-        Short packageId = requestBody.get("packageId");
+        // Safely parse packageId to avoid ClassCastException
+        Object packageIdObj = requestBody.get("packageId");
+        Short packageId = null;
+        if (packageIdObj instanceof Number) {
+            packageId = ((Number) packageIdObj).shortValue();
+        } else if (packageIdObj instanceof String) {
+            packageId = Short.parseShort((String) packageIdObj);
+        } else {
+            throw new IllegalArgumentException("Invalid packageId");
+        }
+
         String paymentUrl = paymentService.createPaymentUrl(user.getEmail(), packageId, request);
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl));
     }
@@ -40,4 +50,3 @@ public class PaymentController {
         return new RedirectView(redirectUrl);
     }
 }
-

@@ -13,6 +13,12 @@ class PaymentCubit extends Cubit<PaymentState> {
     emit(PaymentLoading());
     try {
       final url = await repository.getVnPayUrl(packageId);
+      
+      if (url == 'FREE_SUCCESS') {
+        emit(PaymentSuccess(url));
+        return;
+      }
+
       final uri = Uri.parse(url);
       
       if (await canLaunchUrl(uri)) {

@@ -44,116 +44,142 @@ class _MyContractsView extends StatelessWidget {
           'Hợp đồng của tôi',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: _kPrimaryDark,
+        backgroundColor: _kAccentOrange,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),
-      floatingActionButton: isLandlord
-          ? FloatingActionButton(
-              backgroundColor: _kAccentOrange,
-              foregroundColor: Colors.white,
-              tooltip: 'Tạo hợp đồng mới',
-              onPressed: () => _showCreateContractSheet(context),
-              child: const Icon(Icons.add),
-            )
-          : null,
-      body: BlocListener<ContractCubit, ContractState>(
-        listener: (context, state) {
-          if (state is ContractCreated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Tạo hợp đồng thành công!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state is ContractError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Lỗi: ${state.message}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        child: BlocBuilder<ContractCubit, ContractState>(
-          builder: (context, state) {
-            if (state is ContractLoading || state is ContractCreating) {
-              return const Center(
-                child: CircularProgressIndicator(color: _kAccentOrange),
-              );
-            }
-
-            if (state is ContractError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
-                      const SizedBox(height: 16),
-                      Text(
-                        state.message,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _kAccentOrange,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () =>
-                            context.read<ContractCubit>().fetchMyContracts(),
-                        child: const Text('Thử lại'),
-                      ),
-                    ],
+      body: Stack(
+        children: [
+          BlocListener<ContractCubit, ContractState>(
+            listener: (context, state) {
+              if (state is ContractCreated) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tạo hợp đồng thành công!'),
+                    backgroundColor: Colors.green,
                   ),
-                ),
-              );
-            }
-
-            if (state is ContractLoaded) {
-              if (state.contracts.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.description_outlined,
-                          size: 80, color: Colors.grey.shade300),
-                      const SizedBox(height: 16),
-                      Text(
-                        isLandlord
-                            ? 'Bạn chưa tạo hợp đồng nào.\nNhấn + để tạo hợp đồng mới.'
-                            : 'Bạn chưa có hợp đồng thuê nào.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-                      ),
-                    ],
+                );
+              } else if (state is ContractError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Lỗi: ${state.message}'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }
+            },
+            child: BlocBuilder<ContractCubit, ContractState>(
+              builder: (context, state) {
+                if (state is ContractLoading || state is ContractCreating) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: _kAccentOrange),
+                  );
+                }
 
-              return RefreshIndicator(
-                color: _kAccentOrange,
-                onRefresh: () =>
-                    context.read<ContractCubit>().fetchMyContracts(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: state.contracts.length,
-                  itemBuilder: (context, index) =>
-                      _ContractCard(contract: state.contracts[index]),
-                ),
-              );
-            }
+                if (state is ContractError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 32, right: 32, bottom: 100, top: 32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, size: 56, color: Colors.redAccent),
+                          const SizedBox(height: 16),
+                          Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _kAccentOrange,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () =>
+                                context.read<ContractCubit>().fetchMyContracts(),
+                            child: const Text('Thử lại'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
-            return const SizedBox.shrink();
-          },
-        ),
+                if (state is ContractLoaded) {
+                  if (state.contracts.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 100),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: _kAccentOrange.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.description_outlined,
+                                  size: 64, color: _kAccentOrange),
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Chưa có hợp đồng nào',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _kPrimaryDark,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isLandlord
+                                  ? 'Bạn chưa tạo hợp đồng nào.\nNhấn nút + bên dưới để tạo hợp đồng mới.'
+                                  : 'Bạn chưa có hợp đồng thuê nào.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey.shade600, height: 1.5, fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    color: _kAccentOrange,
+                    onRefresh: () =>
+                        context.read<ContractCubit>().fetchMyContracts(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      itemCount: state.contracts.length,
+                      itemBuilder: (context, index) =>
+                          _ContractCard(contract: state.contracts[index]),
+                    ),
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+          if (isLandlord)
+            Positioned(
+              right: 16,
+              bottom: 90,
+              child: FloatingActionButton(
+                backgroundColor: _kAccentOrange,
+                foregroundColor: Colors.white,
+                tooltip: 'Tạo hợp đồng mới',
+                onPressed: () => _showCreateContractSheet(context),
+                child: const Icon(Icons.add),
+              ),
+            ),
+        ],
       ),
     );
   }

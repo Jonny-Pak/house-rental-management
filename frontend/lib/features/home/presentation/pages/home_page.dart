@@ -204,13 +204,13 @@ class HomePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: _buildFeatureItem(context, Symbols.post_add, 'Đăng Tin', color: Colors.green, onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateListingPage()));
+                        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => const CreateListingPage()));
                       })),
                       Expanded(child: _buildFeatureItem(context, Symbols.maps_home_work, 'Thuê Nhà', color: Colors.blue, onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const PropertyBrowsePage(propertyType: 'WHOLE_HOUSE', title: 'Thuê Nhà')));
+                        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => const PropertyBrowsePage(propertyType: 'WHOLE_HOUSE', title: 'Thuê Nhà')));
                       })),
                       Expanded(child: _buildFeatureItem(context, Symbols.corporate_fare, 'Thuê Phòng\nTrọ', color: Colors.orange, onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const PropertyBrowsePage(propertyType: 'BOARDING_HOUSE', title: 'Thuê Phòng Trọ')));
+                        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => const PropertyBrowsePage(propertyType: 'BOARDING_HOUSE', title: 'Thuê Phòng Trọ')));
                       })),
                       Expanded(child: _buildFeatureItem(context, Symbols.assignment, 'Quản Lý\nTin Đăng', color: Colors.teal, onTap: () {})),
                     ],
@@ -226,13 +226,13 @@ class HomePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: _buildFeatureItem(context, Symbols.contract, 'Quản Lý\nHợp Đồng', color: Colors.purple, onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MyContractsPage(isLandlord: true)));
+                        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => const MyContractsPage(isLandlord: true)));
                       })),
                       Expanded(child: _buildFeatureItem(context, Symbols.request_quote, 'Gói Dịch Vụ', color: Colors.amber.shade700, onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MembershipPage()));
+                        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => const MembershipPage()));
                       })),
                       Expanded(child: _buildFeatureItem(context, Symbols.map, 'Bản Đồ', color: Colors.red, onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MapPage()));
+                        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => const MapPage()));
                       })),
                       Expanded(child: _buildFeatureItem(context, Symbols.smart_toy, 'Trợ Lý AI', color: Colors.indigo, onTap: () {})),
                     ],
