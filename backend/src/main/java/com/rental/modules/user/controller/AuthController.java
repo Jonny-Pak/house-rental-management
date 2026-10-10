@@ -8,7 +8,6 @@ import com.rental.modules.user.dto.response.ApiResponse;
 import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.service.AuthService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,10 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<String>> register(
@@ -43,13 +46,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công.", authResponse));
+        return ResponseEntity.ok(ApiResponse.success("ÄÄƒng nháº­p thÃ nh cÃ´ng.", authResponse));
     }
 
     @PostMapping("/google-login")
     public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request) {
         AuthResponse authResponse = authService.googleLogin(request);
-        return ResponseEntity.ok(ApiResponse.success("Đăng nhập bằng Google thành công.", authResponse));
+        return ResponseEntity.ok(ApiResponse.success("ÄÄƒng nháº­p báº±ng Google thÃ nh cÃ´ng.", authResponse));
     }
 }

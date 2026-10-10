@@ -1,9 +1,7 @@
-﻿package com.rental.modules.payment.controller;
+package com.rental.modules.payment.controller;
 
 import com.rental.modules.payment.service.PaymentService;
-import com.rental.modules.user.domain.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -13,14 +11,20 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/payments")
-@RequiredArgsConstructor
 public class PaymentController {
+
 
     private final PaymentService paymentService;
 
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+
+
     @PostMapping("/create")
+    @SuppressWarnings("all")
     public ResponseEntity<Map<String, String>> createPayment(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails,
             @RequestBody Map<String, Object> requestBody,
             HttpServletRequest request) {
         
@@ -30,12 +34,12 @@ public class PaymentController {
         if (packageIdObj instanceof Number) {
             packageId = ((Number) packageIdObj).shortValue();
         } else if (packageIdObj instanceof String) {
-            packageId = Short.parseShort((String) packageIdObj);
+            packageId = Short.valueOf((String) packageIdObj);
         } else {
             throw new IllegalArgumentException("Invalid packageId");
         }
 
-        String paymentUrl = paymentService.createPaymentUrl(user.getEmail(), packageId, request);
+        String paymentUrl = paymentService.createPaymentUrl(userDetails.getUsername(), packageId, request);
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl));
     }
 

@@ -5,7 +5,6 @@ import com.rental.modules.area.dto.ProvinceDto;
 import com.rental.modules.area.dto.WardDto;
 import com.rental.modules.area.service.AreaService;
 import com.rental.modules.user.dto.response.ApiResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,10 +12,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/areas")
-@RequiredArgsConstructor
 public class AreaController {
 
     private final AreaService areaService;
+
+    public AreaController(AreaService areaService) {
+        this.areaService = areaService;
+    }
 
     @GetMapping("/provinces")
     public ResponseEntity<ApiResponse<List<ProvinceDto>>> getAllProvinces() {

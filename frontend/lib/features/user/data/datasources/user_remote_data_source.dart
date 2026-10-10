@@ -34,7 +34,7 @@ class UserRemoteDataSourceImpl implements UserRemoteDataSource {
   @override
   Future<String> uploadImage(XFile file) async {
     final formData = FormData.fromMap({
-      'file': MultipartFile.fromBytes(await file.readAsBytes(), filename: file.name),
+      'file': await MultipartFile.fromFile(file.path, filename: file.name),
     });
 
     final response = await _apiClient.post('/images/upload', formData);

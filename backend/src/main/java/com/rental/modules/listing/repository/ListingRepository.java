@@ -23,4 +23,6 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
            "AND l.approvalStatus = 'APPROVED' " +
            "AND l.rentalStatus = 'AVAILABLE'")
     List<Listing> findListingsWithinBoundingBox(@Param("bbox") Polygon bbox);
+
+    List<Listing> findByApprovalStatus(String approvalStatus);
 }

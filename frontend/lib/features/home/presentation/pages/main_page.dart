@@ -14,7 +14,6 @@ import 'home_page.dart';
 
 const _kOrange = Color(0xFFFF6B00);
 const _kBlack = Color(0xFF1A1A1A);
-const _kGrey = Color(0xFF8A8A8A);
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -55,7 +54,7 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final isFirstRouteInCurrentTab = !await _navigatorKeys[_currentIndex].currentState!.maybePop();
         if (isFirstRouteInCurrentTab) {
@@ -144,6 +143,7 @@ class _MainPageState extends State<MainPage> {
                       radius: 30,
                       backgroundColor: Colors.white,
                       backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                      onBackgroundImageError: (e, s) {},
                       child: avatarUrl == null || avatarUrl.isEmpty
                           ? const Icon(Symbols.person, size: 36, color: _kOrange)
                           : null,
@@ -354,6 +354,7 @@ class _MainPageState extends State<MainPage> {
                       ? DecorationImage(
                           image: NetworkImage(avatarUrl),
                           fit: BoxFit.cover,
+                          onError: (e, s) {},
                         )
                       : null,
                 ),

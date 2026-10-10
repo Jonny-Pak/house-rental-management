@@ -278,6 +278,12 @@ class _RegisterPageState extends State<RegisterPage> {
                           icon: Image.network(
                             'https://img.icons8.com/color/48/000000/google-logo.png',
                             height: 24,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.error_outline,
+                                size: 24,
+                              );
+                            },
                           ),
                           label: const Text(
                             'Đăng ký với Google',

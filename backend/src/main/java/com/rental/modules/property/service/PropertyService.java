@@ -8,7 +8,6 @@ import com.rental.modules.property.repository.PropertyImageRepository;
 import com.rental.modules.property.repository.PropertyRepository;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,40 +15,47 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final PropertyImageRepository propertyImageRepository;
     private final UserRepository userRepository;
 
+    public PropertyService(PropertyRepository propertyRepository, PropertyImageRepository propertyImageRepository, UserRepository userRepository) {
+        this.propertyRepository = propertyRepository;
+        this.propertyImageRepository = propertyImageRepository;
+        this.userRepository = userRepository;
+    }
+
+
     @Transactional
     public PropertyResponse createProperty(String email, PropertyRequest request) {
         User landlord = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
 
-        Property property = Property.builder()
-                .landlord(landlord)
-                .name(request.getName())
-                .description(request.getDescription())
-                .address(request.getAddress())
-                .provinceId(request.getProvinceId())
-                .districtId(request.getDistrictId())
-                .wardId(request.getWardId())
-                .propertyType(request.getPropertyType())
-                .electricityPrice(request.getElectricityPrice())
-                .waterPrice(request.getWaterPrice())
-                .build();
+        Property property = new Property();
+        property.setLandlord(landlord);
+        property.setName(request.getName());
+        property.setDescription(request.getDescription());
+        property.setAddress(request.getAddress());
+        property.setProvinceId(request.getProvinceId());
+        property.setDistrictId(request.getDistrictId());
+        property.setWardId(request.getWardId());
+        property.setPropertyType(request.getPropertyType());
+        property.setElectricityPrice(request.getElectricityPrice());
+        property.setWaterPrice(request.getWaterPrice());
 
         Property savedProperty = propertyRepository.save(property);
 
         // Save Property Images if any
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
             List<PropertyImage> images = request.getImageUrls().stream()
-                    .map(url -> PropertyImage.builder()
-                            .property(savedProperty)
-                            .imageUrl(url)
-                            .build())
+                    .map(url -> {
+                        PropertyImage img = new PropertyImage();
+                        img.setProperty(savedProperty);
+                        img.setImageUrl(url);
+                        return img;
+                    })
                     .collect(Collectors.toList());
             propertyImageRepository.saveAll(images);
         }
@@ -60,7 +66,7 @@ public class PropertyService {
     @Transactional(readOnly = true)
     public List<PropertyResponse> getMyProperties(String email) {
         User landlord = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
 
         return propertyRepository.findByLandlord(landlord).stream()
                 .map(this::mapToResponse)
@@ -70,7 +76,7 @@ public class PropertyService {
     @Transactional(readOnly = true)
     public PropertyResponse getPropertyById(Long id) {
         Property property = propertyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khu trọ với ID: " + id));
+                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + id));
         return mapToResponse(property);
     }
 
@@ -100,22 +106,22 @@ public class PropertyService {
                 .map(PropertyImage::getImageUrl)
                 .collect(Collectors.toList());
 
-        return PropertyResponse.builder()
-                .id(property.getId())
-                .landlordId(property.getLandlord().getUserId())
-                .name(property.getName())
-                .description(property.getDescription())
-                .address(property.getAddress())
-                .provinceId(property.getProvinceId())
-                .districtId(property.getDistrictId())
-                .wardId(property.getWardId())
-                .electricityPrice(property.getElectricityPrice())
-                .waterPrice(property.getWaterPrice())
-                .propertyType(property.getPropertyType())
-                .status(property.getStatus())
-                .landlordName(property.getLandlord().getFullName())
-                .landlordPhone(property.getLandlord().getPhoneNumber())
-                .imageUrls(imageUrls)
-                .build();
+        PropertyResponse response = new PropertyResponse();
+        response.setId(property.getId());
+        response.setLandlordId(property.getLandlord().getUserId());
+        response.setName(property.getName());
+        response.setDescription(property.getDescription());
+        response.setAddress(property.getAddress());
+        response.setProvinceId(property.getProvinceId());
+        response.setDistrictId(property.getDistrictId());
+        response.setWardId(property.getWardId());
+        response.setElectricityPrice(property.getElectricityPrice());
+        response.setWaterPrice(property.getWaterPrice());
+        response.setPropertyType(property.getPropertyType());
+        response.setStatus(property.getStatus());
+        response.setLandlordName(property.getLandlord().getFullName());
+        response.setLandlordPhone(property.getLandlord().getPhoneNumber());
+        response.setImageUrls(imageUrls);
+        return response;
     }
 }

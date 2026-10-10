@@ -3,7 +3,6 @@ package com.rental.modules.contract.controller;
 import com.rental.modules.contract.dto.request.CreateContractRequest;
 import com.rental.modules.contract.entity.Contract;
 import com.rental.modules.contract.service.ContractService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,10 +11,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/contracts")
-@RequiredArgsConstructor
 public class ContractController {
 
     private final ContractService contractService;
+
+    public ContractController(ContractService contractService) {
+        this.contractService = contractService;
+    }
 
     @PostMapping
     public ResponseEntity<Contract> createContract(

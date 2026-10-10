@@ -297,6 +297,7 @@ class _LoginPageState extends State<LoginPage> {
                           icon: Image.network(
                             'https://img.icons8.com/color/48/000000/google-logo.png',
                             height: 24,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, size: 24),
                           ),
                           label: const Text(
                             'Tiếp tục với Google',

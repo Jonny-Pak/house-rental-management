@@ -1,6 +1,5 @@
 package com.rental.modules.payment.config;
 
-import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,7 +7,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 
-@Getter
 @Configuration
 public class VnPayConfig {
 
@@ -26,6 +24,22 @@ public class VnPayConfig {
 
     @Value("${vnpay.apiUrl:https://sandbox.vnpayment.vn/merchant_webapi/api/transaction}")
     private String vnp_ApiUrl;
+
+    
+    public String getVnp_TmnCode() { return vnp_TmnCode; }
+    public void setVnp_TmnCode(String vnp_TmnCode) { this.vnp_TmnCode = vnp_TmnCode; }
+
+    public String getVnp_HashSecret() { return vnp_HashSecret; }
+    public void setVnp_HashSecret(String vnp_HashSecret) { this.vnp_HashSecret = vnp_HashSecret; }
+
+    public String getVnp_PayUrl() { return vnp_PayUrl; }
+    public void setVnp_PayUrl(String vnp_PayUrl) { this.vnp_PayUrl = vnp_PayUrl; }
+
+    public String getVnp_ReturnUrl() { return vnp_ReturnUrl; }
+    public void setVnp_ReturnUrl(String vnp_ReturnUrl) { this.vnp_ReturnUrl = vnp_ReturnUrl; }
+
+    public String getVnp_ApiUrl() { return vnp_ApiUrl; }
+    public void setVnp_ApiUrl(String vnp_ApiUrl) { this.vnp_ApiUrl = vnp_ApiUrl; }
 
     public String hmacSHA512(final String key, final String data) {
         try {

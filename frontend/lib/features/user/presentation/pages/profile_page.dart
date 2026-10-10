@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
-import '../../../../core/network/api_client.dart';
-import '../../data/datasources/user_remote_data_source.dart';
-import '../../data/repositories/user_repository.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -150,15 +147,25 @@ class ProfileView extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(color: kPrimaryAccent.withValues(alpha: 0.3), width: 2),
                                 ),
-                                child: CircleAvatar(
-                                  radius: 48,
-                                  backgroundColor: kPrimaryAccent.withValues(alpha: 0.1),
-                                  backgroundImage: profile.avatarUrl != null
-                                      ? NetworkImage(profile.avatarUrl!)
-                                      : null,
-                                  child: profile.avatarUrl == null
-                                      ? const Icon(Icons.person, size: 48, color: kPrimaryAccent)
-                                      : null,
+                                child: Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: kPrimaryAccent.withValues(alpha: 0.1),
+                                  ),
+                                  child: ClipOval(
+                                    child: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
+                                        ? Image.network(
+                                            profile.avatarUrl!,
+                                            width: 96,
+                                            height: 96,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) =>
+                                                const Icon(Icons.person, size: 48, color: kPrimaryAccent),
+                                          )
+                                        : const Icon(Icons.person, size: 48, color: kPrimaryAccent),
+                                  ),
                                 ),
                               ),
                               if (state is ProfileAvatarUploading)
