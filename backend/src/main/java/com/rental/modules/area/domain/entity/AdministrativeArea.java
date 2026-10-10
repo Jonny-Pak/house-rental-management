@@ -1,17 +1,12 @@
 package com.rental.modules.area.domain.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "administrative_areas")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AdministrativeArea {
 
     @Id
@@ -35,4 +30,17 @@ public class AdministrativeArea {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public Long getAreaId() { return areaId; }
+    public void setAreaId(Long areaId) { this.areaId = areaId; }
+    public String getAreaName() { return areaName; }
+    public void setAreaName(String areaName) { this.areaName = areaName; }
+    public String getAreaType() { return areaType; }
+    public void setAreaType(String areaType) { this.areaType = areaType; }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+    public AdministrativeArea getParent() { return parent; }
+    public void setParent(AdministrativeArea parent) { this.parent = parent; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -10,8 +10,8 @@ String get _baseUrl {
     return 'http://localhost:8080/api/v1';
   }
   if (defaultTargetPlatform == TargetPlatform.android) {
-    // Sử dụng 127.0.0.1 kết hợp với adb reverse để không lo bị tường lửa hay đổi IP Wi-Fi chặn
-    return 'http://127.0.0.1:8080/api/v1';
+    // Đổi về IP LAN của máy tính để test trên điện thoại thật
+    return 'http://192.168.100.72:8080/api/v1';
   }
   return 'http://localhost:8080/api/v1';
 }
@@ -25,7 +25,6 @@ class ApiClient {
             baseUrl: _baseUrl,
             connectTimeout: const Duration(seconds: 15),
             receiveTimeout: const Duration(seconds: 15),
-            headers: {'Content-Type': 'application/json'},
           ),
         ) {
     _dio.interceptors.add(

@@ -1,14 +1,9 @@
 package com.rental.modules.user.domain.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
 
 @Entity
 @Table(name = "user_preferences")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class UserPreference {
 
     @Id
@@ -31,4 +26,33 @@ public class UserPreference {
 
     @Column(name = "preferred_area", length = 150)
     private String preferredArea;
+
+    public UserPreference() {}
+
+    public UserPreference(Long preferenceId, User user, Double minBudget, Double maxBudget, Boolean hasPet, String preferredArea) {
+        this.preferenceId = preferenceId;
+        this.user = user;
+        this.minBudget = minBudget;
+        this.maxBudget = maxBudget;
+        this.hasPet = hasPet;
+        this.preferredArea = preferredArea;
+    }
+
+    public Long getPreferenceId() { return preferenceId; }
+    public void setPreferenceId(Long preferenceId) { this.preferenceId = preferenceId; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public Double getMinBudget() { return minBudget; }
+    public void setMinBudget(Double minBudget) { this.minBudget = minBudget; }
+
+    public Double getMaxBudget() { return maxBudget; }
+    public void setMaxBudget(Double maxBudget) { this.maxBudget = maxBudget; }
+
+    public Boolean getHasPet() { return hasPet; }
+    public void setHasPet(Boolean hasPet) { this.hasPet = hasPet; }
+
+    public String getPreferredArea() { return preferredArea; }
+    public void setPreferredArea(String preferredArea) { this.preferredArea = preferredArea; }
 }

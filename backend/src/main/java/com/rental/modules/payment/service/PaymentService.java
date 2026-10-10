@@ -10,7 +10,6 @@ import com.rental.modules.subscription.repository.UserSubscriptionRepository;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 public class PaymentService {
 
     private final VnPayConfig vnPayConfig;
@@ -30,6 +28,15 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final MembershipPackageRepository membershipPackageRepository;
     private final UserSubscriptionRepository userSubscriptionRepository;
+
+    public PaymentService(VnPayConfig vnPayConfig, PaymentTransactionRepository paymentTransactionRepository, UserRepository userRepository, MembershipPackageRepository membershipPackageRepository, UserSubscriptionRepository userSubscriptionRepository) {
+        this.vnPayConfig = vnPayConfig;
+        this.paymentTransactionRepository = paymentTransactionRepository;
+        this.userRepository = userRepository;
+        this.membershipPackageRepository = membershipPackageRepository;
+        this.userSubscriptionRepository = userSubscriptionRepository;
+    }
+
 
     @Transactional
     public String createPaymentUrl(String userEmail, Short packageId, HttpServletRequest request) {
@@ -42,14 +49,13 @@ public class PaymentService {
         // Format: pkgId_userId_timestamp
         String vnp_TxnRef = packageId + "_" + user.getUserId() + "_" + System.currentTimeMillis();
 
-        PaymentTransaction transaction = PaymentTransaction.builder()
-                .user(user)
-                .amount(membershipPackage.getPrice())
-                .vnpayTransactionRef(vnp_TxnRef)
-                .status("PENDING")
-                .paymentMethod(membershipPackage.getPrice().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : "VNPAY")
-                .transactionDate(LocalDateTime.now())
-                .build();
+        PaymentTransaction transaction = new PaymentTransaction();
+        transaction.setUser(user);
+        transaction.setAmount(membershipPackage.getPrice());
+        transaction.setVnpayTransactionRef(vnp_TxnRef);
+        transaction.setStatus("PENDING");
+        transaction.setPaymentMethod(membershipPackage.getPrice().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : "VNPAY");
+        transaction.setTransactionDate(LocalDateTime.now());
         
         paymentTransactionRepository.save(transaction);
 
@@ -65,15 +71,9 @@ public class PaymentService {
             subscription.setUser(user);
             subscription.setMembershipPackage(membershipPackage);
             subscription.setPurchasedAt(LocalDateTime.now());
-            subscription.setRemainingStandardQuota(
-                    (subscription.getRemainingStandardQuota() != null ? subscription.getRemainingStandardQuota() : 0)
-                            + membershipPackage.getStandardPostQuota());
-            subscription.setRemainingVipQuota(
-                    (subscription.getRemainingVipQuota() != null ? subscription.getRemainingVipQuota() : 0)
-                            + membershipPackage.getVipPostQuota());
-            subscription.setRemainingRefreshQuota(
-                    (subscription.getRemainingRefreshQuota() != null ? subscription.getRemainingRefreshQuota() : 0)
-                            + membershipPackage.getRefreshQuota());
+            subscription.setRemainingStandardQuota((short) (safeShort(subscription.getRemainingStandardQuota()) + safeShort(membershipPackage.getStandardPostQuota())));
+            subscription.setRemainingVipQuota((short) (safeShort(subscription.getRemainingVipQuota()) + safeShort(membershipPackage.getVipPostQuota())));
+            subscription.setRemainingRefreshQuota((short) (safeShort(subscription.getRemainingRefreshQuota()) + safeShort(membershipPackage.getRefreshQuota())));
             subscription.setStatus("ACTIVE");
             subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
             userSubscriptionRepository.save(subscription);
@@ -190,7 +190,7 @@ public class PaymentService {
             
             String[] parts = vnp_TxnRef.split("_");
             if (parts.length >= 2) {
-                Short packageId = Short.parseShort(parts[0]);
+                Short packageId = Short.valueOf(parts[0]);
                 MembershipPackage pkg = membershipPackageRepository.findById(packageId).orElse(null);
                 if (pkg != null) {
                     UserSubscription subscription = userSubscriptionRepository.findByUser(transaction.getUser())
@@ -199,15 +199,9 @@ public class PaymentService {
                     subscription.setMembershipPackage(pkg);
                     subscription.setPurchasedAt(LocalDateTime.now());
                     
-                    subscription.setRemainingStandardQuota(
-                            (subscription.getRemainingStandardQuota() != null ? subscription.getRemainingStandardQuota() : 0)
-                                    + pkg.getStandardPostQuota());
-                    subscription.setRemainingVipQuota(
-                            (subscription.getRemainingVipQuota() != null ? subscription.getRemainingVipQuota() : 0)
-                                    + pkg.getVipPostQuota());
-                    subscription.setRemainingRefreshQuota(
-                            (subscription.getRemainingRefreshQuota() != null ? subscription.getRemainingRefreshQuota() : 0)
-                                    + pkg.getRefreshQuota());
+                    subscription.setRemainingStandardQuota((short) (safeShort(subscription.getRemainingStandardQuota()) + safeShort(pkg.getStandardPostQuota())));
+                    subscription.setRemainingVipQuota((short) (safeShort(subscription.getRemainingVipQuota()) + safeShort(pkg.getVipPostQuota())));
+                    subscription.setRemainingRefreshQuota((short) (safeShort(subscription.getRemainingRefreshQuota()) + safeShort(pkg.getRefreshQuota())));
                                     
                     subscription.setStatus("ACTIVE");
                     subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
@@ -220,5 +214,9 @@ public class PaymentService {
             paymentTransactionRepository.save(transaction);
             return false;
         }
+    }
+
+    private short safeShort(Short val) {
+        return val != null ? val : 0;
     }
 }

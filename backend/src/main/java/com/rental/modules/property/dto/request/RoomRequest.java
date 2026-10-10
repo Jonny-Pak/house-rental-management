@@ -3,11 +3,9 @@ package com.rental.modules.property.dto.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 
 import java.math.BigDecimal;
 
-@Data
 public class RoomRequest {
 
     @NotBlank(message = "Tên phòng không được để trống")
@@ -24,4 +22,17 @@ public class RoomRequest {
     @NotNull(message = "Sức chứa tối đa không được để trống")
     @Min(value = 1, message = "Sức chứa tối đa phải từ 1 trở lên")
     private Integer maxCapacity;
+
+    public RoomRequest() {}
+    public RoomRequest(String name, Double area, BigDecimal price, Integer maxCapacity) {
+        this.name = name;
+        this.area = area;
+        this.price = price;
+        this.maxCapacity = maxCapacity;
+    }
+    public String getName() { return name; }    public void setName(String name) { this.name = name; }
+    public Double getArea() { return area; }    public void setArea(Double area) { this.area = area; }
+    public BigDecimal getPrice() { return price; }    public void setPrice(BigDecimal price) { this.price = price; }
+    public Integer getMaxCapacity() { return maxCapacity; }    public void setMaxCapacity(Integer maxCapacity) { this.maxCapacity = maxCapacity; }
+
 }
