@@ -27,7 +27,7 @@ public class AdminListingController {
     @GetMapping("/pending")
     public ResponseEntity<ApiResponse<List<AdminListingResponse>>> getPendingListings() {
         List<AdminListingResponse> listings = adminListingService.getPendingListings();
-        return ResponseEntity.ok(ApiResponse.success("Danh sÃ¡ch bÃ i Ä‘Äƒng chá» duyá»‡t.", listings));
+        return ResponseEntity.ok(ApiResponse.success("Danh sách bài đăng chờ duyệt.", listings));
     }
 
     @PatchMapping("/{id}/approve")
@@ -35,7 +35,7 @@ public class AdminListingController {
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails adminDetails) {
         AdminListingResponse response = adminListingService.approveListing(id, adminDetails.getUser().getUserId());
-        return ResponseEntity.ok(ApiResponse.success("BÃ i Ä‘Äƒng Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t thÃ nh cÃ´ng.", response));
+        return ResponseEntity.ok(ApiResponse.success("Bài đăng đã được duyệt thành công.", response));
     }
 
     @PatchMapping("/{id}/reject")
@@ -44,7 +44,6 @@ public class AdminListingController {
             @Valid @RequestBody RejectListingRequest request,
             @AuthenticationPrincipal CustomUserDetails adminDetails) {
         AdminListingResponse response = adminListingService.rejectListing(id, adminDetails.getUser().getUserId(), request.getReason());
-        return ResponseEntity.ok(ApiResponse.success("BÃ i Ä‘Äƒng Ä‘Ã£ bá»‹ tá»« chá»‘i.", response));
+        return ResponseEntity.ok(ApiResponse.success("Bài đăng đã bị từ chối.", response));
     }
 }
-

@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'core/network/api_client.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_page.dart';
-
-import 'package:get_it/get_it.dart';
+import 'features/admin/data/repositories/admin_listing_repository.dart';
+import 'features/admin/presentation/bloc/admin_listing_cubit.dart';
+import 'features/admin/presentation/pages/admin_dashboard_page.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -20,10 +22,6 @@ class MyHttpOverrides extends HttpOverrides {
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = MyHttpOverrides();
-  
-  // Register DI
-  GetIt.I.registerLazySingleton<ApiClient>(() => ApiClient());
-  
   runApp(const MyApp());
 }
 
@@ -32,15 +30,20 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Dependency Wiring
-    final apiClient = GetIt.I<ApiClient>();
-    final remoteDataSource = AuthRemoteDataSourceImpl(apiClient);
-    final authRepository = AuthRepositoryImpl(remoteDataSource);
+    // Khởi tạo ApiClient dùng chung
+    final apiClient = ApiClient();
 
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(authRepository),
+          create: (_) => AuthBloc(
+            AuthRepositoryImpl(AuthRemoteDataSourceImpl(apiClient)),
+          ),
+        ),
+        BlocProvider<AdminListingCubit>(
+          create: (_) => AdminListingCubit(
+            AdminListingRepository(apiClient),
+          ),
         ),
       ],
       child: MaterialApp(
@@ -57,6 +60,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const LoginPage(),
+        // home: const AdminDashboardPage(),
       ),
     );
   }
