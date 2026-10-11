@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../admin/presentation/pages/admin_dashboard_page.dart';
 import '../../../home/presentation/pages/main_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -144,9 +146,12 @@ class _LoginPageState extends State<LoginPage> {
               );
               await TokenStorage.saveToken(state.data.accessToken);
               if (context.mounted) {
+                final bool isAdmin = state.data.role == 'ADMIN' || kIsWeb;
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const MainPage()),
+                  MaterialPageRoute(
+                    builder: (context) => isAdmin ? const AdminDashboardPage() : const MainPage(),
+                  ),
                 );
               }
             }

@@ -7,16 +7,37 @@ class AdminListingRepository {
 
   AdminListingRepository(this._apiClient);
 
+  String _extractError(dynamic data, String fallback) {
+    if (data is Map && data['message'] != null) {
+      return data['message'].toString();
+    }
+    if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return fallback;
+  }
+
   Future<List<AdminListingModel>> getPendingListings() async {
     try {
       final response = await _apiClient.get('/admin/listings/pending');
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data['data'];
-        return data.map((e) => AdminListingModel.fromJson(e)).toList();
+        final dynamic raw = response.data;
+        List<dynamic> list = [];
+        if (raw is Map && raw['data'] is List) {
+          list = raw['data'];
+        } else if (raw is List) {
+          list = raw;
+        }
+        return list.map((e) => AdminListingModel.fromJson(e as Map<String, dynamic>)).toList();
       }
-      throw Exception('Failed to load pending listings');
+      throw Exception('Không thể tải danh sách bài đăng');
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? e.message);
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        throw Exception('Chưa đăng nhập hoặc không có quyền Admin. Vui lòng đăng nhập!');
+      }
+      throw Exception(_extractError(e.response?.data, e.message ?? 'Lỗi kết nối máy chủ'));
+    } catch (e) {
+      throw Exception(e.toString());
     }
   }
 
@@ -24,10 +45,12 @@ class AdminListingRepository {
     try {
       final response = await _apiClient.patch('/admin/listings/$id/approve');
       if (response.statusCode != 200) {
-        throw Exception('Failed to approve listing');
+        throw Exception('Phê duyệt bài đăng thất bại');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? e.message);
+      throw Exception(_extractError(e.response?.data, e.message ?? 'Lỗi khi phê duyệt'));
+    } catch (e) {
+      throw Exception(e.toString());
     }
   }
 
@@ -38,11 +61,12 @@ class AdminListingRepository {
         data: {'reason': reason},
       );
       if (response.statusCode != 200) {
-        throw Exception('Failed to reject listing');
+        throw Exception('Từ chối bài đăng thất bại');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? e.message);
+      throw Exception(_extractError(e.response?.data, e.message ?? 'Lỗi khi từ chối'));
+    } catch (e) {
+      throw Exception(e.toString());
     }
   }
 }
-

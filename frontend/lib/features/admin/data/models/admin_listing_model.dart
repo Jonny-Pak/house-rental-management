@@ -31,19 +31,19 @@ class AdminListingModel {
 
   factory AdminListingModel.fromJson(Map<String, dynamic> json) {
     return AdminListingModel(
-      id: json['id'] as int,
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      listingType: json['listingType'],
-      rentPrice: (json['rentPrice'] ?? 0).toDouble(),
-      areaSqm: (json['areaSqm'] ?? 0).toDouble(),
-      address: json['address'] ?? '',
-      ownerName: json['ownerName'],
-      ownerPhone: json['ownerPhone'],
-      approvalStatus: json['approvalStatus'] ?? 'PENDING',
-      houseType: json['houseType'],
-      legalDocuments: json['legalDocuments'],
-      createdAt: json['createdAt'],
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      listingType: json['listingType']?.toString(),
+      rentPrice: (json['rentPrice'] as num?)?.toDouble() ?? 0.0,
+      areaSqm: (json['areaSqm'] as num?)?.toDouble() ?? 0.0,
+      address: json['address']?.toString() ?? '',
+      ownerName: json['ownerName']?.toString(),
+      ownerPhone: json['ownerPhone']?.toString(),
+      approvalStatus: json['approvalStatus']?.toString() ?? 'PENDING',
+      houseType: json['houseType']?.toString(),
+      legalDocuments: json['legalDocuments']?.toString(),
+      createdAt: json['createdAt']?.toString(),
     );
   }
 }

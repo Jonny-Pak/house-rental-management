@@ -32,6 +32,7 @@ public class ListingResponse {
     private String furnitureStatus;
     private BigDecimal depositAmount;
     private String posterType;
+    private String imageUrl;
 
     public ListingResponse() {}
     public ListingResponse(Long id, String title, String description, String listingType, BigDecimal rentPrice, BigDecimal areaSqm, String address, Double latitude, Double longitude, Long ownerId, Long areaId, String approvalStatus, String rentalStatus, Boolean isVip, Integer viewCount, LocalDateTime createdAt, String houseType, Integer bedrooms, Integer bathrooms, Integer totalFloors, String doorDirection, String legalDocuments, String furnitureStatus, BigDecimal depositAmount, String posterType) {
@@ -86,6 +87,7 @@ public class ListingResponse {
     public String getFurnitureStatus() { return furnitureStatus; }    public void setFurnitureStatus(String furnitureStatus) { this.furnitureStatus = furnitureStatus; }
     public BigDecimal getDepositAmount() { return depositAmount; }    public void setDepositAmount(BigDecimal depositAmount) { this.depositAmount = depositAmount; }
     public String getPosterType() { return posterType; }    public void setPosterType(String posterType) { this.posterType = posterType; }
+    public String getImageUrl() { return imageUrl; }    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
 }
 
