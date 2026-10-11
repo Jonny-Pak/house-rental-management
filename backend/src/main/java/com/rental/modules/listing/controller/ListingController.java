@@ -39,6 +39,18 @@ public class ListingController {
 
         return ResponseEntity.ok(results);
     }
+
+    /**
+     * GET /api/v1/listings/public
+     *
+     * Trả về danh sách tất cả các bài đăng đã được duyệt (APPROVED).
+     */
+    @GetMapping("/public")
+    public ResponseEntity<List<ListingResponse>> getPublicListings() {
+        List<ListingResponse> listings = listingService.getApprovedListings();
+        return ResponseEntity.ok(listings);
+    }
+
     @PostMapping
     public ResponseEntity<ListingResponse> createListing(
             @AuthenticationPrincipal com.rental.core.security.CustomUserDetails userDetails,

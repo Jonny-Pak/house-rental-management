@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/network/api_client.dart';
+import 'core/storage/token_storage.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -19,19 +21,31 @@ class MyHttpOverrides extends HttpOverrides {
   }
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  HttpOverrides.global = MyHttpOverrides();
-  runApp(const MyApp());
+  if (!kIsWeb) {
+    HttpOverrides.global = MyHttpOverrides();
+  }
+  // Kiểm tra token đã lưu trong bộ nhớ
+  final token = await TokenStorage.getToken();
+  runApp(MyApp(hasToken: token != null && token.isNotEmpty));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool hasToken;
+  const MyApp({super.key, this.hasToken = false});
 
   @override
   Widget build(BuildContext context) {
     // Khởi tạo ApiClient dùng chung
     final apiClient = ApiClient();
+
+    // Điều hướng trang khởi đầu:
+    // - Trên Web: nếu đã đăng nhập thì vào thẳng AdminDashboardPage, nếu chưa thì vào LoginPage
+    // - Trên Mobile/Android: vào LoginPage
+    final Widget initialHome = (kIsWeb && hasToken)
+        ? const AdminDashboardPage()
+        : const LoginPage();
 
     return MultiBlocProvider(
       providers: [
@@ -59,8 +73,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const LoginPage(),
-        // home: const AdminDashboardPage(),
+        home: initialHome,
       ),
     );
   }

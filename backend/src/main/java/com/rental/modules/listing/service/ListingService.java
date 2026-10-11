@@ -72,6 +72,13 @@ public class ListingService {
                 .collect(Collectors.toList());
     }
 
+    public List<ListingResponse> getApprovedListings() {
+        return listingRepository.findByApprovalStatus("APPROVED")
+                .stream()
+                .map(this::toListingResponse)
+                .collect(Collectors.toList());
+    }
+
     private MapListingResponse toMapListingResponse(Listing listing) {
         MapListingResponse response = new MapListingResponse();
         response.setId(listing.getId());

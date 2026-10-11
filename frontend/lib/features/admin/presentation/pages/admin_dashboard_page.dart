@@ -5,9 +5,10 @@ import 'package:intl/intl.dart';
 import '../../data/models/admin_listing_model.dart';
 import '../bloc/admin_listing_cubit.dart';
 import '../bloc/admin_listing_state.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 
 class AdminDashboardPage extends StatefulWidget {
-  const AdminDashboardPage({Key? key}) : super(key: key);
+  const AdminDashboardPage({super.key});
 
   @override
   State<AdminDashboardPage> createState() => _AdminDashboardPageState();
@@ -172,6 +173,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       appBar: AppBar(
         title: const Text('Quản trị hệ thống'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Làm mới',
+            onPressed: () => context.read<AdminListingCubit>().fetchPendingListings(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Đăng xuất / Đổi tài khoản',
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: BlocConsumer<AdminListingCubit, AdminListingState>(
         listener: (context, state) {
@@ -188,6 +206,28 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         builder: (context, state) {
           if (state is AdminListingLoading && context.read<AdminListingCubit>().state is! AdminListingLoaded) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is AdminListingError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(state.message, style: const TextStyle(color: Colors.red, fontSize: 16)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.login),
+                    label: const Text('Đăng nhập tài khoản Admin'),
+                  ),
+                ],
+              ),
+            );
           }
 
           List<AdminListingModel> listings = [];
