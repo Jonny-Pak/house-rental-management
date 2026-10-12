@@ -30,7 +30,7 @@ public class Property {
     @Column(name = "province_id", nullable = false)
     private Long provinceId;
 
-    @Column(name = "district_id", nullable = false)
+    @Column(name = "district_id")
     private Long districtId;
 
     @Column(name = "ward_id", nullable = false)

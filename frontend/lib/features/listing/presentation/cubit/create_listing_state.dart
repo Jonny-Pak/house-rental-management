@@ -6,6 +6,7 @@ enum CreateListingStatus { draft, submitting, success, error }
 
 /// Holds all draft data across all steps of the multi-step listing form.
 class CreateListingState extends Equatable {
+  final int? areaId;
   // ── Step 1: Listing Type ────────────────────────────────────────────────────
   /// 'WHOLE_HOUSE' or 'BOARDING_ROOM'
   final String propertyType;
@@ -38,16 +39,20 @@ class CreateListingState extends Equatable {
   final int? bedrooms;
   final int? bathrooms;
   final int? totalFloors;
+
   /// NORTH | SOUTH | EAST | WEST | NORTHEAST | NORTHWEST | SOUTHEAST | SOUTHWEST
   final String? doorDirection;
+
   /// PINK_BOOK | RED_BOOK | SALE_CONTRACT | NONE
   final String? legalDocuments;
+
   /// FULL | BASIC | EMPTY
   final String? furnitureStatus;
 
   // ── Step 4: Pricing ──────────────────────────────────────────────────────────
   final double? rentPrice;
   final double? depositAmount;
+
   /// CA_NHAN | MOI_GIOI
   final String? posterType;
 
@@ -61,6 +66,7 @@ class CreateListingState extends Equatable {
   final String? errorMessage;
 
   const CreateListingState({
+    this.areaId,
     this.propertyType = 'WHOLE_HOUSE',
     this.polygonPoints = const [],
     this.calculatedArea = 0.0,
@@ -87,6 +93,8 @@ class CreateListingState extends Equatable {
   });
 
   CreateListingState copyWith({
+    int? areaId,
+    bool clearAreaId = false,
     String? propertyType,
     List<LatLng>? polygonPoints,
     double? calculatedArea,
@@ -119,11 +127,14 @@ class CreateListingState extends Equatable {
     bool clearError = false,
   }) {
     return CreateListingState(
+      areaId: clearAreaId ? null : (areaId ?? this.areaId),
       propertyType: propertyType ?? this.propertyType,
       polygonPoints: polygonPoints ?? this.polygonPoints,
       calculatedArea: calculatedArea ?? this.calculatedArea,
       address: address ?? this.address,
-      pinnedLocation: clearPinnedLocation ? null : (pinnedLocation ?? this.pinnedLocation),
+      pinnedLocation: clearPinnedLocation
+          ? null
+          : (pinnedLocation ?? this.pinnedLocation),
       isSearching: isSearching ?? this.isSearching,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -131,8 +142,12 @@ class CreateListingState extends Equatable {
       bedrooms: bedrooms ?? this.bedrooms,
       bathrooms: bathrooms ?? this.bathrooms,
       totalFloors: totalFloors ?? this.totalFloors,
-      doorDirection: clearDoorDirection ? null : (doorDirection ?? this.doorDirection),
-      legalDocuments: clearLegalDocuments ? null : (legalDocuments ?? this.legalDocuments),
+      doorDirection: clearDoorDirection
+          ? null
+          : (doorDirection ?? this.doorDirection),
+      legalDocuments: clearLegalDocuments
+          ? null
+          : (legalDocuments ?? this.legalDocuments),
       furnitureStatus: furnitureStatus ?? this.furnitureStatus,
       rentPrice: rentPrice ?? this.rentPrice,
       depositAmount: depositAmount ?? this.depositAmount,
@@ -150,29 +165,29 @@ class CreateListingState extends Equatable {
 
   @override
   List<Object?> get props => [
-        propertyType,
-        polygonPoints,
-        calculatedArea,
-        address,
-        pinnedLocation,
-        isSearching,
-        latitude,
-        longitude,
-        houseType,
-        bedrooms,
-        bathrooms,
-        totalFloors,
-        doorDirection,
-        legalDocuments,
-        furnitureStatus,
-        rentPrice,
-        depositAmount,
-        posterType,
-        title,
-        description,
-        imagePaths,
-        status,
-        errorMessage,
-      ];
+    areaId,
+    propertyType,
+    polygonPoints,
+    calculatedArea,
+    address,
+    pinnedLocation,
+    isSearching,
+    latitude,
+    longitude,
+    houseType,
+    bedrooms,
+    bathrooms,
+    totalFloors,
+    doorDirection,
+    legalDocuments,
+    furnitureStatus,
+    rentPrice,
+    depositAmount,
+    posterType,
+    title,
+    description,
+    imagePaths,
+    status,
+    errorMessage,
+  ];
 }
-

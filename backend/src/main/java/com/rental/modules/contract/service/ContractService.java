@@ -1,9 +1,9 @@
 package com.rental.modules.contract.service;
 
 import com.rental.modules.contract.dto.request.CreateContractRequest;
-import com.rental.modules.contract.entity.Contract;
+import com.rental.modules.contract.domain.entity.Contract;
 import com.rental.modules.contract.repository.ContractRepository;
-import com.rental.modules.listing.entity.Listing;
+import com.rental.modules.listing.domain.entity.Listing;
 import com.rental.modules.listing.repository.ListingRepository;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.repository.UserRepository;

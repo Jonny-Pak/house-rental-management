@@ -4,7 +4,7 @@ import com.rental.core.security.CustomUserDetails;
 import com.rental.modules.admin.dto.request.RejectListingRequest;
 import com.rental.modules.admin.dto.response.AdminListingResponse;
 import com.rental.modules.admin.service.AdminListingService;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

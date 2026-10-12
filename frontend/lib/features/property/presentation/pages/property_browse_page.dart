@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../property/data/repositories/property_repository.dart';
-import '../../../property/data/models/property_model.dart';
-import '../../../property/presentation/pages/property_detail_page.dart';
+import '../../data/repositories/property_repository.dart';
+import '../../data/models/property_model.dart';
+import 'property_detail_page.dart';
 import '../../../favorites/data/repositories/favorite_repository.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 
-import '../../../property/presentation/cubit/property_browse_cubit.dart';
+import '../cubit/property_browse_cubit.dart';
 
 
 // ─── Design System Colors ─────────────────────────────────────────────

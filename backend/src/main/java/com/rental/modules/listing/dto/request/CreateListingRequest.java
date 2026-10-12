@@ -1,47 +1,70 @@
 package com.rental.modules.listing.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
+import java.util.List;
 
 import java.math.BigDecimal;
 
 public class CreateListingRequest {
 
     @NotBlank(message = "Title is required")
+    @Size(max = 200)
     private String title;
 
+    @Size(max = 10000)
     private String description;
 
     @NotBlank(message = "Listing type is required")
+    @Pattern(regexp = "WHOLE_HOUSE|BOARDING_ROOM|SHARED_ROOM")
     private String listingType;
 
     @NotNull(message = "Rent price is required")
+    @DecimalMin("0.01") @Digits(integer = 10, fraction = 2)
     private BigDecimal rentPrice;
 
+    @NotNull @DecimalMin("0.01") @Digits(integer = 4, fraction = 2)
     private BigDecimal areaSqm;
 
     @NotBlank(message = "Address is required")
+    @Size(max = 255)
     private String address;
 
     @NotNull(message = "Area ID is required")
     private Long areaId;
 
     @NotNull(message = "Latitude is required")
+    @DecimalMin("-90") @DecimalMax("90")
     private Double latitude;
 
     @NotNull(message = "Longitude is required")
+    @DecimalMin("-180") @DecimalMax("180")
     private Double longitude;
 
     // Advanced Details
+    @Size(max = 50)
     private String houseType;
+    @Min(0) @Max(100)
     private Integer bedrooms;
+    @Min(0) @Max(100)
     private Integer bathrooms;
+    @Min(0) @Max(100)
     private Integer totalFloors;
+    @Size(max = 50)
     private String doorDirection;
+    @Size(max = 100)
     private String legalDocuments;
+    @Size(max = 50)
     private String furnitureStatus;
+    @DecimalMin("0") @Digits(integer = 10, fraction = 2)
     private BigDecimal depositAmount;
+    @Size(max = 20)
     private String posterType;
+
+    @NotEmpty @Size(max = 10)
+    private List<@NotBlank @Size(max = 255) @Pattern(regexp = "https://[^\\s]+", message = "Image URL must use HTTPS") String> imageUrls;
+    public List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
 
     public CreateListingRequest() {}
     public CreateListingRequest(String title, String description, String listingType, BigDecimal rentPrice, BigDecimal areaSqm, String address, Long areaId, Double latitude, Double longitude, String houseType, Integer bedrooms, Integer bathrooms, Integer totalFloors, String doorDirection, String legalDocuments, String furnitureStatus, BigDecimal depositAmount, String posterType) {

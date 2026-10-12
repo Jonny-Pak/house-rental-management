@@ -4,7 +4,7 @@ import com.rental.modules.area.dto.DistrictDto;
 import com.rental.modules.area.dto.ProvinceDto;
 import com.rental.modules.area.dto.WardDto;
 import com.rental.modules.area.service.AreaService;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,5 +38,11 @@ public class AreaController {
             @PathVariable Long districtId) {
         List<WardDto> wards = areaService.getWardsByDistrict(districtId);
         return ResponseEntity.ok(ApiResponse.success("Wards fetched successfully.", wards));
+    }
+
+    @GetMapping("/provinces/{provinceId}/wards")
+    public ResponseEntity<ApiResponse<List<WardDto>>> getWardsByProvince(@PathVariable Long provinceId) {
+        return ResponseEntity.ok(ApiResponse.success("Commune-level areas fetched successfully.",
+                areaService.getWardsByProvince(provinceId)));
     }
 }

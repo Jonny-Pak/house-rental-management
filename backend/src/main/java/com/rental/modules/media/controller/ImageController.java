@@ -1,7 +1,7 @@
 package com.rental.modules.media.controller;
 
 import com.rental.modules.media.service.ImageService;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;

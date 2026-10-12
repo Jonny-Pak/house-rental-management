@@ -1,6 +1,6 @@
 package com.rental.modules.subscription.repository;
 
-import com.rental.modules.subscription.entity.UserSubscription;
+import com.rental.modules.subscription.domain.entity.UserSubscription;
 import com.rental.modules.user.domain.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

@@ -3,7 +3,7 @@ package com.rental.modules.property.controller;
 import com.rental.modules.property.dto.request.PropertyRequest;
 import com.rental.modules.property.dto.response.PropertyResponse;
 import com.rental.modules.property.service.PropertyService;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -1,6 +1,6 @@
 package com.rental.modules.payment.repository;
 
-import com.rental.modules.payment.entity.PaymentTransaction;
+import com.rental.modules.payment.domain.entity.PaymentTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

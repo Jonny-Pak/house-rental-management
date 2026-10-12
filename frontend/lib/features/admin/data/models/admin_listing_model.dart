@@ -1,4 +1,5 @@
 class AdminListingModel {
+  final List<String> imageUrls;
   final int id;
   final String title;
   final String description;
@@ -14,6 +15,7 @@ class AdminListingModel {
   final String? createdAt;
 
   AdminListingModel({
+    this.imageUrls = const [],
     required this.id,
     required this.title,
     required this.description,
@@ -31,6 +33,7 @@ class AdminListingModel {
 
   factory AdminListingModel.fromJson(Map<String, dynamic> json) {
     return AdminListingModel(
+      imageUrls: (json['imageUrls'] as List?)?.cast<String>() ?? [],
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
@@ -47,4 +50,3 @@ class AdminListingModel {
     );
   }
 }
-

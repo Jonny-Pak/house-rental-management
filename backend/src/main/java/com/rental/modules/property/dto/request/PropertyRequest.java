@@ -19,7 +19,6 @@ public class PropertyRequest {
     @NotNull(message = "Tỉnh/Thành phố không được để trống")
     private Long provinceId;
 
-    @NotNull(message = "Quận/Huyện không được để trống")
     private Long districtId;
 
     @NotNull(message = "Phường/Xã không được để trống")

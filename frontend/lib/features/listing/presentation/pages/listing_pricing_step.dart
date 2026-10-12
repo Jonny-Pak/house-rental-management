@@ -1,9 +1,12 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../cubit/create_listing_cubit.dart';
 import '../cubit/create_listing_state.dart';
+import '../widgets/listing_area_selector.dart';
 
 const _kAccent = Color(0xFFD85D15);
 const _kDark = Color(0xFF2C1D11);
@@ -31,6 +34,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
   final _depositController = TextEditingController();
+  final _areaController = TextEditingController();
   final _picker = ImagePicker();
 
   Future<void> _pickImages(BuildContext context) async {
@@ -49,6 +53,9 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
   void initState() {
     super.initState();
     final state = context.read<CreateListingCubit>().state;
+    _areaController.text = state.calculatedArea > 0
+        ? state.calculatedArea.toStringAsFixed(2)
+        : '';
     _titleController.text = state.title;
     _descController.text = state.description;
     _priceController.text = state.rentPrice?.toStringAsFixed(0) ?? '';
@@ -61,6 +68,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
     _descController.dispose();
     _priceController.dispose();
     _depositController.dispose();
+    _areaController.dispose();
     super.dispose();
   }
 
@@ -77,7 +85,11 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
         ),
         title: const Text(
           'Thông tin giá & Mô tả',
-          style: TextStyle(color: _kDark, fontSize: 16, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: _kDark,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         centerTitle: false,
         bottom: PreferredSize(
@@ -95,6 +107,23 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
+                    _buildSectionTitle('Diện tích (m²) *'),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: _areaController,
+                      hint: 'Ví dụ: 30',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (value) => cubit.updateArea(
+                        double.tryParse(value.replaceAll(',', '.')) ?? 0,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('Khu vực hành chính *'),
+                    const SizedBox(height: 12),
+                    ListingAreaSelector(onChanged: cubit.updateAreaId),
+                    const SizedBox(height: 24),
                     // --- Hình ảnh ---
                     _buildSectionTitle('Hình ảnh (Tối đa 10 ảnh) *'),
                     const SizedBox(height: 12),
@@ -136,8 +165,14 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                       value: state.posterType,
                       hint: 'Chọn tư cách người đăng',
                       items: const [
-                        DropdownMenuItem(value: 'CA_NHAN', child: Text('Cá nhân (Chủ nhà)')),
-                        DropdownMenuItem(value: 'MOI_GIOI', child: Text('Môi giới')),
+                        DropdownMenuItem(
+                          value: 'CA_NHAN',
+                          child: Text('Cá nhân (Chủ nhà)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'MOI_GIOI',
+                          child: Text('Môi giới'),
+                        ),
                       ],
                       onChanged: (val) => cubit.updatePosterType(val),
                     ),
@@ -180,30 +215,44 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _canProceed(state) ? widget.onPreview : null,
+                          onPressed: _canProceed(state)
+                              ? widget.onPreview
+                              : null,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _kAccent,
                             side: const BorderSide(color: _kAccent),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text(
                             'Xem trước',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: FilledButton(
-                          onPressed: _canProceed(state) ? widget.onSubmit : null,
+                          onPressed: _canProceed(state)
+                              ? widget.onSubmit
+                              : null,
                           style: FilledButton.styleFrom(
                             backgroundColor: _kAccent,
                             disabledBackgroundColor: Colors.grey.shade300,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text(
                             'Đăng tin',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -229,7 +278,11 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
     );
   }
 
-  Widget _buildImageSection(BuildContext context, CreateListingState state, CreateListingCubit cubit) {
+  Widget _buildImageSection(
+    BuildContext context,
+    CreateListingState state,
+    CreateListingCubit cubit,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -238,7 +291,9 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
             height: 100,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: state.imagePaths.length + (state.imagePaths.length < 10 ? 1 : 0),
+              itemCount:
+                  state.imagePaths.length +
+                  (state.imagePaths.length < 10 ? 1 : 0),
               separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 if (index == state.imagePaths.length) {
@@ -271,10 +326,18 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                             color: Colors.white,
                             shape: BoxShape.circle,
                             boxShadow: [
-                              BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
                             ],
                           ),
-                          child: const Icon(Icons.close, size: 16, color: Colors.redAccent),
+                          child: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Colors.redAccent,
+                          ),
                         ),
                       ),
                     ),
@@ -302,7 +365,10 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _kAccent.withValues(alpha: 0.5), style: BorderStyle.solid),
+          border: Border.all(
+            color: _kAccent.withValues(alpha: 0.5),
+            style: BorderStyle.solid,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -311,7 +377,11 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
             const SizedBox(height: 4),
             Text(
               'Thêm ảnh',
-              style: TextStyle(color: _kAccent, fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: _kAccent,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -337,7 +407,10 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _kBorder),
@@ -371,7 +444,10 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
         child: DropdownButton<String>(
           isExpanded: true,
           value: value,
-          hint: Text(hint, style: TextStyle(color: Colors.grey.shade400, fontSize: 15)),
+          hint: Text(
+            hint,
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+          ),
           items: items,
           onChanged: onChanged,
           icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _kDark),
@@ -381,10 +457,14 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
   }
 
   bool _canProceed(CreateListingState state) {
-    return state.rentPrice != null && state.rentPrice! > 0 &&
-           state.posterType != null &&
-           state.title.trim().isNotEmpty &&
-           state.description.trim().isNotEmpty &&
-           state.imagePaths.isNotEmpty;
+    return state.status != CreateListingStatus.submitting &&
+        state.areaId != null &&
+        state.calculatedArea > 0 &&
+        state.rentPrice != null &&
+        state.rentPrice! > 0 &&
+        state.posterType != null &&
+        state.title.trim().isNotEmpty &&
+        state.description.trim().isNotEmpty &&
+        state.imagePaths.isNotEmpty;
   }
 }

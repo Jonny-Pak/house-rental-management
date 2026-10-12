@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../preferences/data/models/area_models.dart';
 import '../models/property_model.dart';
@@ -41,7 +42,9 @@ class PropertyRepository {
     }
   }
 
-  Future<List<PropertyModel>> fetchProperties({Map<String, dynamic>? filters}) async {
+  Future<List<PropertyModel>> fetchProperties({
+    Map<String, dynamic>? filters,
+  }) async {
     final response = await _apiClient.get('/properties', queryParams: filters);
     if (response.statusCode == 200 && response.data['success'] == true) {
       return (response.data['data'] as List)
@@ -69,13 +72,22 @@ class PropertyRepository {
   }
 
   Future<List<District>> getDistricts(int provinceId) async {
-    final response = await _apiClient.get('/areas/provinces/$provinceId/districts');
+    final response = await _apiClient.get(
+      '/areas/provinces/$provinceId/districts',
+    );
     if (response.statusCode == 200 && response.data['success'] == true) {
       return (response.data['data'] as List)
           .map((json) => District.fromJson(json))
           .toList();
     }
     throw Exception('Failed to load districts');
+  }
+
+  Future<List<Ward>> getWardsByProvince(int provinceId) async {
+    final response = await _apiClient.get('/areas/provinces/$provinceId/wards');
+    return (response.data['data'] as List)
+        .map((json) => Ward.fromJson(json))
+        .toList();
   }
 
   Future<List<Ward>> getWards(int districtId) async {

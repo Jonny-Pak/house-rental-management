@@ -20,16 +20,35 @@ public class PropertyService {
     private final PropertyRepository propertyRepository;
     private final PropertyImageRepository propertyImageRepository;
     private final UserRepository userRepository;
+    private final com.rental.modules.area.repository.AdministrativeAreaRepository areaRepository;
 
-    public PropertyService(PropertyRepository propertyRepository, PropertyImageRepository propertyImageRepository, UserRepository userRepository) {
+    public PropertyService(PropertyRepository propertyRepository, PropertyImageRepository propertyImageRepository, UserRepository userRepository,
+            com.rental.modules.area.repository.AdministrativeAreaRepository areaRepository) {
         this.propertyRepository = propertyRepository;
         this.propertyImageRepository = propertyImageRepository;
         this.userRepository = userRepository;
+        this.areaRepository = areaRepository;
     }
 
 
     @Transactional
     public PropertyResponse createProperty(String email, PropertyRequest request) {
+        var ward = areaRepository.findById(request.getWardId())
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.BAD_REQUEST, "Phường/xã/đặc khu không hợp lệ."));
+        var parent = ward.getParent();
+        if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(ward.getAreaType()) || parent == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Phường/xã/đặc khu không hợp lệ.");
+        }
+        Long provinceId = "PROVINCE".equals(parent.getAreaType()) ? parent.getAreaId()
+                : parent.getParent() == null ? null : parent.getParent().getAreaId();
+        Long districtId = "DISTRICT".equals(parent.getAreaType()) ? parent.getAreaId() : null;
+        if (!java.util.Objects.equals(provinceId, request.getProvinceId())
+                || !java.util.Objects.equals(districtId, request.getDistrictId())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Địa chỉ hành chính không khớp với phường/xã đã chọn.");
+        }
         User landlord = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
 

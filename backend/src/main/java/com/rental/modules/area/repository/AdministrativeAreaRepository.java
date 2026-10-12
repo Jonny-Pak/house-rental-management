@@ -12,4 +12,6 @@ public interface AdministrativeAreaRepository extends JpaRepository<Administrati
     List<AdministrativeArea> findByAreaTypeOrderByAreaNameAsc(String areaType);
 
     List<AdministrativeArea> findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(Long parentId, String areaType);
+
+    List<AdministrativeArea> findByParent_AreaIdAndAreaTypeInOrderByAreaNameAsc(Long parentId, List<String> areaTypes);
 }

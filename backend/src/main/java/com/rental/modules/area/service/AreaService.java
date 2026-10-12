@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class AreaService {
 
     private final AdministrativeAreaRepository areaRepository;
@@ -51,5 +52,16 @@ public class AreaService {
                         area.getParent() != null ? area.getParent().getAreaId() : null
                 ))
                 .collect(Collectors.toList());
+    }
+
+    public List<WardDto> getWardsByProvince(Long provinceId) {
+        return areaRepository.findByParent_AreaIdAndAreaTypeInOrderByAreaNameAsc(
+                provinceId, List.of("WARD", "COMMUNE", "SPECIAL"))
+                .stream().map(area -> {
+                    WardDto dto = new WardDto(area.getAreaId(), area.getAreaName(), area.getCode(), null);
+                    dto.setProvinceId(provinceId);
+                    dto.setType(area.getAreaType());
+                    return dto;
+                }).toList();
     }
 }
