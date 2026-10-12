@@ -1,3 +1,5 @@
+import '../../../map/presentation/widgets/rental_map_tiles.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -9,11 +11,11 @@ import '../cubit/create_listing_state.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // Design tokens
 // ─────────────────────────────────────────────────────────────────────────────
-const _kAccent     = Color(0xFFD85D15);
-const _kDark       = Color(0xFF2C1D11);
+const _kAccent = Color(0xFFD85D15);
+const _kDark = Color(0xFF2C1D11);
 const _kBackground = Color(0xFFFAF8F5);
-const _kBorder     = Color(0xFFE8DED1);
-const _kSubText    = Color(0xFF64748B);
+const _kBorder = Color(0xFFE8DED1);
+const _kSubText = Color(0xFF64748B);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -33,9 +35,9 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
   final _mapController = MapController();
   final _addressController = TextEditingController();
 
-  // Default center: Đà Nẵng
-  static const _defaultCenter = LatLng(16.0544, 108.2022);
-  static const _defaultZoom   = 14.0;
+  // Default center: TP.HCM
+  static const _defaultCenter = LatLng(10.7769, 106.7009);
+  static const _defaultZoom = 14.0;
 
   /// Whether the user is in polygon drawing mode (after placing the pin).
   bool _isDrawingMode = false;
@@ -60,7 +62,7 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
     if (_isDrawingMode) {
       // In drawing mode, taps add polygon points
       cubit.addPolygonPoint(point);
-    } else if (cubit.state.pinnedLocation != null) {
+    } else {
       // If pin is already placed, tap moves the pin
       cubit.updatePinnedLocation(point);
     }
@@ -83,7 +85,8 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
       listener: (context, state) {
         // When pin is placed/changed, animate map to it
         if (state.pinnedLocation != null &&
-            state.pinnedLocation != context.read<CreateListingCubit>().state.pinnedLocation) {
+            state.pinnedLocation !=
+                context.read<CreateListingCubit>().state.pinnedLocation) {
           // This won't trigger because listener fires AFTER state update.
           // We handle map animation in the builder instead.
         }
@@ -119,11 +122,7 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
 
               // ── Drawing mode badge (top-left) ──────────────────────────
               if (_isDrawingMode)
-                Positioned(
-                  top: 80,
-                  left: 16,
-                  child: _buildDrawingBadge(state),
-                ),
+                Positioned(top: 80, left: 16, child: _buildDrawingBadge(state)),
 
               // ── Bottom panel ─────────────────────────────────────────────
               Positioned(
@@ -151,7 +150,11 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
       ),
       title: const Text(
         'Xác định vị trí & diện tích',
-        style: TextStyle(color: _kDark, fontSize: 16, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: _kDark,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       centerTitle: false,
       bottom: PreferredSize(
@@ -163,7 +166,11 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
 
   // ── Search bar ──────────────────────────────────────────────────────────────
 
-  Widget _buildSearchBar(BuildContext context, CreateListingState state, CreateListingCubit cubit) {
+  Widget _buildSearchBar(
+    BuildContext context,
+    CreateListingState state,
+    CreateListingCubit cubit,
+  ) {
     return Container(
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -187,7 +194,8 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
             child: TextField(
               controller: _addressController,
               onChanged: cubit.updateAddress,
-              onSubmitted: (_) => cubit.searchAddress().then((_) => _animateToPin(cubit.state)),
+              onSubmitted: (_) =>
+                  cubit.searchAddress().then((_) => _animateToPin(cubit.state)),
               style: const TextStyle(fontSize: 14, color: _kDark),
               decoration: const InputDecoration(
                 hintText: 'Nhập địa chỉ cho thuê...',
@@ -204,9 +212,14 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
               borderRadius: BorderRadius.circular(10),
               onTap: state.isSearching
                   ? null
-                  : () => cubit.searchAddress().then((_) => _animateToPin(cubit.state)),
+                  : () => cubit.searchAddress().then(
+                      (_) => _animateToPin(cubit.state),
+                    ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: _kAccent,
                   borderRadius: BorderRadius.circular(10),
@@ -257,12 +270,7 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
       ),
       children: [
         // ── Tile layer ─────────────────────────────────────────────────────
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          fallbackUrl: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.rental.management.app.v1',
-          maxNativeZoom: 19,
-        ),
+        const RentalMapTiles(),
 
         // ── Polygon layer (visible only when >= 3 points) ──────────────────
         if (points.length >= 3)
@@ -328,7 +336,11 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
                   color: Colors.red,
                   size: 40,
                   shadows: [
-                    Shadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+                    Shadow(
+                      color: Colors.black38,
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
                   ],
                 ),
               ),
@@ -337,7 +349,10 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
 
         // ── Attribution ────────────────────────────────────────────────────
         const SimpleAttributionWidget(
-          source: Text('© OpenStreetMap contributors', style: TextStyle(fontSize: 10)),
+          source: Text(
+            '© OpenStreetMap contributors',
+            style: TextStyle(fontSize: 10),
+          ),
         ),
       ],
     );
@@ -346,7 +361,10 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
   // ── Floating controls ───────────────────────────────────────────────────────
 
   Widget _buildFloatingControls(
-      BuildContext context, CreateListingState state, CreateListingCubit cubit) {
+    BuildContext context,
+    CreateListingState state,
+    CreateListingCubit cubit,
+  ) {
     return Column(
       children: [
         // GPS button
@@ -355,7 +373,9 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
           label: 'Vị trí hiện tại',
           onTap: state.isSearching
               ? null
-              : () => cubit.useCurrentLocation().then((_) => _animateToPin(cubit.state)),
+              : () => cubit.useCurrentLocation().then(
+                  (_) => _animateToPin(cubit.state),
+                ),
           color: Colors.blueAccent,
         ),
 
@@ -399,7 +419,9 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xóa toàn bộ điểm?'),
-        content: const Text('Hành động này sẽ xóa tất cả điểm đã vẽ trên bản đồ.'),
+        content: const Text(
+          'Hành động này sẽ xóa tất cả điểm đã vẽ trên bản đồ.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -440,12 +462,19 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 8),
           Text(
             'Đang vẽ · ${state.polygonPoints.length} điểm',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _kDark),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _kDark,
+            ),
           ),
           if (state.hasPolygon) ...[
             const SizedBox(width: 6),
@@ -459,7 +488,10 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
   // ── Bottom panel ────────────────────────────────────────────────────────────
 
   Widget _buildBottomPanel(
-      BuildContext context, CreateListingState state, CreateListingCubit cubit) {
+    BuildContext context,
+    CreateListingState state,
+    CreateListingCubit cubit,
+  ) {
     final hasPin = state.pinnedLocation != null;
 
     return Container(
@@ -573,7 +605,10 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
                       borderRadius: BorderRadius.circular(13),
                     ),
                   ),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
+                  icon: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 20,
+                  ),
                   label: const Text(
                     'Xác nhận vị trí',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
@@ -605,10 +640,7 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
           Icon(icon, color: color, size: 18),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 12, color: color),
-            ),
+            child: Text(text, style: TextStyle(fontSize: 12, color: color)),
           ),
         ],
       ),
@@ -688,7 +720,9 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = highlight ? _kAccent.withValues(alpha: 0.08) : Colors.grey.shade50;
+    final bgColor = highlight
+        ? _kAccent.withValues(alpha: 0.08)
+        : Colors.grey.shade50;
     final borderColor = highlight ? _kAccent.withValues(alpha: 0.3) : _kBorder;
     final textColor = highlight ? _kAccent : _kDark;
 

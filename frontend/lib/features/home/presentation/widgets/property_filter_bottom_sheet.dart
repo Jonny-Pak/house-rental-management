@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../preferences/data/models/area_models.dart';
 import '../../../property/data/repositories/property_repository.dart';
@@ -10,18 +11,19 @@ class PropertyFilterBottomSheet extends StatefulWidget {
   const PropertyFilterBottomSheet({super.key, this.initialFilters});
 
   @override
-  State<PropertyFilterBottomSheet> createState() => _PropertyFilterBottomSheetState();
+  State<PropertyFilterBottomSheet> createState() =>
+      _PropertyFilterBottomSheetState();
 }
 
 class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
-  final PropertyRepository _repository = PropertyRepository(GetIt.I<ApiClient>());
+  final PropertyRepository _repository = PropertyRepository(
+    GetIt.I<ApiClient>(),
+  );
 
   List<Province> provinces = [];
-  List<District> districts = [];
   List<Ward> wards = [];
 
   Province? selectedProvince;
-  District? selectedDistrict;
   Ward? selectedWard;
 
   String? selectedPropertyType;
@@ -38,6 +40,7 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
   Future<void> _loadInitialFilters() async {
     try {
       final pList = await _repository.getProvinces();
+      if (!mounted) return;
       setState(() {
         provinces = pList;
         isLoadingLocations = false;
@@ -59,24 +62,17 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
             orElse: () => provinces.isNotEmpty ? provinces.first : null,
           );
           await _onProvinceChanged(selectedProvince);
-          
-          if (init['districtId'] != null) {
-            selectedDistrict = districts.cast<District?>().firstWhere(
-              (d) => d?.id == init['districtId'],
-              orElse: () => districts.isNotEmpty ? districts.first : null,
+
+          if (init['wardId'] != null) {
+            selectedWard = wards.cast<Ward?>().firstWhere(
+              (w) => w?.id == init['wardId'],
+              orElse: () => null,
             );
-            await _onDistrictChanged(selectedDistrict);
-            
-            if (init['wardId'] != null) {
-              selectedWard = wards.cast<Ward?>().firstWhere(
-                (w) => w?.id == init['wardId'],
-                orElse: () => wards.isNotEmpty ? wards.first : null,
-              );
-            }
           }
         }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoadingLocations = false;
       });
@@ -86,27 +82,14 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
   Future<void> _onProvinceChanged(Province? province) async {
     setState(() {
       selectedProvince = province;
-      selectedDistrict = null;
       selectedWard = null;
-      districts = [];
       wards = [];
     });
     if (province != null) {
-      final dList = await _repository.getDistricts(province.id);
-      setState(() {
-        districts = dList;
-      });
-    }
-  }
-
-  Future<void> _onDistrictChanged(District? district) async {
-    setState(() {
-      selectedDistrict = district;
-      selectedWard = null;
-      wards = [];
-    });
-    if (district != null) {
-      final wList = await _repository.getWards(district.id);
+      final wList = await _repository.getWardsByProvince(province.id);
+      if (!mounted || selectedProvince?.id != province.id) {
+        return;
+      }
       setState(() {
         wards = wList;
       });
@@ -116,10 +99,11 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
   void _applyFilter() {
     final filters = <String, dynamic>{};
     if (selectedProvince != null) filters['provinceId'] = selectedProvince!.id;
-    if (selectedDistrict != null) filters['districtId'] = selectedDistrict!.id;
     if (selectedWard != null) filters['wardId'] = selectedWard!.id;
-    if (selectedPropertyType != null) filters['propertyType'] = selectedPropertyType;
-    
+    if (selectedPropertyType != null) {
+      filters['propertyType'] = selectedPropertyType;
+    }
+
     if (priceRange.start > 0) filters['minPrice'] = priceRange.start;
     if (priceRange.end < 15000000) filters['maxPrice'] = priceRange.end;
 
@@ -129,11 +113,9 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
   void _clearFilter() {
     setState(() {
       selectedProvince = null;
-      selectedDistrict = null;
       selectedWard = null;
       selectedPropertyType = null;
       priceRange = const RangeValues(0, 15000000);
-      districts = [];
       wards = [];
     });
   }
@@ -155,7 +137,11 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Bộ lọc tìm kiếm', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Bộ lọc tìm kiếm',
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
@@ -169,34 +155,51 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-                  const Text('Khu vực', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Khu vực',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   const SizedBox(height: 8),
                   if (isLoadingLocations)
                     const Center(child: CircularProgressIndicator())
                   else ...[
                     DropdownButtonFormField<Province>(
-                      decoration: const InputDecoration(labelText: 'Tỉnh/Thành phố', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Tỉnh/Thành phố',
+                        border: OutlineInputBorder(),
+                      ),
                       initialValue: selectedProvince,
-                      items: provinces.map((p) => DropdownMenuItem(value: p, child: Text(p.name))).toList(),
+                      items: provinces
+                          .map(
+                            (p) =>
+                                DropdownMenuItem(value: p, child: Text(p.name)),
+                          )
+                          .toList(),
                       onChanged: _onProvinceChanged,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<District>(
-                      decoration: const InputDecoration(labelText: 'Quận/Huyện', border: OutlineInputBorder()),
-                      initialValue: selectedDistrict,
-                      items: districts.map((d) => DropdownMenuItem(value: d, child: Text(d.name))).toList(),
-                      onChanged: _onDistrictChanged,
-                    ),
-                    const SizedBox(height: 12),
                     DropdownButtonFormField<Ward>(
-                      decoration: const InputDecoration(labelText: 'Phường/Xã', border: OutlineInputBorder()),
+                      key: ValueKey(selectedWard?.id),
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Phường / xã / đặc khu',
+                        border: OutlineInputBorder(),
+                      ),
                       initialValue: selectedWard,
-                      items: wards.map((w) => DropdownMenuItem(value: w, child: Text(w.name))).toList(),
+                      items: wards
+                          .map(
+                            (w) =>
+                                DropdownMenuItem(value: w, child: Text(w.name)),
+                          )
+                          .toList(),
                       onChanged: (w) => setState(() => selectedWard = w),
                     ),
                   ],
                   const SizedBox(height: 24),
-                  const Text('Loại hình', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Loại hình',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -204,12 +207,19 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
                       FilterChip(
                         label: const Text('Nhà nguyên căn'),
                         selected: selectedPropertyType == 'WHOLE_HOUSE',
-                        onSelected: (val) => setState(() => selectedPropertyType = val ? 'WHOLE_HOUSE' : null),
+                        onSelected: (val) => setState(
+                          () =>
+                              selectedPropertyType = val ? 'WHOLE_HOUSE' : null,
+                        ),
                       ),
                       FilterChip(
                         label: const Text('Khu trọ'),
                         selected: selectedPropertyType == 'BOARDING_HOUSE',
-                        onSelected: (val) => setState(() => selectedPropertyType = val ? 'BOARDING_HOUSE' : null),
+                        onSelected: (val) => setState(
+                          () => selectedPropertyType = val
+                              ? 'BOARDING_HOUSE'
+                              : null,
+                        ),
                       ),
                     ],
                   ),
@@ -217,10 +227,19 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Khoảng giá', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text(
+                        'Khoảng giá',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       Text(
                         'Từ ${_formatCurrency(priceRange.start)} - ${_formatCurrency(priceRange.end)}',
-                        style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.indigo,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -229,7 +248,10 @@ class _PropertyFilterBottomSheetState extends State<PropertyFilterBottomSheet> {
                     min: 0,
                     max: 15000000,
                     divisions: 30,
-                    labels: RangeLabels(_formatCurrency(priceRange.start), _formatCurrency(priceRange.end)),
+                    labels: RangeLabels(
+                      _formatCurrency(priceRange.start),
+                      _formatCurrency(priceRange.end),
+                    ),
                     onChanged: (values) => setState(() => priceRange = values),
                   ),
                 ],

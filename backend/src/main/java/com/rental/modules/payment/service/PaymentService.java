@@ -1,10 +1,10 @@
 package com.rental.modules.payment.service;
 
 import com.rental.modules.payment.config.VnPayConfig;
-import com.rental.modules.payment.entity.PaymentTransaction;
+import com.rental.modules.payment.domain.entity.PaymentTransaction;
 import com.rental.modules.payment.repository.PaymentTransactionRepository;
-import com.rental.modules.subscription.entity.MembershipPackage;
-import com.rental.modules.subscription.entity.UserSubscription;
+import com.rental.modules.subscription.domain.entity.MembershipPackage;
+import com.rental.modules.subscription.domain.entity.UserSubscription;
 import com.rental.modules.subscription.repository.MembershipPackageRepository;
 import com.rental.modules.subscription.repository.UserSubscriptionRepository;
 import com.rental.modules.user.domain.entity.User;

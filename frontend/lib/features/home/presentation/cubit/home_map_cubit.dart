@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/network/api_client.dart';
-import '../../data/models/listing_model.dart';
+
+import '../../../listing/data/repositories/listing_repository.dart';
+import '../../../listing/data/models/listing_model.dart';
 
 // --- States ---
 abstract class HomeMapState {}
@@ -21,34 +22,24 @@ class HomeMapError extends HomeMapState {
 
 // --- Cubit ---
 class HomeMapCubit extends Cubit<HomeMapState> {
-  final ApiClient _apiClient;
+  final ListingRepository _repository;
 
-  HomeMapCubit(this._apiClient) : super(HomeMapInitial());
+  HomeMapCubit(this._repository) : super(HomeMapInitial());
+  bool _fetching = false;
 
-  Future<void> fetchApprovedListings() async {
-    emit(HomeMapLoading());
+  Future<void> fetchApprovedListings({bool silent = false}) async {
+    if (_fetching || isClosed) return;
+    _fetching = true;
+    if (!silent) emit(HomeMapLoading());
     try {
-      final response = await _apiClient.get('/listings/public');
-      if (response.statusCode == 200) {
-        final dynamic body = response.data;
-        List<dynamic> listData = [];
-        if (body is List) {
-          listData = body;
-        } else if (body is Map && body['data'] is List) {
-          listData = body['data'];
-        }
-
-        final listings = listData
-            .map((item) => Listing.fromJson(item as Map<String, dynamic>))
-            .toList();
-
-        emit(HomeMapLoaded(listings));
-      } else {
-        emit(HomeMapError('Không thể tải danh sách bài đăng'));
-      }
+      final listings = await _repository.fetchApprovedListings();
+      if (!isClosed) emit(HomeMapLoaded(listings));
     } catch (e) {
-      emit(HomeMapError(e.toString()));
+      if (!isClosed && !(silent && state is HomeMapLoaded)) {
+        emit(HomeMapError(ListingRepository.errorMessage(e)));
+      }
+    } finally {
+      _fetching = false;
     }
   }
 }
-

@@ -41,13 +41,17 @@ class Ward {
   final int id;
   final String name;
   final String code;
-  final int districtId;
+  final int? districtId;
+  final int? provinceId;
+  final String type;
 
   const Ward({
     required this.id,
     required this.name,
     required this.code,
-    required this.districtId,
+    this.districtId,
+    this.provinceId,
+    this.type = 'WARD',
   });
 
   factory Ward.fromJson(Map<String, dynamic> json) {
@@ -55,7 +59,9 @@ class Ward {
       id: json['id'] as int,
       name: json['name'] as String,
       code: json['code'] as String,
-      districtId: json['districtId'] as int,
+      districtId: json['districtId'] as int?,
+      provinceId: json['provinceId'] as int?,
+      type: json['type'] as String? ?? 'WARD',
     );
   }
 }

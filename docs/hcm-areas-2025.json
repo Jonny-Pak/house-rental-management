@@ -1,0 +1,847 @@
+{
+  "resolution": "1685/NQ-UBTVQH15",
+  "source": "https://xaydungchinhsach.chinhphu.vn/sap-xep-dvhc-danh-sach-168-xa-phuong-dac-khu-cua-thanh-pho-ho-chi-minh-119250623085031865.htm",
+  "codeSystem": "Application-local identifiers; not official government codes",
+  "units": [
+    {
+      "code": "HCM25-001",
+      "name": "Phường Sài Gòn",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-002",
+      "name": "Phường Tân Định",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-003",
+      "name": "Phường Bến Thành",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-004",
+      "name": "Phường Cầu Ông Lãnh",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-005",
+      "name": "Phường Bàn Cờ",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-006",
+      "name": "Phường Xuân Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-007",
+      "name": "Phường Nhiêu Lộc",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-008",
+      "name": "Phường Xóm Chiếu",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-009",
+      "name": "Phường Khánh Hội",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-010",
+      "name": "Phường Vĩnh Hội",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-011",
+      "name": "Phường Chợ Quán",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-012",
+      "name": "Phường An Đông",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-013",
+      "name": "Phường Chợ Lớn",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-014",
+      "name": "Phường Bình Tây",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-015",
+      "name": "Phường Bình Tiên",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-016",
+      "name": "Phường Bình Phú",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-017",
+      "name": "Phường Phú Lâm",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-018",
+      "name": "Phường Tân Thuận",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-019",
+      "name": "Phường Phú Thuận",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-020",
+      "name": "Phường Tân Mỹ",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-021",
+      "name": "Phường Tân Hưng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-022",
+      "name": "Phường Chánh Hưng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-023",
+      "name": "Phường Phú Định",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-024",
+      "name": "Phường Bình Đông",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-025",
+      "name": "Phường Diên Hồng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-026",
+      "name": "Phường Vườn Lài",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-027",
+      "name": "Phường Hòa Hưng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-028",
+      "name": "Phường Minh Phụng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-029",
+      "name": "Phường Bình Thới",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-030",
+      "name": "Phường Hòa Bình",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-031",
+      "name": "Phường Phú Thọ",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-032",
+      "name": "Phường Đông Hưng Thuận",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-033",
+      "name": "Phường Trung Mỹ Tây",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-034",
+      "name": "Phường Tân Thới Hiệp",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-035",
+      "name": "Phường Thới An",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-036",
+      "name": "Phường An Phú Đông",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-037",
+      "name": "Phường An Lạc",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-038",
+      "name": "Phường Bình Tân",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-039",
+      "name": "Phường Tân Tạo",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-040",
+      "name": "Phường Bình Trị Đông",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-041",
+      "name": "Phường Bình Hưng Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-042",
+      "name": "Phường Gia Định",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-043",
+      "name": "Phường Bình Thạnh",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-044",
+      "name": "Phường Bình Lợi Trung",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-045",
+      "name": "Phường Thạnh Mỹ Tây",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-046",
+      "name": "Phường Bình Quới",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-047",
+      "name": "Phường Hạnh Thông",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-048",
+      "name": "Phường An Nhơn",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-049",
+      "name": "Phường Gò Vấp",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-050",
+      "name": "Phường An Hội Đông",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-051",
+      "name": "Phường Thông Tây Hội",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-052",
+      "name": "Phường An Hội Tây",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-053",
+      "name": "Phường Đức Nhuận",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-054",
+      "name": "Phường Cầu Kiệu",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-055",
+      "name": "Phường Phú Nhuận",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-056",
+      "name": "Phường Tân Sơn Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-057",
+      "name": "Phường Tân Sơn Nhất",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-058",
+      "name": "Phường Tân Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-059",
+      "name": "Phường Bảy Hiền",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-060",
+      "name": "Phường Tân Bình",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-061",
+      "name": "Phường Tân Sơn",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-062",
+      "name": "Phường Tây Thạnh",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-063",
+      "name": "Phường Tân Sơn Nhì",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-064",
+      "name": "Phường Phú Thọ Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-065",
+      "name": "Phường Tân Phú",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-066",
+      "name": "Phường Phú Thạnh",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-067",
+      "name": "Phường Hiệp Bình",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-068",
+      "name": "Phường Thủ Đức",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-069",
+      "name": "Phường Tam Bình",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-070",
+      "name": "Phường Linh Xuân",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-071",
+      "name": "Phường Tăng Nhơn Phú",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-072",
+      "name": "Phường Long Bình",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-073",
+      "name": "Phường Long Phước",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-074",
+      "name": "Phường Long Trường",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-075",
+      "name": "Phường Cát Lái",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-076",
+      "name": "Phường Bình Trưng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-077",
+      "name": "Phường Phước Long",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-078",
+      "name": "Phường An Khánh",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-079",
+      "name": "Phường Đông Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-080",
+      "name": "Phường Dĩ An",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-081",
+      "name": "Phường Tân Đông Hiệp",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-082",
+      "name": "Phường An Phú",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-083",
+      "name": "Phường Bình Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-084",
+      "name": "Phường Lái Thiêu",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-085",
+      "name": "Phường Thuận An",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-086",
+      "name": "Phường Thuận Giao",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-087",
+      "name": "Phường Thủ Dầu Một",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-088",
+      "name": "Phường Phú Lợi",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-089",
+      "name": "Phường Chánh Hiệp",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-090",
+      "name": "Phường Bình Dương",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-091",
+      "name": "Phường Hòa Lợi",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-092",
+      "name": "Phường Phú An",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-093",
+      "name": "Phường Tây Nam",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-094",
+      "name": "Phường Long Nguyên",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-095",
+      "name": "Phường Bến Cát",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-096",
+      "name": "Phường Chánh Phú Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-097",
+      "name": "Phường Vĩnh Tân",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-098",
+      "name": "Phường Bình Cơ",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-099",
+      "name": "Phường Tân Uyên",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-100",
+      "name": "Phường Tân Hiệp",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-101",
+      "name": "Phường Tân Khánh",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-102",
+      "name": "Phường Vũng Tàu",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-103",
+      "name": "Phường Tam Thắng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-104",
+      "name": "Phường Rạch Dừa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-105",
+      "name": "Phường Phước Thắng",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-106",
+      "name": "Phường Long Hương",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-107",
+      "name": "Phường Bà Rịa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-108",
+      "name": "Phường Tam Long",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-109",
+      "name": "Phường Tân Hải",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-110",
+      "name": "Phường Tân Phước",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-111",
+      "name": "Phường Phú Mỹ",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-112",
+      "name": "Phường Tân Thành",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-113",
+      "name": "Xã Vĩnh Lộc",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-114",
+      "name": "Xã Tân Vĩnh Lộc",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-115",
+      "name": "Xã Bình Lợi",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-116",
+      "name": "Xã Tân Nhựt",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-117",
+      "name": "Xã Bình Chánh",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-118",
+      "name": "Xã Hưng Long",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-119",
+      "name": "Xã Bình Hưng",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-120",
+      "name": "Xã Bình Khánh",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-121",
+      "name": "Xã An Thới Đông",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-122",
+      "name": "Xã Cần Giờ",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-123",
+      "name": "Xã Củ Chi",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-124",
+      "name": "Xã Tân An Hội",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-125",
+      "name": "Xã Thái Mỹ",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-126",
+      "name": "Xã An Nhơn Tây",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-127",
+      "name": "Xã Nhuận Đức",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-128",
+      "name": "Xã Phú Hòa Đông",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-129",
+      "name": "Xã Bình Mỹ",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-130",
+      "name": "Xã Đông Thạnh",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-131",
+      "name": "Xã Hóc Môn",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-132",
+      "name": "Xã Xuân Thới Sơn",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-133",
+      "name": "Xã Bà Điểm",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-134",
+      "name": "Xã Nhà Bè",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-135",
+      "name": "Xã Hiệp Phước",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-136",
+      "name": "Xã Thường Tân",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-137",
+      "name": "Xã Bắc Tân Uyên",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-138",
+      "name": "Xã Phú Giáo",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-139",
+      "name": "Xã Phước Hòa",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-140",
+      "name": "Xã Phước Thành",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-141",
+      "name": "Xã An Long",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-142",
+      "name": "Xã Trừ Văn Thố",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-143",
+      "name": "Xã Bàu Bàng",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-144",
+      "name": "Xã Long Hòa",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-145",
+      "name": "Xã Thanh An",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-146",
+      "name": "Xã Dầu Tiếng",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-147",
+      "name": "Xã Minh Thạnh",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-148",
+      "name": "Xã Châu Pha",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-149",
+      "name": "Xã Long Hải",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-150",
+      "name": "Xã Long Điền",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-151",
+      "name": "Xã Phước Hải",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-152",
+      "name": "Xã Đất Đỏ",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-153",
+      "name": "Xã Nghĩa Thành",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-154",
+      "name": "Xã Ngãi Giao",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-155",
+      "name": "Xã Kim Long",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-156",
+      "name": "Xã Châu Đức",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-157",
+      "name": "Xã Bình Giã",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-158",
+      "name": "Xã Xuân Sơn",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-159",
+      "name": "Xã Hồ Tràm",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-160",
+      "name": "Xã Xuyên Mộc",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-161",
+      "name": "Xã Hòa Hội",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-162",
+      "name": "Xã Bàu Lâm",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-163",
+      "name": "Đặc khu Côn Đảo",
+      "type": "SPECIAL"
+    },
+    {
+      "code": "HCM25-164",
+      "name": "Phường Thới Hòa",
+      "type": "WARD"
+    },
+    {
+      "code": "HCM25-165",
+      "name": "Xã Long Sơn",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-166",
+      "name": "Xã Hòa Hiệp",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-167",
+      "name": "Xã Bình Châu",
+      "type": "COMMUNE"
+    },
+    {
+      "code": "HCM25-168",
+      "name": "Xã Thạnh An",
+      "type": "COMMUNE"
+    }
+  ]
+}

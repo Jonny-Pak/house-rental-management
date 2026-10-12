@@ -3,7 +3,7 @@ package com.rental.modules.user.controller;
 import com.rental.modules.user.dto.request.UpdateAvatarRequest;
 import com.rental.modules.user.dto.request.UpdateProfileRequest;
 import com.rental.modules.user.dto.request.UserPreferenceDto;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import com.rental.modules.user.dto.response.UserProfileResponse;
 import com.rental.modules.user.service.UserService;
 import jakarta.validation.Valid;

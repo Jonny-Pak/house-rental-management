@@ -5,6 +5,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class AdminListingResponse {
+    private java.util.List<String> imageUrls;
+    public java.util.List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(java.util.List<String> urls) { imageUrls = urls; }
 
     private Long id;
     private String title;

@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../data/datasources/area_remote_data_source.dart';
 import '../../data/datasources/preference_remote_data_source.dart';
@@ -17,8 +18,12 @@ class PreferencesPage extends StatelessWidget {
     return BlocProvider(
       create: (context) {
         final apiClient = ApiClient();
-        final areaRepo = AreaRepositoryImpl(AreaRemoteDataSourceImpl(apiClient));
-        final prefRepo = PreferenceRepositoryImpl(PreferenceRemoteDataSourceImpl(apiClient));
+        final areaRepo = AreaRepositoryImpl(
+          AreaRemoteDataSourceImpl(apiClient),
+        );
+        final prefRepo = PreferenceRepositoryImpl(
+          PreferenceRemoteDataSourceImpl(apiClient),
+        );
         return PreferencesCubit(areaRepo, prefRepo)..loadInitialData();
       },
       child: const PreferencesView(),
@@ -48,11 +53,15 @@ class _PreferencesViewState extends State<PreferencesView> {
 
   void _populateInitialData(PreferencesState state) {
     if (state.currentPreference != null) {
-      if (state.currentPreference!.minBudget != null && _minBudgetController.text.isEmpty) {
-        _minBudgetController.text = state.currentPreference!.minBudget!.toStringAsFixed(0);
+      if (state.currentPreference!.minBudget != null &&
+          _minBudgetController.text.isEmpty) {
+        _minBudgetController.text = state.currentPreference!.minBudget!
+            .toStringAsFixed(0);
       }
-      if (state.currentPreference!.maxBudget != null && _maxBudgetController.text.isEmpty) {
-        _maxBudgetController.text = state.currentPreference!.maxBudget!.toStringAsFixed(0);
+      if (state.currentPreference!.maxBudget != null &&
+          _maxBudgetController.text.isEmpty) {
+        _maxBudgetController.text = state.currentPreference!.maxBudget!
+            .toStringAsFixed(0);
       }
       if (state.currentPreference!.hasPet != null) {
         _hasPet = state.currentPreference!.hasPet!;
@@ -96,10 +105,7 @@ class _PreferencesViewState extends State<PreferencesView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sở thích tìm trọ'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Sở thích tìm trọ'), centerTitle: true),
       body: BlocConsumer<PreferencesCubit, PreferencesState>(
         listener: (context, state) {
           if (state.status == PreferencesStatus.updateSuccess) {
@@ -117,7 +123,8 @@ class _PreferencesViewState extends State<PreferencesView> {
           }
         },
         builder: (context, state) {
-          if (state.status == PreferencesStatus.loading || state.status == PreferencesStatus.initial) {
+          if (state.status == PreferencesStatus.loading ||
+              state.status == PreferencesStatus.initial) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -145,7 +152,10 @@ class _PreferencesViewState extends State<PreferencesView> {
                           Expanded(
                             child: Text(
                               'Khu vực hiện tại: ${state.currentPreference!.preferredArea}',
-                              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blue),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                              ),
                             ),
                           ),
                         ],
@@ -155,7 +165,8 @@ class _PreferencesViewState extends State<PreferencesView> {
                   ],
                   Text(
                     'Khu vực mong muốn',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   _buildDropdown<Province>(
@@ -165,39 +176,33 @@ class _PreferencesViewState extends State<PreferencesView> {
                       return DropdownMenuItem(value: p, child: Text(p.name));
                     }).toList(),
                     onChanged: (val) {
-                      if (val != null) context.read<PreferencesCubit>().onProvinceChanged(val);
+                      if (val != null) {
+                        context.read<PreferencesCubit>().onProvinceChanged(val);
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
-                  _buildDropdown<District>(
-                    label: 'Quận/Huyện',
-                    value: state.selectedDistrict,
-                    items: state.districts.map((d) {
-                      return DropdownMenuItem(value: d, child: Text(d.name));
-                    }).toList(),
-                    onChanged: state.selectedProvince == null
-                        ? null
-                        : (val) {
-                            if (val != null) context.read<PreferencesCubit>().onDistrictChanged(val);
-                          },
-                  ),
-                  const SizedBox(height: 16),
                   _buildDropdown<Ward>(
-                    label: 'Phường/Xã',
+                    label: 'Phường / xã / đặc khu',
                     value: state.selectedWard,
                     items: state.wards.map((w) {
                       return DropdownMenuItem(value: w, child: Text(w.name));
                     }).toList(),
-                    onChanged: state.selectedDistrict == null
+                    onChanged: state.wards.isEmpty
                         ? null
                         : (val) {
-                            if (val != null) context.read<PreferencesCubit>().onWardChanged(val);
+                            if (val != null) {
+                              context.read<PreferencesCubit>().onWardChanged(
+                                val,
+                              );
+                            }
                           },
                   ),
                   const SizedBox(height: 32),
                   Text(
                     'Ngân sách dự kiến',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -243,8 +248,13 @@ class _PreferencesViewState extends State<PreferencesView> {
                       border: Border.all(color: Colors.grey.shade300),
                     ),
                     child: SwitchListTile(
-                      title: const Text('Có mang theo thú cưng', style: TextStyle(fontWeight: FontWeight.w500)),
-                      subtitle: const Text('Tick chọn nếu bạn dự định nuôi chó mèo'),
+                      title: const Text(
+                        'Có mang theo thú cưng',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: const Text(
+                        'Tick chọn nếu bạn dự định nuôi chó mèo',
+                      ),
                       secondary: const Icon(Icons.pets),
                       value: _hasPet,
                       onChanged: (val) {
@@ -269,19 +279,31 @@ class _PreferencesViewState extends State<PreferencesView> {
                       onPressed: state.status == PreferencesStatus.updating
                           ? null
                           : () {
-                              final min = double.tryParse(_minBudgetController.text);
-                              final max = double.tryParse(_maxBudgetController.text);
-                              context.read<PreferencesCubit>().updatePreferences(min, max, _hasPet);
+                              final min = double.tryParse(
+                                _minBudgetController.text,
+                              );
+                              final max = double.tryParse(
+                                _maxBudgetController.text,
+                              );
+                              context
+                                  .read<PreferencesCubit>()
+                                  .updatePreferences(min, max, _hasPet);
                             },
                       child: state.status == PreferencesStatus.updating
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
                             )
                           : const Text(
                               'Lưu thông tin',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                     ),
                   ),

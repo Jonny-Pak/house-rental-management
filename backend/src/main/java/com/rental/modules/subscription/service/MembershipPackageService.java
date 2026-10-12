@@ -1,6 +1,6 @@
 package com.rental.modules.subscription.service;
 
-import com.rental.modules.subscription.entity.MembershipPackage;
+import com.rental.modules.subscription.domain.entity.MembershipPackage;
 import com.rental.modules.subscription.repository.MembershipPackageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

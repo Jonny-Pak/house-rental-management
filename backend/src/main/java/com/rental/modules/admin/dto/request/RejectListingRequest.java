@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public class RejectListingRequest {
 
     @NotBlank(message = "Rejection reason must not be blank")
+    @jakarta.validation.constraints.Size(max = 255)
     private String reason;
 
     public String getReason() { return reason; }

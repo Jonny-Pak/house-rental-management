@@ -18,7 +18,7 @@ public class AdministrativeArea {
     private String areaName;
 
     @Column(name = "area_type", length = 10)
-    private String areaType; // PROVINCE, DISTRICT, WARD
+    private String areaType; // PROVINCE, DISTRICT (legacy), WARD, COMMUNE, SPECIAL
 
     @Column(name = "code", length = 20)
     private String code;

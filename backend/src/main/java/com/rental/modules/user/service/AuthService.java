@@ -50,6 +50,9 @@ public class AuthService {
     // â”€â”€ Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public String register(RegisterRequest request) {
+        if (request.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Không thể tự đăng ký tài khoản Admin.");
+        }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email " + request.getEmail() + "Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng. Vui lÃ²ng sá»­ dá»¥ng email khÃ¡c.");
         }

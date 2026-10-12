@@ -1,7 +1,7 @@
 package com.rental.modules.admin.service;
 
 import com.rental.modules.admin.dto.response.AdminListingResponse;
-import com.rental.modules.listing.entity.Listing;
+import com.rental.modules.listing.domain.entity.Listing;
 import com.rental.modules.listing.repository.ListingRepository;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.repository.UserRepository;
@@ -30,6 +30,7 @@ public class AdminListingService {
     public List<AdminListingResponse> getPendingListings() {
         return listingRepository.findByApprovalStatus("PENDING")
                 .stream()
+                .filter(l -> !"DELETED".equals(l.getRentalStatus()))
                 .map(this::toAdminListingResponse)
                 .collect(Collectors.toList());
     }
@@ -51,12 +52,18 @@ public class AdminListingService {
     }
 
     private AdminListingResponse updateApprovalStatus(Long listingId, Long adminId, String status, String reason) {
-        Listing listing = listingRepository.findById(listingId)
+        Listing listing = listingRepository.findLockedById(listingId)
                 .orElseThrow(() -> new IllegalArgumentException("Listing not found with id: " + listingId));
 
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("Admin user not found with id: " + adminId));
 
+        if (admin.getRole() != com.rental.modules.user.domain.enums.Role.ADMIN) {
+            throw new org.springframework.security.access.AccessDeniedException("Admin required");
+        }
+        if (!"PENDING".equals(listing.getApprovalStatus()) || "DELETED".equals(listing.getRentalStatus())) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Tin không còn ở trạng thái chờ duyệt. Vui lòng tải lại.");
+        }
         listing.setApprovalStatus(status);
         listing.setApprovedBy(admin);
         listing.setRejectionReason(reason);
@@ -68,6 +75,7 @@ public class AdminListingService {
 
     private AdminListingResponse toAdminListingResponse(Listing listing) {
         AdminListingResponse response = new AdminListingResponse();
+        response.setImageUrls(listing.getImages().stream().map(com.rental.modules.listing.domain.entity.ListingImage::getImageUrl).toList());
         response.setId(listing.getId());
         response.setTitle(listing.getTitle());
         response.setDescription(listing.getDescription());

@@ -15,6 +15,32 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/listings")
 public class ListingController {
 
+    @GetMapping("/me")
+    public List<ListingResponse> getMyListings(@AuthenticationPrincipal com.rental.core.security.CustomUserDetails user) {
+        return listingService.getMyListings(user.getUser().getUserId());
+    }
+
+    @PutMapping("/{id}")
+    public ListingResponse updateListing(@PathVariable Long id,
+            @AuthenticationPrincipal com.rental.core.security.CustomUserDetails user,
+            @Valid @RequestBody CreateListingRequest request) {
+        return listingService.updateListing(id, user.getUser().getUserId(), request);
+    }
+
+    @PatchMapping("/{id}/rental-status")
+    public ListingResponse updateRentalStatus(@PathVariable Long id,
+            @AuthenticationPrincipal com.rental.core.security.CustomUserDetails user,
+            @Valid @RequestBody com.rental.modules.listing.dto.request.UpdateRentalStatusRequest request) {
+        return listingService.updateRentalStatus(id, user.getUser().getUserId(), request.getRentalStatus());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteListing(@PathVariable Long id,
+            @AuthenticationPrincipal com.rental.core.security.CustomUserDetails user) {
+        listingService.deleteListing(id, user.getUser().getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     private final ListingService listingService;
 
     public ListingController(ListingService listingService) {

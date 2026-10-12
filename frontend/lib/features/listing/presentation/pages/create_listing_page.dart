@@ -6,7 +6,7 @@ import 'listing_details_step.dart';
 import 'listing_location_map_step.dart';
 import 'listing_pricing_step.dart';
 import 'listing_preview_page.dart';
-import 'my_listings_page.dart';
+import '../cubit/create_listing_state.dart';
 
 class CreateListingPage extends StatelessWidget {
   const CreateListingPage({super.key});
@@ -47,56 +47,80 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // For now, we only have Step 2 (Map) implemented as a full page component.
-    // We can just show the ListingLocationMapStep directly or in a PageView.
-    return PageView(
-      controller: _pageController,
-      physics: const NeverScrollableScrollPhysics(), // Disable swipe to navigate
-      children: [
-        // Step 1: Select Type (Placeholder)
-        _buildTypeSelectionStep(context),
-        
-        // Step 2: Location Map
-        ListingLocationMapStep(
-          onBack: _previousStep,
-          onConfirm: () {
-            // Move to step 3 when confirmed
-            _nextStep();
-          },
-        ),
+    // Keep the draft across all steps and block repeated submission while saving.
+    return BlocBuilder<CreateListingCubit, CreateListingState>(
+      builder: (context, state) => Stack(
+        children: [
+          AbsorbPointer(
+            absorbing: state.status == CreateListingStatus.submitting,
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(), // Disable swipe to navigate
+              children: [
+                // Step 1: Select listing type.
+                _buildTypeSelectionStep(context),
 
-        // Step 3: Property Details
-        ListingDetailsStep(
-          onBack: _previousStep,
-          onNext: _nextStep,
-        ),
+                // Step 2: Location Map
+                ListingLocationMapStep(
+                  onBack: _previousStep,
+                  onConfirm: () {
+                    // Move to step 3 when confirmed
+                    _nextStep();
+                  },
+                ),
 
-        // Step 4: Pricing and General Info
-        ListingPricingStep(
-          onBack: _previousStep,
-          onPreview: () {
-            // Push preview page
-            final state = context.read<CreateListingCubit>().state;
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ListingPreviewPage(state: state)),
-            );
-          },
-          onSubmit: () {
-            // Show toast and navigate to management page
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đăng tin thành công!')),
-            );
-            // In a real app we'd pop to home then push MyListingsPage.
-            // For now, we replace the create flow with MyListingsPage.
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MyListingsPage()),
-            );
-          },
-        ),
-      ],
+                // Step 3: Property Details
+                ListingDetailsStep(onBack: _previousStep, onNext: _nextStep),
+
+                // Step 4: Pricing and General Info
+                ListingPricingStep(
+                  onBack: _previousStep,
+                  onPreview: () {
+                    // Push preview page
+                    final state = context.read<CreateListingCubit>().state;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ListingPreviewPage(state: state),
+                      ),
+                    );
+                  },
+                  onSubmit: () async {
+                    final cubit = context.read<CreateListingCubit>();
+                    final success = await cubit.submit();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? 'Đã gửi tin. Tin sẽ xuất hiện trên bản đồ sau khi Admin duyệt.'
+                              : cubit.state.errorMessage ??
+                                    'Không thể gửi tin.',
+                        ),
+                      ),
+                    );
+                    if (success) Navigator.of(context).pop(true);
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (state.status == CreateListingStatus.submitting)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Color(0x66000000),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -195,10 +219,7 @@ class _TypeOptionCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                   ),
                 ],
               ),

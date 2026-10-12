@@ -1,6 +1,6 @@
 package com.rental.modules.contract.repository;
 
-import com.rental.modules.contract.entity.Contract;
+import com.rental.modules.contract.domain.entity.Contract;
 import com.rental.modules.user.domain.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

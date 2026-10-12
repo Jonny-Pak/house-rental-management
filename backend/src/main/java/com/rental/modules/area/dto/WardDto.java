@@ -6,6 +6,8 @@ public class WardDto {
     private String name;
     private String code;
     private Long districtId;
+    private Long provinceId;
+    private String type;
 
     public WardDto() {}
 
@@ -24,4 +26,8 @@ public class WardDto {
     public void setCode(String code) { this.code = code; }
     public Long getDistrictId() { return districtId; }
     public void setDistrictId(Long districtId) { this.districtId = districtId; }
+    public Long getProvinceId() { return provinceId; }
+    public void setProvinceId(Long provinceId) { this.provinceId = provinceId; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 }

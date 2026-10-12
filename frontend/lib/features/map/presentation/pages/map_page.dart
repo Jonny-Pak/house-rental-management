@@ -1,3 +1,5 @@
+import '../widgets/rental_map_tiles.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -69,11 +71,11 @@ class _MapViewState extends State<_MapView> {
     if (!hasGesture) return;
     final bounds = camera.visibleBounds;
     context.read<MapCubit>().fetchListingsInArea(
-          bounds.south,
-          bounds.west,
-          bounds.north,
-          bounds.east,
-        );
+      bounds.south,
+      bounds.west,
+      bounds.north,
+      bounds.east,
+    );
   }
 
   void _showListingSheet(MapListingModel listing) {
@@ -107,22 +109,17 @@ class _MapViewState extends State<_MapView> {
                 // Fetch initial viewport on first load
                 final bounds = _mapController.camera.visibleBounds;
                 context.read<MapCubit>().fetchListingsInArea(
-                      bounds.south,
-                      bounds.west,
-                      bounds.north,
-                      bounds.east,
-                    );
+                  bounds.south,
+                  bounds.west,
+                  bounds.north,
+                  bounds.east,
+                );
               },
               onPositionChanged: _onMapMoved,
             ),
             children: [
               // ── Tile Layer ─────────────────────
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                fallbackUrl: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', // Alternative OSM server if main is blocked
-                userAgentPackageName: 'com.rental.management.app.v1', // Use a unique User-Agent to prevent OSM CDN blocking (Connection refused 111)
-                maxNativeZoom: 19,
-              ),
+              const RentalMapTiles(),
 
               // ── Marker Layer ───────────────────
               BlocBuilder<MapCubit, MapState>(
@@ -151,8 +148,10 @@ class _MapViewState extends State<_MapView> {
                 right: 0,
                 child: Center(
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -197,8 +196,7 @@ class _MapViewState extends State<_MapView> {
             bottom: 8,
             right: 8,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(6),
@@ -240,8 +238,7 @@ class _MapViewState extends State<_MapView> {
         ),
       ),
       title: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -298,10 +295,7 @@ class _PriceTagMarker extends StatelessWidget {
   final String price;
   final bool isSelected;
 
-  const _PriceTagMarker({
-    required this.price,
-    this.isSelected = false,
-  });
+  const _PriceTagMarker({required this.price, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
@@ -317,8 +311,7 @@ class _PriceTagMarker extends StatelessWidget {
               ? Matrix4.diagonal3Values(1.12, 1.12, 1.0)
               : Matrix4.identity(),
           transformAlignment: Alignment.center,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(20),
@@ -404,8 +397,7 @@ class _ListingBottomSheet extends StatelessWidget {
 
           // ── Image placeholder ───────────────────
           ClipRRect(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Container(
               height: 160,
               width: double.infinity,
@@ -419,8 +411,11 @@ class _ListingBottomSheet extends StatelessWidget {
                     '?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const Center(
-                      child: Icon(Icons.image_not_supported,
-                          size: 48, color: Colors.black26),
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 48,
+                        color: Colors.black26,
+                      ),
                     ),
                   ),
                   // Gradient overlay
@@ -442,7 +437,9 @@ class _ListingBottomSheet extends StatelessWidget {
                     right: 12,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: _kAccent,
                         borderRadius: BorderRadius.circular(12),
@@ -481,8 +478,7 @@ class _ListingBottomSheet extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.location_on,
-                        size: 14, color: _kAccent),
+                    const Icon(Icons.location_on, size: 14, color: _kAccent),
                     const SizedBox(width: 4),
                     Text(
                       '${listing.latitude.toStringAsFixed(4)}, '
@@ -501,8 +497,7 @@ class _ListingBottomSheet extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kAccent,
                       foregroundColor: Colors.white,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),

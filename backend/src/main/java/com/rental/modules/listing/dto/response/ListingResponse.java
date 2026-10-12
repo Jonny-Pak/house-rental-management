@@ -5,6 +5,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class ListingResponse {
+    private String rejectionReason;
+    private java.util.List<String> imageUrls;
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String reason) { rejectionReason = reason; }
+    public java.util.List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(java.util.List<String> urls) { imageUrls = urls; }
     private Long id;
     private String title;
     private String description;

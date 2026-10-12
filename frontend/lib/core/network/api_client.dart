@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+
 import '../storage/token_storage.dart';
 
 /// Dynamically resolve baseUrl depending on platform:
@@ -20,13 +21,13 @@ class ApiClient {
   final Dio _dio;
 
   ApiClient()
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: _baseUrl,
-             connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 15),
-          ),
-        ) {
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: _baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -55,4 +56,6 @@ class ApiClient {
   Future<Response> patch(String path, {dynamic data}) async {
     return _dio.patch(path, data: data);
   }
+
+  Future<Response> delete(String path) async => _dio.delete(path);
 }

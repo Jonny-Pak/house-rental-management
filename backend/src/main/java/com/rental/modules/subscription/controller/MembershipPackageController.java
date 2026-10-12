@@ -1,6 +1,6 @@
 package com.rental.modules.subscription.controller;
 
-import com.rental.modules.subscription.entity.MembershipPackage;
+import com.rental.modules.subscription.domain.entity.MembershipPackage;
 import com.rental.modules.subscription.service.MembershipPackageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

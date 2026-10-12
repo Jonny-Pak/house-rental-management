@@ -7,6 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'create_listing_state.dart';
+import '../../data/repositories/listing_repository.dart';
+import '../../../../core/network/api_client.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Area calculation utility (spherical excess / Shoelace on Web Mercator)
@@ -54,8 +56,10 @@ double calculatePolygonArea(List<LatLng> points) {
 /// Computes the geographic centroid of a polygon (average of vertices).
 /// Simple centroid — accurate enough for a pin placement.
 LatLng _centroid(List<LatLng> points) {
-  final lat = points.map((p) => p.latitude).reduce((a, b) => a + b) / points.length;
-  final lng = points.map((p) => p.longitude).reduce((a, b) => a + b) / points.length;
+  final lat =
+      points.map((p) => p.latitude).reduce((a, b) => a + b) / points.length;
+  final lng =
+      points.map((p) => p.longitude).reduce((a, b) => a + b) / points.length;
   return LatLng(lat, lng);
 }
 
@@ -64,7 +68,83 @@ LatLng _centroid(List<LatLng> points) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class CreateListingCubit extends Cubit<CreateListingState> {
-  CreateListingCubit() : super(const CreateListingState());
+  final ListingRepository repository;
+  CreateListingCubit({ListingRepository? repository})
+    : repository = repository ?? ListingRepository(ApiClient()),
+      super(const CreateListingState());
+
+  void updateAreaId(int? id) =>
+      emit(state.copyWith(areaId: id, clearAreaId: id == null));
+  void updateArea(double area) => emit(state.copyWith(calculatedArea: area));
+
+  Future<bool> submit() async {
+    if (state.status == CreateListingStatus.submitting) return false;
+    final draft = state;
+    if (draft.areaId == null ||
+        draft.latitude == null ||
+        draft.longitude == null ||
+        draft.address.trim().isEmpty ||
+        draft.title.trim().isEmpty ||
+        draft.rentPrice == null ||
+        draft.rentPrice! <= 0 ||
+        draft.calculatedArea <= 0 ||
+        draft.imagePaths.isEmpty ||
+        draft.imagePaths.length > 10 ||
+        !draft.rentPrice!.isFinite ||
+        !draft.calculatedArea.isFinite ||
+        draft.latitude!.abs() > 90 ||
+        draft.longitude!.abs() > 180) {
+      emit(
+        state.copyWith(
+          status: CreateListingStatus.error,
+          errorMessage: 'Vui lòng điền đủ thông tin, chọn phường/xã, vị trí, diện tích và 1–10 ảnh.',
+        ),
+      );
+      return false;
+    }
+    emit(
+      state.copyWith(status: CreateListingStatus.submitting, clearError: true),
+    );
+    try {
+      final urls = <String>[];
+      for (final path in draft.imagePaths) {
+        urls.add(await repository.uploadImage(path));
+      }
+      await repository.createListing({
+        'title': draft.title.trim(),
+        'description': draft.description.trim(),
+        'listingType': draft.propertyType,
+        'rentPrice': draft.rentPrice,
+        'areaSqm': double.parse(draft.calculatedArea.toStringAsFixed(2)),
+        'address': draft.address.trim(),
+        'areaId': draft.areaId,
+        'latitude': draft.latitude,
+        'longitude': draft.longitude,
+        'houseType': draft.houseType,
+        'bedrooms': draft.bedrooms,
+        'bathrooms': draft.bathrooms,
+        'totalFloors': draft.totalFloors,
+        'doorDirection': draft.doorDirection,
+        'legalDocuments': draft.legalDocuments,
+        'furnitureStatus': draft.furnitureStatus,
+        'depositAmount': draft.depositAmount,
+        'posterType': draft.posterType,
+        'imageUrls': urls,
+      });
+      if (!isClosed) emit(state.copyWith(status: CreateListingStatus.success));
+      return true;
+    } catch (error) {
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            status: CreateListingStatus.error,
+            errorMessage: ListingRepository.errorMessage(error),
+          ),
+        );
+      }
+      return false;
+    }
+  }
 
   // ── Step 1 helpers ─────────────────────────────────────────────────────────
 
@@ -82,36 +162,44 @@ class CreateListingCubit extends Cubit<CreateListingState> {
     LatLng? center;
     if (updated.length >= 3) center = _centroid(updated);
 
-    emit(state.copyWith(
-      polygonPoints: updated,
-      calculatedArea: area,
-      latitude: center?.latitude ?? (updated.isNotEmpty ? updated.last.latitude : null),
-      longitude: center?.longitude ?? (updated.isNotEmpty ? updated.last.longitude : null),
-    ));
+    emit(
+      state.copyWith(
+        polygonPoints: updated,
+        calculatedArea: area,
+        latitude:
+            center?.latitude ??
+            (updated.isNotEmpty ? updated.last.latitude : null),
+        longitude:
+            center?.longitude ??
+            (updated.isNotEmpty ? updated.last.longitude : null),
+      ),
+    );
   }
 
   /// Removes the last added polygon point and recalculates area.
   void undoLastPoint() {
     if (state.polygonPoints.isEmpty) return;
-    final updated = state.polygonPoints.sublist(0, state.polygonPoints.length - 1);
+    final updated = state.polygonPoints.sublist(
+      0,
+      state.polygonPoints.length - 1,
+    );
     final area = calculatePolygonArea(updated);
     LatLng? center;
     if (updated.length >= 3) center = _centroid(updated);
 
-    emit(state.copyWith(
-      polygonPoints: updated,
-      calculatedArea: area,
-      latitude: center?.latitude,
-      longitude: center?.longitude,
-    ));
+    emit(
+      state.copyWith(
+        polygonPoints: updated,
+        calculatedArea: area,
+        latitude: center?.latitude,
+        longitude: center?.longitude,
+      ),
+    );
   }
 
   /// Clears all polygon points and resets the area to zero.
   void clearPolygon() {
-    emit(state.copyWith(
-      polygonPoints: const [],
-      calculatedArea: 0.0,
-    ));
+    emit(state.copyWith(polygonPoints: const [], calculatedArea: 0.0));
   }
 
   /// Updates the human-readable address string.
@@ -119,11 +207,13 @@ class CreateListingCubit extends Cubit<CreateListingState> {
 
   /// Updates the pinned location on the map (e.g. from dragging)
   void updatePinnedLocation(LatLng location) {
-    emit(state.copyWith(
-      pinnedLocation: location,
-      latitude: location.latitude,
-      longitude: location.longitude,
-    ));
+    emit(
+      state.copyWith(
+        pinnedLocation: location,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      ),
+    );
   }
 
   /// Geocode the current address string to get a LatLng pin.
@@ -138,12 +228,14 @@ class CreateListingCubit extends Cubit<CreateListingState> {
       if (locations.isNotEmpty) {
         final loc = locations.first;
         final pin = LatLng(loc.latitude, loc.longitude);
-        emit(state.copyWith(
-          pinnedLocation: pin,
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          isSearching: false,
-        ));
+        emit(
+          state.copyWith(
+            pinnedLocation: pin,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            isSearching: false,
+          ),
+        );
       } else {
         emit(state.copyWith(isSearching: false));
       }
@@ -172,7 +264,9 @@ class CreateListingCubit extends Cubit<CreateListingState> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       final pin = LatLng(position.latitude, position.longitude);
 
@@ -180,14 +274,22 @@ class CreateListingCubit extends Cubit<CreateListingState> {
       String addressStr = '';
       try {
         final geocoding = Geocoding();
-        final placemarks = await geocoding.placemarkFromCoordinates(position.latitude, position.longitude);
+        final placemarks = await geocoding.placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
         if (placemarks.isNotEmpty) {
           final p = placemarks.first;
           final parts = <String>[
             if (p.street != null && p.street!.isNotEmpty) p.street!,
-            if (p.subLocality != null && p.subLocality!.isNotEmpty) p.subLocality!,
-            if (p.subAdministrativeArea != null && p.subAdministrativeArea!.isNotEmpty) p.subAdministrativeArea!,
-            if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty) p.administrativeArea!,
+            if (p.subLocality != null && p.subLocality!.isNotEmpty)
+              p.subLocality!,
+            if (p.subAdministrativeArea != null &&
+                p.subAdministrativeArea!.isNotEmpty)
+              p.subAdministrativeArea!,
+            if (p.administrativeArea != null &&
+                p.administrativeArea!.isNotEmpty)
+              p.administrativeArea!,
           ];
           addressStr = parts.join(', ');
         }
@@ -195,13 +297,15 @@ class CreateListingCubit extends Cubit<CreateListingState> {
         // Reverse geocoding failed, that's fine, just don't set address
       }
 
-      emit(state.copyWith(
-        pinnedLocation: pin,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        address: addressStr.isNotEmpty ? addressStr : state.address,
-        isSearching: false,
-      ));
+      emit(
+        state.copyWith(
+          pinnedLocation: pin,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          address: addressStr.isNotEmpty ? addressStr : state.address,
+          isSearching: false,
+        ),
+      );
     } catch (e) {
       debugPrint('Geolocator error: $e');
       emit(state.copyWith(isSearching: false));
@@ -210,18 +314,22 @@ class CreateListingCubit extends Cubit<CreateListingState> {
 
   // ── Step 3 – House detail helpers ──────────────────────────────────────────
 
-  void updateHouseType(String? type) =>
-      type == null ? emit(state.copyWith(clearHouseType: true)) : emit(state.copyWith(houseType: type));
+  void updateHouseType(String? type) => type == null
+      ? emit(state.copyWith(clearHouseType: true))
+      : emit(state.copyWith(houseType: type));
 
   void updateBedrooms(int? count) => emit(state.copyWith(bedrooms: count));
   void updateBathrooms(int? count) => emit(state.copyWith(bathrooms: count));
-  void updateTotalFloors(int? count) => emit(state.copyWith(totalFloors: count));
+  void updateTotalFloors(int? count) =>
+      emit(state.copyWith(totalFloors: count));
 
-  void updateDoorDirection(String? dir) =>
-      dir == null ? emit(state.copyWith(clearDoorDirection: true)) : emit(state.copyWith(doorDirection: dir));
+  void updateDoorDirection(String? dir) => dir == null
+      ? emit(state.copyWith(clearDoorDirection: true))
+      : emit(state.copyWith(doorDirection: dir));
 
-  void updateLegalDocuments(String? doc) =>
-      doc == null ? emit(state.copyWith(clearLegalDocuments: true)) : emit(state.copyWith(legalDocuments: doc));
+  void updateLegalDocuments(String? doc) => doc == null
+      ? emit(state.copyWith(clearLegalDocuments: true))
+      : emit(state.copyWith(legalDocuments: doc));
 
   void updateFurnitureStatus(String? status) =>
       emit(state.copyWith(furnitureStatus: status));
@@ -229,7 +337,8 @@ class CreateListingCubit extends Cubit<CreateListingState> {
   // ── Step 4 – Pricing helpers ───────────────────────────────────────────────
 
   void updateRentPrice(double? price) => emit(state.copyWith(rentPrice: price));
-  void updateDepositAmount(double? amount) => emit(state.copyWith(depositAmount: amount));
+  void updateDepositAmount(double? amount) =>
+      emit(state.copyWith(depositAmount: amount));
   void updatePosterType(String? type) => emit(state.copyWith(posterType: type));
 
   // ── Step 5 – General info helpers ─────────────────────────────────────────
@@ -241,7 +350,11 @@ class CreateListingCubit extends Cubit<CreateListingState> {
   // ── Image helpers ──────────────────────────────────────────────────────────
 
   void addImages(List<String> paths) {
-    emit(state.copyWith(imagePaths: [...state.imagePaths, ...paths]));
+    emit(
+      state.copyWith(
+        imagePaths: [...state.imagePaths, ...paths].take(10).toList(),
+      ),
+    );
   }
 
   void removeImage(int index) {

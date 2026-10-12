@@ -42,3 +42,9 @@ Thumbs.db
 replace*.py
 CleanDB.java
 test*.java
+
+# Local database backups (may contain private data)
+backend/local-backups/
+
+# Private local service credentials
+backend/config/local-secrets.properties

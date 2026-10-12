@@ -11,7 +11,7 @@ import '../../data/models/admin_listing_model.dart';
 import '../../data/repositories/admin_listing_repository.dart';
 import '../bloc/admin_listing_cubit.dart';
 import '../bloc/admin_listing_state.dart';
-import '../../shared/widgets/states.dart';
+import '../../../../shared/admin/widgets/states.dart';
 
 class AdminDashboardPage extends StatelessWidget {
   const AdminDashboardPage({super.key});
@@ -19,9 +19,7 @@ class AdminDashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AdminListingCubit(
-        AdminListingRepository(ApiClient()),
-      ),
+      create: (_) => AdminListingCubit(AdminListingRepository(ApiClient())),
       child: const _AdminDashboardView(),
     );
   }
@@ -54,14 +52,16 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
   List<AdminListingModel> _filterListings(List<AdminListingModel> raw) {
     return raw.where((item) {
       final q = _searchQuery.toLowerCase().trim();
-      final matchQuery = q.isEmpty ||
+      final matchQuery =
+          q.isEmpty ||
           item.title.toLowerCase().contains(q) ||
           item.address.toLowerCase().contains(q) ||
           (item.ownerName?.toLowerCase().contains(q) ?? false) ||
           item.id.toString().contains(q);
 
       final type = item.listingType ?? item.houseType ?? '';
-      final matchType = _selectedType == 'Tất cả' ||
+      final matchType =
+          _selectedType == 'Tất cả' ||
           type.toLowerCase().contains(_selectedType.toLowerCase());
 
       return matchQuery && matchType;
@@ -100,14 +100,21 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                             color: c.primary.withValues(alpha: 0.1),
                             borderRadius: KiteRadius.allSm,
                           ),
-                          child: Icon(Icons.home_work_rounded, color: c.primary, size: 20),
+                          child: Icon(
+                            Icons.home_work_rounded,
+                            color: c.primary,
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: KiteSpace.md),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Chi tiết kiểm duyệt #${listing.id}', style: t.h4),
+                              Text(
+                                'Chi tiết kiểm duyệt #${listing.id}',
+                                style: t.h4,
+                              ),
                               Text(
                                 'Ngày tạo: ${listing.createdAt != null && listing.createdAt!.length >= 10 ? listing.createdAt!.substring(0, 10) : "Mới đây"}',
                                 style: t.muted.copyWith(fontSize: 12),
@@ -118,7 +125,11 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                         const KiteBadge('Chờ duyệt', tone: KiteTone.warning),
                         const SizedBox(width: KiteSpace.sm),
                         IconButton(
-                          icon: Icon(Icons.close, size: 18, color: c.mutedForeground),
+                          icon: Icon(
+                            Icons.close,
+                            size: 18,
+                            color: c.mutedForeground,
+                          ),
                           onPressed: () => Navigator.of(ctx).pop(),
                         ),
                       ],
@@ -132,8 +143,9 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                       height: 140,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: 3,
-                        separatorBuilder: (_, _) => const SizedBox(width: KiteSpace.sm),
+                        itemCount: listing.imageUrls.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(width: KiteSpace.sm),
                         itemBuilder: (context, index) {
                           return Container(
                             width: 200,
@@ -142,13 +154,12 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                               borderRadius: KiteRadius.allMd,
                               border: Border.all(color: c.border),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.image_outlined, size: 36, color: c.mutedForeground),
-                                const SizedBox(height: 4),
-                                Text('Hình ảnh ${index + 1}', style: t.muted.copyWith(fontSize: 11)),
-                              ],
+                            child: Image.network(
+                              listing.imageUrls[index],
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const Center(
+                                child: Icon(Icons.broken_image_outlined),
+                              ),
                             ),
                           );
                         },
@@ -167,17 +178,41 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildModalRow(context, 'Tiêu đề:', listing.title, isBold: true),
-                          _buildModalRow(context, 'Địa chỉ:', listing.address, icon: Icons.place_outlined),
+                          _buildModalRow(
+                            context,
+                            'Tiêu đề:',
+                            listing.title,
+                            isBold: true,
+                          ),
+                          _buildModalRow(
+                            context,
+                            'Địa chỉ:',
+                            listing.address,
+                            icon: Icons.place_outlined,
+                          ),
                           _buildModalRow(
                             context,
                             'Giá thuê:',
                             currency.format(listing.rentPrice),
                             highlight: true,
                           ),
-                          _buildModalRow(context, 'Diện tích:', '${listing.areaSqm} m²'),
-                          _buildModalRow(context, 'Loại hình:', listing.listingType ?? listing.houseType ?? 'Phòng trọ'),
-                          _buildModalRow(context, 'Pháp lý:', listing.legalDocuments ?? 'Đầy đủ'),
+                          _buildModalRow(
+                            context,
+                            'Diện tích:',
+                            '${listing.areaSqm} m²',
+                          ),
+                          _buildModalRow(
+                            context,
+                            'Loại hình:',
+                            listing.listingType ??
+                                listing.houseType ??
+                                'Phòng trọ',
+                          ),
+                          _buildModalRow(
+                            context,
+                            'Pháp lý:',
+                            listing.legalDocuments ?? 'Đầy đủ',
+                          ),
                           _buildModalRow(
                             context,
                             'Chủ sở hữu:',
@@ -190,7 +225,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     const SizedBox(height: KiteSpace.lg),
 
                     // Description
-                    Text('Mô tả chi tiết:', style: t.small.copyWith(fontWeight: FontWeight.w600)),
+                    Text(
+                      'Mô tả chi tiết:',
+                      style: t.small.copyWith(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(height: KiteSpace.xs),
                     Container(
                       padding: const EdgeInsets.all(KiteSpace.md),
@@ -200,7 +238,9 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                         border: Border.all(color: c.border),
                       ),
                       child: Text(
-                        listing.description.isEmpty ? 'Không có mô tả bổ sung.' : listing.description,
+                        listing.description.isEmpty
+                            ? 'Không có mô tả bổ sung.'
+                            : listing.description,
                         style: t.p.copyWith(fontSize: 13),
                       ),
                     ),
@@ -228,7 +268,9 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           leading: const Icon(Icons.check, size: 16),
                           onPressed: () {
                             Navigator.of(ctx).pop();
-                            context.read<AdminListingCubit>().approveListing(listing.id);
+                            context.read<AdminListingCubit>().approveListing(
+                              listing.id,
+                            );
                           },
                           child: const Text('Phê duyệt tin'),
                         ),
@@ -268,7 +310,11 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: c.destructive, size: 22),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: c.destructive,
+                        size: 22,
+                      ),
                       const SizedBox(width: KiteSpace.sm),
                       Text('Từ chối bài đăng #$listingId', style: t.h4),
                     ],
@@ -297,7 +343,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           final text = reasonController.text.trim();
                           if (text.isEmpty) return;
                           Navigator.of(ctx).pop();
-                          context.read<AdminListingCubit>().rejectListing(listingId, text);
+                          context.read<AdminListingCubit>().rejectListing(
+                            listingId,
+                            text,
+                          );
                         },
                         child: const Text('Xác nhận từ chối'),
                       ),
@@ -348,7 +397,11 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                               color: c.primary.withValues(alpha: 0.1),
                               borderRadius: KiteRadius.allSm,
                             ),
-                            child: Icon(Icons.admin_panel_settings_rounded, color: c.primary, size: 22),
+                            child: Icon(
+                              Icons.admin_panel_settings_rounded,
+                              color: c.primary,
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(width: KiteSpace.md),
                           Expanded(
@@ -356,12 +409,19 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Đăng nhập Quản trị viên', style: t.h4),
-                                Text('Xác thực tài khoản Admin hệ thống', style: t.muted.copyWith(fontSize: 12)),
+                                Text(
+                                  'Xác thực tài khoản Admin hệ thống',
+                                  style: t.muted.copyWith(fontSize: 12),
+                                ),
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.close, size: 18, color: c.mutedForeground),
+                            icon: Icon(
+                              Icons.close,
+                              size: 18,
+                              color: c.mutedForeground,
+                            ),
                             onPressed: () => Navigator.of(ctx).pop(),
                           ),
                         ],
@@ -373,9 +433,17 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           decoration: BoxDecoration(
                             color: c.destructive.withValues(alpha: 0.1),
                             borderRadius: KiteRadius.allSm,
-                            border: Border.all(color: c.destructive.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: c.destructive.withValues(alpha: 0.3),
+                            ),
                           ),
-                          child: Text(err!, style: t.small.copyWith(color: c.destructive, fontSize: 12)),
+                          child: Text(
+                            err!,
+                            style: t.small.copyWith(
+                              color: c.destructive,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: KiteSpace.md),
                       ],
@@ -397,13 +465,18 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                       ),
                       const SizedBox(height: KiteSpace.lg),
                       KiteButton(
-                        leading: busy ? null : const Icon(Icons.login, size: 16),
+                        leading: busy
+                            ? null
+                            : const Icon(Icons.login, size: 16),
                         enabled: !busy,
                         onPressed: () async {
                           final em = emailCtrl.text.trim();
                           final pw = passCtrl.text;
                           if (em.isEmpty || pw.isEmpty) {
-                            setDialogState(() => err = 'Vui lòng nhập đầy đủ email và mật khẩu.');
+                            setDialogState(
+                              () => err =
+                                  'Vui lòng nhập đầy đủ email và mật khẩu.',
+                            );
                             return;
                           }
                           setDialogState(() {
@@ -413,37 +486,58 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
 
                           try {
                             final client = ApiClient();
-                            final res = await client.post('/auth/login', {'email': em, 'password': pw});
+                            final res = await client.post('/auth/login', {
+                              'email': em,
+                              'password': pw,
+                            });
                             if (res.statusCode == 200) {
-                              final authResponse = AuthResponse.fromJson(res.data as Map<String, dynamic>);
-                              await TokenStorage.saveToken(authResponse.accessToken);
+                              final authResponse = AuthResponse.fromJson(
+                                res.data as Map<String, dynamic>,
+                              );
+                              await TokenStorage.saveToken(
+                                authResponse.accessToken,
+                              );
 
                               if (ctx.mounted) Navigator.of(ctx).pop();
                               if (context.mounted) {
                                 KiteToast.show(
                                   context,
                                   title: 'Đăng nhập thành công',
-                                  description: 'Đã xác thực tài khoản quản trị viên.',
+                                  description:
+                                      'Đã xác thực tài khoản quản trị viên.',
                                   tone: KiteTone.success,
                                 );
-                                context.read<AdminListingCubit>().fetchPendingListings();
+                                context
+                                    .read<AdminListingCubit>()
+                                    .fetchPendingListings();
                               }
                             } else {
-                              setDialogState(() => err = 'Đăng nhập không thành công.');
+                              setDialogState(
+                                () => err = 'Đăng nhập không thành công.',
+                              );
                             }
                           } on DioException catch (e) {
-                            String msg = 'Tài khoản hoặc mật khẩu không chính xác.';
-                            if (e.response?.data is Map && e.response?.data['message'] != null) {
+                            String msg =
+                                'Tài khoản hoặc mật khẩu không chính xác.';
+                            if (e.response?.data is Map &&
+                                e.response?.data['message'] != null) {
                               msg = e.response!.data['message'].toString();
                             }
                             setDialogState(() => err = msg);
                           } catch (e) {
-                            setDialogState(() => err = e.toString().replaceFirst('Exception: ', ''));
+                            setDialogState(
+                              () => err = e.toString().replaceFirst(
+                                'Exception: ',
+                                '',
+                              ),
+                            );
                           } finally {
                             setDialogState(() => busy = false);
                           }
                         },
-                        child: Text(busy ? 'Đang xác thực...' : 'Đăng nhập ngay'),
+                        child: Text(
+                          busy ? 'Đang xác thực...' : 'Đăng nhập ngay',
+                        ),
                       ),
                     ],
                   ),
@@ -474,7 +568,13 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
         children: [
           SizedBox(
             width: 110,
-            child: Text(label, style: t.muted.copyWith(fontSize: 13, fontWeight: FontWeight.w500)),
+            child: Text(
+              label,
+              style: t.muted.copyWith(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
           if (icon != null) ...[
             Icon(icon, size: 14, color: c.mutedForeground),
@@ -522,8 +622,11 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
         List<AdminListingModel> rawListings = [];
         if (state is AdminListingLoaded) {
           rawListings = state.pendingListings;
-        } else if (context.read<AdminListingCubit>().state is AdminListingLoaded) {
-          rawListings = (context.read<AdminListingCubit>().state as AdminListingLoaded).pendingListings;
+        } else if (context.read<AdminListingCubit>().state
+            is AdminListingLoaded) {
+          rawListings =
+              (context.read<AdminListingCubit>().state as AdminListingLoaded)
+                  .pendingListings;
         }
 
         final filtered = _filterListings(rawListings);
@@ -552,7 +655,9 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                   ),
                   KiteButton.outline(
                     leading: const Icon(Icons.refresh, size: 15),
-                    onPressed: () => context.read<AdminListingCubit>().fetchPendingListings(),
+                    onPressed: () => context
+                        .read<AdminListingCubit>()
+                        .fetchPendingListings(),
                     child: const Text('Làm mới'),
                   ),
                 ],
@@ -565,8 +670,12 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                   KiteStat(
                     label: 'Tin chờ phê duyệt',
                     value: '${rawListings.length}',
-                    delta: rawListings.isEmpty ? 'Đã xử lý hết' : 'Cần kiểm tra',
-                    deltaTone: rawListings.isEmpty ? KiteTone.success : KiteTone.warning,
+                    delta: rawListings.isEmpty
+                        ? 'Đã xử lý hết'
+                        : 'Cần kiểm tra',
+                    deltaTone: rawListings.isEmpty
+                        ? KiteTone.success
+                        : KiteTone.warning,
                   ),
                   KiteStat(
                     label: 'Đã lọc theo điều kiện',
@@ -612,7 +721,11 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                       child: KiteInput(
                         controller: _searchCtrl,
                         placeholder: 'Tìm theo tiêu đề, địa chỉ, chủ nhà...',
-                        leading: Icon(Icons.search, size: 16, color: c.mutedForeground),
+                        leading: Icon(
+                          Icons.search,
+                          size: 16,
+                          color: c.mutedForeground,
+                        ),
                         onChanged: (val) => setState(() => _searchQuery = val),
                       ),
                     ),
@@ -620,29 +733,43 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        for (final type in ['Tất cả', 'Phòng trọ', 'Nhà nguyên căn', 'Căn hộ'])
+                        for (final type in [
+                          'Tất cả',
+                          'Phòng trọ',
+                          'Nhà nguyên căn',
+                          'Căn hộ',
+                        ])
                           Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: InkWell(
                               borderRadius: KiteRadius.allSm,
                               onTap: () => setState(() => _selectedType = type),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _selectedType == type
                                       ? c.primary.withValues(alpha: 0.12)
                                       : Colors.transparent,
                                   borderRadius: KiteRadius.allSm,
                                   border: Border.all(
-                                    color: _selectedType == type ? c.primary : c.border,
+                                    color: _selectedType == type
+                                        ? c.primary
+                                        : c.border,
                                   ),
                                 ),
                                 child: Text(
                                   type,
                                   style: t.small.copyWith(
                                     fontSize: 12,
-                                    fontWeight: _selectedType == type ? FontWeight.w600 : FontWeight.w500,
-                                    color: _selectedType == type ? c.primary : c.mutedForeground,
+                                    fontWeight: _selectedType == type
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: _selectedType == type
+                                        ? c.primary
+                                        : c.mutedForeground,
                                   ),
                                 ),
                               ),
@@ -658,7 +785,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
               // Main Table / List Card
               KiteCard(
                 title: 'Danh sách bài đăng cần duyệt',
-                trailing: KiteBadge('${filtered.length} tin', tone: KiteTone.warning),
+                trailing: KiteBadge(
+                  '${filtered.length} tin',
+                  tone: KiteTone.warning,
+                ),
                 padding: const EdgeInsets.all(KiteSpace.lg),
                 child: _buildContent(context, state, rawListings, filtered),
               ),
@@ -676,14 +806,12 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
     List<AdminListingModel> filtered,
   ) {
     if (state is AdminListingLoading && raw.isEmpty) {
-      return const SizedBox(
-        height: 260,
-        child: LoadingState(),
-      );
+      return const SizedBox(height: 260, child: LoadingState());
     }
 
     if (state is AdminListingError && raw.isEmpty) {
-      final isAuthError = state.message.contains('đăng nhập') ||
+      final isAuthError =
+          state.message.contains('đăng nhập') ||
           state.message.contains('quyền') ||
           state.message.contains('Admin');
 
@@ -703,10 +831,18 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                       color: const Color(0xFFD85D15).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.lock_person_outlined, size: 40, color: Color(0xFFD85D15)),
+                    child: const Icon(
+                      Icons.lock_person_outlined,
+                      size: 40,
+                      color: Color(0xFFD85D15),
+                    ),
                   ),
                   const SizedBox(height: KiteSpace.lg),
-                  Text('Yêu cầu quyền Quản trị viên', style: t.h4, textAlign: TextAlign.center),
+                  Text(
+                    'Yêu cầu quyền Quản trị viên',
+                    style: t.h4,
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: KiteSpace.sm),
                   Text(
                     'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập với tài khoản Quản trị viên để kiểm duyệt bài đăng.',
@@ -730,7 +866,8 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
         height: 260,
         child: ErrorState(
           message: state.message,
-          onRetry: () => context.read<AdminListingCubit>().fetchPendingListings(),
+          onRetry: () =>
+              context.read<AdminListingCubit>().fetchPendingListings(),
         ),
       );
     }
@@ -739,7 +876,9 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
       return SizedBox(
         height: 260,
         child: EmptyState(
-          title: raw.isEmpty ? 'Không có bài đăng nào cần duyệt' : 'Không có bài đăng phù hợp',
+          title: raw.isEmpty
+              ? 'Không có bài đăng nào cần duyệt'
+              : 'Không có bài đăng phù hợp',
           message: raw.isEmpty
               ? 'Tất cả các tin đăng của chủ nhà đã được kiểm duyệt xong!'
               : 'Hãy thử tìm kiếm với từ khóa khác hoặc bỏ chọn bộ lọc.',
@@ -759,7 +898,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
     return _buildResponsiveList(context, filtered);
   }
 
-  Widget _buildResponsiveList(BuildContext context, List<AdminListingModel> items) {
+  Widget _buildResponsiveList(
+    BuildContext context,
+    List<AdminListingModel> items,
+  ) {
     final c = KiteColors.of(context);
     final t = KiteText.of(context);
     final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
@@ -768,15 +910,73 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
       children: [
         // Table Header
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KiteSpace.md, vertical: KiteSpace.sm),
+          padding: const EdgeInsets.symmetric(
+            horizontal: KiteSpace.md,
+            vertical: KiteSpace.sm,
+          ),
           child: Row(
             children: [
-              SizedBox(width: 50, child: Text('MÃ', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
-              Expanded(flex: 4, child: Text('THÔNG TIN BÀI ĐĂNG', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
-              Expanded(flex: 2, child: Text('GIÁ & DIỆN TÍCH', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
-              Expanded(flex: 2, child: Text('CHỦ NHÀ', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
-              Expanded(flex: 2, child: Text('NGÀY GỬI', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
-              SizedBox(width: 190, child: Text('THAO TÁC', textAlign: TextAlign.right, style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+              SizedBox(
+                width: 50,
+                child: Text(
+                  'MÃ',
+                  style: t.muted.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 4,
+                child: Text(
+                  'THÔNG TIN BÀI ĐĂNG',
+                  style: t.muted.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'GIÁ & DIỆN TÍCH',
+                  style: t.muted.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'CHỦ NHÀ',
+                  style: t.muted.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'NGÀY GỬI',
+                  style: t.muted.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 190,
+                child: Text(
+                  'THAO TÁC',
+                  textAlign: TextAlign.right,
+                  style: t.muted.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -792,7 +992,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
             final item = items[index];
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: KiteSpace.md, vertical: KiteSpace.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KiteSpace.md,
+                vertical: KiteSpace.md,
+              ),
               child: Row(
                 children: [
                   // ID
@@ -800,7 +1003,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     width: 50,
                     child: Text(
                       '#${item.id}',
-                      style: t.small.copyWith(fontWeight: FontWeight.w600, color: c.mutedForeground),
+                      style: t.small.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: c.mutedForeground,
+                      ),
                     ),
                   ),
 
@@ -815,9 +1021,15 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           decoration: BoxDecoration(
                             color: c.primary.withValues(alpha: 0.08),
                             borderRadius: KiteRadius.allMd,
-                            border: Border.all(color: c.primary.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: c.primary.withValues(alpha: 0.2),
+                            ),
                           ),
-                          child: Icon(Icons.home_work_rounded, color: c.primary, size: 22),
+                          child: Icon(
+                            Icons.home_work_rounded,
+                            color: c.primary,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: KiteSpace.md),
                         Expanded(
@@ -828,12 +1040,19 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                                 item.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: t.small.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                                style: t.small.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  Icon(Icons.place_outlined, size: 12, color: c.mutedForeground),
+                                  Icon(
+                                    Icons.place_outlined,
+                                    size: 12,
+                                    color: c.mutedForeground,
+                                  ),
                                   const SizedBox(width: 3),
                                   Expanded(
                                     child: Text(
@@ -866,7 +1085,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                             fontSize: 13,
                           ),
                         ),
-                        Text('${item.areaSqm} m²', style: t.muted.copyWith(fontSize: 11.5)),
+                        Text(
+                          '${item.areaSqm} m²',
+                          style: t.muted.copyWith(fontSize: 11.5),
+                        ),
                       ],
                     ),
                   ),
@@ -886,10 +1108,16 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                                 item.ownerName ?? 'Chủ nhà',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: t.small.copyWith(fontSize: 12.5, fontWeight: FontWeight.w500),
+                                style: t.small.copyWith(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               if (item.ownerPhone != null)
-                                Text(item.ownerPhone!, style: t.muted.copyWith(fontSize: 11)),
+                                Text(
+                                  item.ownerPhone!,
+                                  style: t.muted.copyWith(fontSize: 11),
+                                ),
                             ],
                           ),
                         ),
@@ -921,12 +1149,22 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                         const SizedBox(width: 6),
                         IconButton(
                           tooltip: 'Duyệt nhanh',
-                          icon: const Icon(Icons.check_circle_outline, color: Color(0xFF0C6B62), size: 20),
-                          onPressed: () => context.read<AdminListingCubit>().approveListing(item.id),
+                          icon: const Icon(
+                            Icons.check_circle_outline,
+                            color: Color(0xFF0C6B62),
+                            size: 20,
+                          ),
+                          onPressed: () => context
+                              .read<AdminListingCubit>()
+                              .approveListing(item.id),
                         ),
                         IconButton(
                           tooltip: 'Từ chối',
-                          icon: Icon(Icons.cancel_outlined, color: c.destructive, size: 20),
+                          icon: Icon(
+                            Icons.cancel_outlined,
+                            color: c.destructive,
+                            size: 20,
+                          ),
                           onPressed: () => _showRejectDialog(context, item.id),
                         ),
                       ],

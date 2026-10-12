@@ -1,7 +1,7 @@
 package com.rental.modules.contract.controller;
 
 import com.rental.modules.contract.dto.request.CreateContractRequest;
-import com.rental.modules.contract.entity.Contract;
+import com.rental.modules.contract.domain.entity.Contract;
 import com.rental.modules.contract.service.ContractService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

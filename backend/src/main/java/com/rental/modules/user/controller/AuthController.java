@@ -4,7 +4,7 @@ import com.rental.modules.user.dto.request.GoogleLoginRequest;
 import com.rental.modules.user.dto.request.LoginRequest;
 import com.rental.modules.user.dto.request.RegisterRequest;
 import com.rental.modules.user.dto.request.VerifyOtpRequest;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.service.AuthService;
 import jakarta.validation.Valid;

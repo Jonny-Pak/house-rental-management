@@ -2,9 +2,11 @@ package com.rental.modules.payment.controller;
 
 import com.rental.modules.payment.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Profile("dev")
 @RequestMapping("/api/v1/auth/test-payment")
 public class TestPaymentController {
 

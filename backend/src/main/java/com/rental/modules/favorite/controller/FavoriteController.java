@@ -2,7 +2,7 @@ package com.rental.modules.favorite.controller;
 
 import com.rental.modules.favorite.service.FavoriteService;
 import com.rental.modules.property.dto.response.PropertyResponse;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
