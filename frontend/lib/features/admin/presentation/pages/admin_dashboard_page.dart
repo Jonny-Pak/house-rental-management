@@ -1,109 +1,241 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:kite_ui/kite_ui.dart';
 
+import '../../../../core/network/api_client.dart';
+import '../../../../core/storage/token_storage.dart';
+import '../../../auth/data/models/auth_models.dart';
 import '../../data/models/admin_listing_model.dart';
+import '../../data/repositories/admin_listing_repository.dart';
 import '../bloc/admin_listing_cubit.dart';
 import '../bloc/admin_listing_state.dart';
-import '../../../auth/presentation/pages/login_page.dart';
+import '../../shared/widgets/states.dart';
 
-class AdminDashboardPage extends StatefulWidget {
+class AdminDashboardPage extends StatelessWidget {
   const AdminDashboardPage({super.key});
 
   @override
-  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => AdminListingCubit(
+        AdminListingRepository(ApiClient()),
+      ),
+      child: const _AdminDashboardView(),
+    );
+  }
 }
 
-class _AdminDashboardPageState extends State<AdminDashboardPage> {
+class _AdminDashboardView extends StatefulWidget {
+  const _AdminDashboardView();
+
+  @override
+  State<_AdminDashboardView> createState() => _AdminDashboardViewState();
+}
+
+class _AdminDashboardViewState extends State<_AdminDashboardView> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String _selectedType = 'Tất cả';
+
   @override
   void initState() {
     super.initState();
     context.read<AdminListingCubit>().fetchPendingListings();
   }
 
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<AdminListingModel> _filterListings(List<AdminListingModel> raw) {
+    return raw.where((item) {
+      final q = _searchQuery.toLowerCase().trim();
+      final matchQuery = q.isEmpty ||
+          item.title.toLowerCase().contains(q) ||
+          item.address.toLowerCase().contains(q) ||
+          (item.ownerName?.toLowerCase().contains(q) ?? false) ||
+          item.id.toString().contains(q);
+
+      final type = item.listingType ?? item.houseType ?? '';
+      final matchType = _selectedType == 'Tất cả' ||
+          type.toLowerCase().contains(_selectedType.toLowerCase());
+
+      return matchQuery && matchType;
+    }).toList();
+  }
+
   void _showReviewDialog(BuildContext context, AdminListingModel listing) {
+    final c = KiteColors.of(context);
+    final t = KiteText.of(context);
+    final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+
     showDialog(
       context: context,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            width: 600,
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Chi tiết bài đăng',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Image placeholder (horizontal scroll)
-                  SizedBox(
-                    height: 150,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 3, // Dummy image count
-                      itemBuilder: (context, index) {
-                        return Container(
-                          width: 200,
-                          margin: const EdgeInsets.only(right: 8),
+          backgroundColor: c.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: KiteRadius.allLg,
+            side: BorderSide(color: c.border),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: Padding(
+              padding: const EdgeInsets.all(KiteSpace.xl),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
+                            color: c.primary.withValues(alpha: 0.1),
+                            borderRadius: KiteRadius.allSm,
                           ),
-                          child: const Center(
-                            child: Icon(Icons.image, size: 50, color: Colors.grey),
+                          child: Icon(Icons.home_work_rounded, color: c.primary, size: 20),
+                        ),
+                        const SizedBox(width: KiteSpace.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Chi tiết kiểm duyệt #${listing.id}', style: t.h4),
+                              Text(
+                                'Ngày tạo: ${listing.createdAt != null && listing.createdAt!.length >= 10 ? listing.createdAt!.substring(0, 10) : "Mới đây"}',
+                                style: t.muted.copyWith(fontSize: 12),
+                              ),
+                            ],
                           ),
-                        );
-                      },
+                        ),
+                        const KiteBadge('Chờ duyệt', tone: KiteTone.warning),
+                        const SizedBox(width: KiteSpace.sm),
+                        IconButton(
+                          icon: Icon(Icons.close, size: 18, color: c.mutedForeground),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  _buildDetailRow('Tiêu đề:', listing.title),
-                  _buildDetailRow('Địa chỉ:', listing.address),
-                  _buildDetailRow('Diện tích:', '${listing.areaSqm} m2'),
-                  _buildDetailRow('Giá thuê:', NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(listing.rentPrice)),
-                  _buildDetailRow('Loại nhà:', listing.houseType ?? 'N/A'),
-                  _buildDetailRow('Giấy tờ pháp lý:', listing.legalDocuments ?? 'N/A'),
-                  _buildDetailRow('Mô tả:', listing.description),
-                  
-                  const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Đóng'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          _showRejectDialog(context, listing.id);
+                    const SizedBox(height: KiteSpace.lg),
+                    const Divider(height: 1),
+                    const SizedBox(height: KiteSpace.lg),
+
+                    // Image gallery preview
+                    SizedBox(
+                      height: 140,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: 3,
+                        separatorBuilder: (_, _) => const SizedBox(width: KiteSpace.sm),
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: 200,
+                            decoration: BoxDecoration(
+                              color: c.muted,
+                              borderRadius: KiteRadius.allMd,
+                              border: Border.all(color: c.border),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image_outlined, size: 36, color: c.mutedForeground),
+                                const SizedBox(height: 4),
+                                Text('Hình ảnh ${index + 1}', style: t.muted.copyWith(fontSize: 11)),
+                              ],
+                            ),
+                          );
                         },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        child: const Text('Từ chối', style: TextStyle(color: Colors.white)),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          context.read<AdminListingCubit>().approveListing(listing.id);
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                        child: const Text('Phê duyệt', style: TextStyle(color: Colors.white)),
+                    ),
+                    const SizedBox(height: KiteSpace.xl),
+
+                    // Information grid
+                    Container(
+                      padding: const EdgeInsets.all(KiteSpace.lg),
+                      decoration: BoxDecoration(
+                        color: c.background,
+                        borderRadius: KiteRadius.allMd,
+                        border: Border.all(color: c.border),
                       ),
-                    ],
-                  )
-                ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildModalRow(context, 'Tiêu đề:', listing.title, isBold: true),
+                          _buildModalRow(context, 'Địa chỉ:', listing.address, icon: Icons.place_outlined),
+                          _buildModalRow(
+                            context,
+                            'Giá thuê:',
+                            currency.format(listing.rentPrice),
+                            highlight: true,
+                          ),
+                          _buildModalRow(context, 'Diện tích:', '${listing.areaSqm} m²'),
+                          _buildModalRow(context, 'Loại hình:', listing.listingType ?? listing.houseType ?? 'Phòng trọ'),
+                          _buildModalRow(context, 'Pháp lý:', listing.legalDocuments ?? 'Đầy đủ'),
+                          _buildModalRow(
+                            context,
+                            'Chủ sở hữu:',
+                            '${listing.ownerName ?? "Chủ nhà"} ${listing.ownerPhone != null ? "(${listing.ownerPhone})" : ""}',
+                            icon: Icons.person_outline,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: KiteSpace.lg),
+
+                    // Description
+                    Text('Mô tả chi tiết:', style: t.small.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: KiteSpace.xs),
+                    Container(
+                      padding: const EdgeInsets.all(KiteSpace.md),
+                      decoration: BoxDecoration(
+                        color: c.background,
+                        borderRadius: KiteRadius.allSm,
+                        border: Border.all(color: c.border),
+                      ),
+                      child: Text(
+                        listing.description.isEmpty ? 'Không có mô tả bổ sung.' : listing.description,
+                        style: t.p.copyWith(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: KiteSpace.xl),
+
+                    // Action buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        KiteButton.ghost(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Đóng'),
+                        ),
+                        const SizedBox(width: KiteSpace.sm),
+                        KiteButton.destructive(
+                          leading: const Icon(Icons.close, size: 16),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            _showRejectDialog(context, listing.id);
+                          },
+                          child: const Text('Từ chối'),
+                        ),
+                        const SizedBox(width: KiteSpace.sm),
+                        KiteButton(
+                          leading: const Icon(Icons.check, size: 16),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            context.read<AdminListingCubit>().approveListing(listing.id);
+                          },
+                          child: const Text('Phê duyệt tin'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -114,51 +246,249 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   void _showRejectDialog(BuildContext context, int listingId) {
     final reasonController = TextEditingController();
+    final c = KiteColors.of(context);
+    final t = KiteText.of(context);
+
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Lý do từ chối'),
-          content: TextField(
-            controller: reasonController,
-            decoration: const InputDecoration(
-              hintText: 'Nhập lý do từ chối (VD: Ảnh không hợp lệ)',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
+        return Dialog(
+          backgroundColor: c.card,
+          shape: RoundedRectangleBorder(
+            borderRadius: KiteRadius.allLg,
+            side: BorderSide(color: c.border),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Hủy'),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(KiteSpace.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: c.destructive, size: 22),
+                      const SizedBox(width: KiteSpace.sm),
+                      Text('Từ chối bài đăng #$listingId', style: t.h4),
+                    ],
+                  ),
+                  const SizedBox(height: KiteSpace.md),
+                  Text(
+                    'Vui lòng nhập lý do từ chối để gửi phản hồi cho chủ bài đăng.',
+                    style: t.muted.copyWith(fontSize: 13),
+                  ),
+                  const SizedBox(height: KiteSpace.lg),
+                  KiteTextarea(
+                    controller: reasonController,
+                    placeholder: 'VD: Hình ảnh không hợp lệ, giá thuê hoặc địa chỉ chưa rõ ràng...',
+                  ),
+                  const SizedBox(height: KiteSpace.xl),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      KiteButton.ghost(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Hủy'),
+                      ),
+                      const SizedBox(width: KiteSpace.sm),
+                      KiteButton.destructive(
+                        onPressed: () {
+                          final text = reasonController.text.trim();
+                          if (text.isEmpty) return;
+                          Navigator.of(ctx).pop();
+                          context.read<AdminListingCubit>().rejectListing(listingId, text);
+                        },
+                        child: const Text('Xác nhận từ chối'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (reasonController.text.trim().isEmpty) return;
-                Navigator.of(ctx).pop();
-                context.read<AdminListingCubit>().rejectListing(listingId, reasonController.text.trim());
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Xác nhận từ chối', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  void _showAdminLoginDialog(BuildContext context) {
+    final emailCtrl = TextEditingController(text: 'thuanln1907@gmail.com');
+    final passCtrl = TextEditingController();
+    bool busy = false;
+    String? err;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final c = KiteColors.of(dialogCtx);
+            final t = KiteText.of(dialogCtx);
+
+            return Dialog(
+              backgroundColor: c.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: KiteRadius.allLg,
+                side: BorderSide(color: c.border),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Padding(
+                  padding: const EdgeInsets.all(KiteSpace.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: c.primary.withValues(alpha: 0.1),
+                              borderRadius: KiteRadius.allSm,
+                            ),
+                            child: Icon(Icons.admin_panel_settings_rounded, color: c.primary, size: 22),
+                          ),
+                          const SizedBox(width: KiteSpace.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Đăng nhập Quản trị viên', style: t.h4),
+                                Text('Xác thực tài khoản Admin hệ thống', style: t.muted.copyWith(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close, size: 18, color: c.mutedForeground),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: KiteSpace.lg),
+                      if (err != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(KiteSpace.sm),
+                          decoration: BoxDecoration(
+                            color: c.destructive.withValues(alpha: 0.1),
+                            borderRadius: KiteRadius.allSm,
+                            border: Border.all(color: c.destructive.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(err!, style: t.small.copyWith(color: c.destructive, fontSize: 12)),
+                        ),
+                        const SizedBox(height: KiteSpace.md),
+                      ],
+                      KiteField(
+                        label: 'Email',
+                        child: KiteInput(
+                          controller: emailCtrl,
+                          placeholder: 'admin@email.com',
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                      ),
+                      KiteField(
+                        label: 'Mật khẩu',
+                        child: KiteInput(
+                          controller: passCtrl,
+                          placeholder: '••••••••',
+                          obscure: true,
+                        ),
+                      ),
+                      const SizedBox(height: KiteSpace.lg),
+                      KiteButton(
+                        leading: busy ? null : const Icon(Icons.login, size: 16),
+                        enabled: !busy,
+                        onPressed: () async {
+                          final em = emailCtrl.text.trim();
+                          final pw = passCtrl.text;
+                          if (em.isEmpty || pw.isEmpty) {
+                            setDialogState(() => err = 'Vui lòng nhập đầy đủ email và mật khẩu.');
+                            return;
+                          }
+                          setDialogState(() {
+                            busy = true;
+                            err = null;
+                          });
+
+                          try {
+                            final client = ApiClient();
+                            final res = await client.post('/auth/login', {'email': em, 'password': pw});
+                            if (res.statusCode == 200) {
+                              final authResponse = AuthResponse.fromJson(res.data as Map<String, dynamic>);
+                              await TokenStorage.saveToken(authResponse.accessToken);
+
+                              if (ctx.mounted) Navigator.of(ctx).pop();
+                              if (context.mounted) {
+                                KiteToast.show(
+                                  context,
+                                  title: 'Đăng nhập thành công',
+                                  description: 'Đã xác thực tài khoản quản trị viên.',
+                                  tone: KiteTone.success,
+                                );
+                                context.read<AdminListingCubit>().fetchPendingListings();
+                              }
+                            } else {
+                              setDialogState(() => err = 'Đăng nhập không thành công.');
+                            }
+                          } on DioException catch (e) {
+                            String msg = 'Tài khoản hoặc mật khẩu không chính xác.';
+                            if (e.response?.data is Map && e.response?.data['message'] != null) {
+                              msg = e.response!.data['message'].toString();
+                            }
+                            setDialogState(() => err = msg);
+                          } catch (e) {
+                            setDialogState(() => err = e.toString().replaceFirst('Exception: ', ''));
+                          } finally {
+                            setDialogState(() => busy = false);
+                          }
+                        },
+                        child: Text(busy ? 'Đang xác thực...' : 'Đăng nhập ngay'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildModalRow(
+    BuildContext context,
+    String label,
+    String value, {
+    bool isBold = false,
+    bool highlight = false,
+    IconData? icon,
+  }) {
+    final c = KiteColors.of(context);
+    final t = KiteText.of(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+            width: 110,
+            child: Text(label, style: t.muted.copyWith(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: c.mutedForeground),
+            const SizedBox(width: 4),
+          ],
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+            child: Text(
+              value,
+              style: t.small.copyWith(
+                fontSize: 13,
+                fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+                color: highlight ? c.primary : c.foreground,
+              ),
+            ),
           ),
         ],
       ),
@@ -167,164 +497,447 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isWideScreen = MediaQuery.of(context).size.width > 800;
+    final c = KiteColors.of(context);
+    final t = KiteText.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Quản trị hệ thống'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Làm mới',
-            onPressed: () => context.read<AdminListingCubit>().fetchPendingListings(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Đăng xuất / Đổi tài khoản',
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: BlocConsumer<AdminListingCubit, AdminListingState>(
-        listener: (context, state) {
-          if (state is AdminListingActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
-            );
-          } else if (state is AdminListingError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is AdminListingLoading && context.read<AdminListingCubit>().state is! AdminListingLoaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return BlocConsumer<AdminListingCubit, AdminListingState>(
+      listener: (context, state) {
+        if (state is AdminListingActionSuccess) {
+          KiteToast.show(
+            context,
+            title: 'Thành công',
+            description: state.message,
+            tone: KiteTone.success,
+          );
+        } else if (state is AdminListingError) {
+          KiteToast.show(
+            context,
+            title: 'Lỗi',
+            description: state.message,
+            tone: KiteTone.danger,
+          );
+        }
+      },
+      builder: (context, state) {
+        List<AdminListingModel> rawListings = [];
+        if (state is AdminListingLoaded) {
+          rawListings = state.pendingListings;
+        } else if (context.read<AdminListingCubit>().state is AdminListingLoaded) {
+          rawListings = (context.read<AdminListingCubit>().state as AdminListingLoaded).pendingListings;
+        }
 
-          if (state is AdminListingError) {
-            return Center(
+        final filtered = _filterListings(rawListings);
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(KiteSpace.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Page header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Duyệt bài đăng', style: t.h3),
+                        const SizedBox(height: KiteSpace.xs),
+                        Text(
+                          'Kiểm duyệt và quản lý các tin đăng cho thuê phòng trọ từ chủ nhà',
+                          style: t.muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                  KiteButton.outline(
+                    leading: const Icon(Icons.refresh, size: 15),
+                    onPressed: () => context.read<AdminListingCubit>().fetchPendingListings(),
+                    child: const Text('Làm mới'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: KiteSpace.xl),
+
+              // Stat Grid
+              KiteStatGrid(
+                children: [
+                  KiteStat(
+                    label: 'Tin chờ phê duyệt',
+                    value: '${rawListings.length}',
+                    delta: rawListings.isEmpty ? 'Đã xử lý hết' : 'Cần kiểm tra',
+                    deltaTone: rawListings.isEmpty ? KiteTone.success : KiteTone.warning,
+                  ),
+                  KiteStat(
+                    label: 'Đã lọc theo điều kiện',
+                    value: '${filtered.length}',
+                    delta: 'Đang hiển thị',
+                    deltaTone: KiteTone.info,
+                  ),
+                  KiteStat(
+                    label: 'Diện tích trung bình',
+                    value: rawListings.isEmpty
+                        ? '0 m²'
+                        : '${(rawListings.fold<double>(0, (s, e) => s + e.areaSqm) / rawListings.length).toStringAsFixed(1)} m²',
+                    delta: 'Phòng trọ chuẩn',
+                    deltaTone: KiteTone.neutral,
+                  ),
+                  const KiteStat(
+                    label: 'Tỷ lệ duyệt chuẩn',
+                    value: '95.4%',
+                    delta: '+1.2% tháng này',
+                    deltaTone: KiteTone.success,
+                  ),
+                ],
+              ),
+              const SizedBox(height: KiteSpace.xl),
+
+              // Filter toolbar
+              Container(
+                padding: const EdgeInsets.all(KiteSpace.md),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: KiteRadius.allMd,
+                  border: Border.all(color: c.border),
+                ),
+                child: Wrap(
+                  spacing: KiteSpace.md,
+                  runSpacing: KiteSpace.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.spaceBetween,
+                  children: [
+                    // Search box
+                    SizedBox(
+                      width: 280,
+                      child: KiteInput(
+                        controller: _searchCtrl,
+                        placeholder: 'Tìm theo tiêu đề, địa chỉ, chủ nhà...',
+                        leading: Icon(Icons.search, size: 16, color: c.mutedForeground),
+                        onChanged: (val) => setState(() => _searchQuery = val),
+                      ),
+                    ),
+                    // Type selector pills
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final type in ['Tất cả', 'Phòng trọ', 'Nhà nguyên căn', 'Căn hộ'])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: InkWell(
+                              borderRadius: KiteRadius.allSm,
+                              onTap: () => setState(() => _selectedType = type),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _selectedType == type
+                                      ? c.primary.withValues(alpha: 0.12)
+                                      : Colors.transparent,
+                                  borderRadius: KiteRadius.allSm,
+                                  border: Border.all(
+                                    color: _selectedType == type ? c.primary : c.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  type,
+                                  style: t.small.copyWith(
+                                    fontSize: 12,
+                                    fontWeight: _selectedType == type ? FontWeight.w600 : FontWeight.w500,
+                                    color: _selectedType == type ? c.primary : c.mutedForeground,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: KiteSpace.lg),
+
+              // Main Table / List Card
+              KiteCard(
+                title: 'Danh sách bài đăng cần duyệt',
+                trailing: KiteBadge('${filtered.length} tin', tone: KiteTone.warning),
+                padding: const EdgeInsets.all(KiteSpace.lg),
+                child: _buildContent(context, state, rawListings, filtered),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    AdminListingState state,
+    List<AdminListingModel> raw,
+    List<AdminListingModel> filtered,
+  ) {
+    if (state is AdminListingLoading && raw.isEmpty) {
+      return const SizedBox(
+        height: 260,
+        child: LoadingState(),
+      );
+    }
+
+    if (state is AdminListingError && raw.isEmpty) {
+      final isAuthError = state.message.contains('đăng nhập') ||
+          state.message.contains('quyền') ||
+          state.message.contains('Admin');
+
+      if (isAuthError) {
+        final t = KiteText.of(context);
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: KiteSpace.xl),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(state.message, style: const TextStyle(color: Colors.red, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                      );
-                    },
-                    icon: const Icon(Icons.login),
-                    label: const Text('Đăng nhập tài khoản Admin'),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD85D15).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lock_person_outlined, size: 40, color: Color(0xFFD85D15)),
+                  ),
+                  const SizedBox(height: KiteSpace.lg),
+                  Text('Yêu cầu quyền Quản trị viên', style: t.h4, textAlign: TextAlign.center),
+                  const SizedBox(height: KiteSpace.sm),
+                  Text(
+                    'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn. Vui lòng đăng nhập với tài khoản Quản trị viên để kiểm duyệt bài đăng.',
+                    style: t.muted,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: KiteSpace.xl),
+                  KiteButton(
+                    leading: const Icon(Icons.login, size: 16),
+                    onPressed: () => _showAdminLoginDialog(context),
+                    child: const Text('Đăng nhập tài khoản Admin'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      return SizedBox(
+        height: 260,
+        child: ErrorState(
+          message: state.message,
+          onRetry: () => context.read<AdminListingCubit>().fetchPendingListings(),
+        ),
+      );
+    }
+
+    if (filtered.isEmpty) {
+      return SizedBox(
+        height: 260,
+        child: EmptyState(
+          title: raw.isEmpty ? 'Không có bài đăng nào cần duyệt' : 'Không có bài đăng phù hợp',
+          message: raw.isEmpty
+              ? 'Tất cả các tin đăng của chủ nhà đã được kiểm duyệt xong!'
+              : 'Hãy thử tìm kiếm với từ khóa khác hoặc bỏ chọn bộ lọc.',
+          actionLabel: 'Tải lại danh sách',
+          onAction: () {
+            setState(() {
+              _searchCtrl.clear();
+              _searchQuery = '';
+              _selectedType = 'Tất cả';
+            });
+            context.read<AdminListingCubit>().fetchPendingListings();
+          },
+        ),
+      );
+    }
+
+    return _buildResponsiveList(context, filtered);
+  }
+
+  Widget _buildResponsiveList(BuildContext context, List<AdminListingModel> items) {
+    final c = KiteColors.of(context);
+    final t = KiteText.of(context);
+    final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+
+    return Column(
+      children: [
+        // Table Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: KiteSpace.md, vertical: KiteSpace.sm),
+          child: Row(
+            children: [
+              SizedBox(width: 50, child: Text('MÃ', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+              Expanded(flex: 4, child: Text('THÔNG TIN BÀI ĐĂNG', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+              Expanded(flex: 2, child: Text('GIÁ & DIỆN TÍCH', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+              Expanded(flex: 2, child: Text('CHỦ NHÀ', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+              Expanded(flex: 2, child: Text('NGÀY GỬI', style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+              SizedBox(width: 190, child: Text('THAO TÁC', textAlign: TextAlign.right, style: t.muted.copyWith(fontSize: 11, fontWeight: FontWeight.w600))),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+
+        // List items
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final item = items[index];
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KiteSpace.md, vertical: KiteSpace.md),
+              child: Row(
+                children: [
+                  // ID
+                  SizedBox(
+                    width: 50,
+                    child: Text(
+                      '#${item.id}',
+                      style: t.small.copyWith(fontWeight: FontWeight.w600, color: c.mutedForeground),
+                    ),
+                  ),
+
+                  // Info
+                  Expanded(
+                    flex: 4,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: c.primary.withValues(alpha: 0.08),
+                            borderRadius: KiteRadius.allMd,
+                            border: Border.all(color: c.primary.withValues(alpha: 0.2)),
+                          ),
+                          child: Icon(Icons.home_work_rounded, color: c.primary, size: 22),
+                        ),
+                        const SizedBox(width: KiteSpace.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.small.copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(Icons.place_outlined, size: 12, color: c.mutedForeground),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      item.address,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: t.muted.copyWith(fontSize: 11.5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Price & Area
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          currency.format(item.rentPrice),
+                          style: t.small.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: c.primary,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text('${item.areaSqm} m²', style: t.muted.copyWith(fontSize: 11.5)),
+                      ],
+                    ),
+                  ),
+
+                  // Owner
+                  Expanded(
+                    flex: 2,
+                    child: Row(
+                      children: [
+                        KiteAvatar(name: item.ownerName ?? 'Chủ nhà', size: 26),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.ownerName ?? 'Chủ nhà',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.small.copyWith(fontSize: 12.5, fontWeight: FontWeight.w500),
+                              ),
+                              if (item.ownerPhone != null)
+                                Text(item.ownerPhone!, style: t.muted.copyWith(fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Date
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      item.createdAt != null && item.createdAt!.length >= 10
+                          ? item.createdAt!.substring(0, 10)
+                          : 'Hôm nay',
+                      style: t.muted.copyWith(fontSize: 12),
+                    ),
+                  ),
+
+                  // Actions
+                  SizedBox(
+                    width: 190,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        KiteButton.outline(
+                          onPressed: () => _showReviewDialog(context, item),
+                          child: const Text('Xem xét'),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          tooltip: 'Duyệt nhanh',
+                          icon: const Icon(Icons.check_circle_outline, color: Color(0xFF0C6B62), size: 20),
+                          onPressed: () => context.read<AdminListingCubit>().approveListing(item.id),
+                        ),
+                        IconButton(
+                          tooltip: 'Từ chối',
+                          icon: Icon(Icons.cancel_outlined, color: c.destructive, size: 20),
+                          onPressed: () => _showRejectDialog(context, item.id),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             );
-          }
-
-          List<AdminListingModel> listings = [];
-          if (state is AdminListingLoaded) {
-            listings = state.pendingListings;
-          } else if (context.read<AdminListingCubit>().state is AdminListingLoaded) {
-            listings = (context.read<AdminListingCubit>().state as AdminListingLoaded).pendingListings;
-          }
-
-          if (listings.isEmpty && state is! AdminListingLoading) {
-            return const Center(child: Text('Không có bài đăng nào cần duyệt.'));
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: isWideScreen
-                ? _buildDataTable(listings)
-                : _buildListView(listings),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildDataTable(List<AdminListingModel> listings) {
-    return SingleChildScrollView(
-      child: SizedBox(
-        width: double.infinity,
-        child: DataTable(
-          headingRowColor: const WidgetStatePropertyAll(Color(0xFFEEEEEE)),
-          columns: const [
-            DataColumn(label: Text('ID')),
-            DataColumn(label: Text('Tiêu đề')),
-            DataColumn(label: Text('Loại')),
-            DataColumn(label: Text('Chủ sở hữu')),
-            DataColumn(label: Text('Ngày tạo')),
-            DataColumn(label: Text('Thao tác')),
-          ],
-          rows: listings.map((listing) {
-            return DataRow(
-              cells: [
-                DataCell(Text(listing.id.toString())),
-                DataCell(
-                  SizedBox(
-                    width: 250,
-                    child: Text(listing.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
-                ),
-                DataCell(Text(listing.listingType ?? 'N/A')),
-                DataCell(Text(listing.ownerName ?? 'N/A')),
-                DataCell(Text(listing.createdAt?.substring(0, 10) ?? 'N/A')),
-                DataCell(
-                  ElevatedButton.icon(
-                    onPressed: () => _showReviewDialog(context, listing),
-                    icon: const Icon(Icons.preview, size: 16),
-                    label: const Text('Xem xét'),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _buildListView(List<AdminListingModel> listings) {
-    return ListView.builder(
-      itemCount: listings.length,
-      itemBuilder: (context, index) {
-        final listing = listings[index];
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            title: Text(
-              listing.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text('ID: ${listing.id} - Loại: ${listing.listingType ?? 'N/A'}'),
-                Text('Chủ: ${listing.ownerName ?? 'N/A'} - Ngày: ${listing.createdAt?.substring(0, 10) ?? 'N/A'}'),
-              ],
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.arrow_forward_ios, size: 16),
-              onPressed: () => _showReviewDialog(context, listing),
-            ),
-            isThreeLine: true,
-          ),
-        );
-      },
+      ],
     );
   }
 }

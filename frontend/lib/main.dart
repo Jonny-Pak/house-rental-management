@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'core/network/api_client.dart';
 import 'core/storage/token_storage.dart';
@@ -9,9 +11,7 @@ import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_page.dart';
-import 'features/admin/data/repositories/admin_listing_repository.dart';
-import 'features/admin/presentation/bloc/admin_listing_cubit.dart';
-import 'features/admin/presentation/pages/admin_dashboard_page.dart';
+import 'features/admin/app.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -23,10 +23,16 @@ class MyHttpOverrides extends HttpOverrides {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb) {
-    HttpOverrides.global = MyHttpOverrides();
+  
+  // ─── Trên Web: Khởi chạy toàn bộ hệ thống Admin Dashboard từ features/admin ───
+  if (kIsWeb) {
+    usePathUrlStrategy();
+    runApp(const ProviderScope(child: KiteApp()));
+    return;
   }
-  // Kiểm tra token đã lưu trong bộ nhớ
+
+  // ─── Trên Android / Mobile: Khởi chạy ứng dụng người dùng ───
+  HttpOverrides.global = MyHttpOverrides();
   final token = await TokenStorage.getToken();
   runApp(MyApp(hasToken: token != null && token.isNotEmpty));
 }
@@ -37,15 +43,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Khởi tạo ApiClient dùng chung
     final apiClient = ApiClient();
-
-    // Điều hướng trang khởi đầu:
-    // - Trên Web: nếu đã đăng nhập thì vào thẳng AdminDashboardPage, nếu chưa thì vào LoginPage
-    // - Trên Mobile/Android: vào LoginPage
-    final Widget initialHome = (kIsWeb && hasToken)
-        ? const AdminDashboardPage()
-        : const LoginPage();
 
     return MultiBlocProvider(
       providers: [
@@ -54,18 +52,13 @@ class MyApp extends StatelessWidget {
             AuthRepositoryImpl(AuthRemoteDataSourceImpl(apiClient)),
           ),
         ),
-        BlocProvider<AdminListingCubit>(
-          create: (_) => AdminListingCubit(
-            AdminListingRepository(apiClient),
-          ),
-        ),
       ],
       child: MaterialApp(
         title: 'House Rental Management',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          colorSchemeSeed: Colors.indigo,
+          colorSchemeSeed: const Color(0xFFD85D15),
           inputDecorationTheme: const InputDecorationTheme(
             filled: true,
             border: OutlineInputBorder(
@@ -73,7 +66,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        home: initialHome,
+        home: const LoginPage(),
       ),
     );
   }
