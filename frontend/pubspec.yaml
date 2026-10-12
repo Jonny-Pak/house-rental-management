@@ -49,6 +49,18 @@ dependencies:
   geolocator: ^14.1.1
   geocoding: ^5.0.0
   material_symbols_icons: ^4.2960.0
+
+  flutter_localizations:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+
+  kite_ui:
+    path: packages/kite_ui
+
+  go_router: any
+  flutter_riverpod: any
+  http: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
