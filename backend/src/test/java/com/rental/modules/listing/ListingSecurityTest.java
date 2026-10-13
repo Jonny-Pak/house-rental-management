@@ -21,7 +21,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({ListingController.class, AdminListingController.class})
+@WebMvcTest({ListingController.class, AdminListingController.class,
+        com.rental.modules.favorite.controller.ListingFavoriteController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
     @Autowired MockMvc mvc;
@@ -29,6 +30,7 @@ class ListingSecurityTest {
     @MockBean AdminListingService admin;
     @MockBean JwtService jwt;
     @MockBean CustomUserDetailsService users;
+    @MockBean com.rental.modules.favorite.service.ListingFavoriteService favorites;
 
     @BeforeEach void tokens() {
         for (String token : new String[]{"owner", "admin"}) {
@@ -43,9 +45,21 @@ class ListingSecurityTest {
     }
 
     @Test void publicMapAndListingsNeedNoToken() throws Exception {
+        mvc.perform(get("/api/v1/listings/public/10")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/listings/public")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/listings/map").param("minLat", "10.7").param("minLng", "106.6")
                 .param("maxLat", "10.9").param("maxLng", "106.8")).andExpect(status().isOk());
+    }
+
+    @Test void favoritesRequireAuthenticationAndUseCurrentUser() throws Exception {
+        mvc.perform(put("/api/v1/listings/10/favorite")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/listings/favorites/me")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/listings/10/favorite").header("Authorization", "Bearer owner"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.isFavorite").value(true));
+        verify(favorites).save(1L, 10L);
+        mvc.perform(delete("/api/v1/listings/10/favorite").header("Authorization", "Bearer owner"))
+                .andExpect(status().isOk());
+        verify(favorites).remove(1L, 10L);
     }
 
     @Test void ownerCannotAccessAnyAdminModerationEndpoint() throws Exception {

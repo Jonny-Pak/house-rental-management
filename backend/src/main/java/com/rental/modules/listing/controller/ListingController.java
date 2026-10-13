@@ -15,6 +15,11 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/listings")
 public class ListingController {
 
+    @GetMapping("/public/{id}")
+    public ListingResponse getPublicListing(@PathVariable Long id) {
+        return listingService.getPublicListing(id);
+    }
+
     @GetMapping("/me")
     public List<ListingResponse> getMyListings(@AuthenticationPrincipal com.rental.core.security.CustomUserDetails user) {
         return listingService.getMyListings(user.getUser().getUserId());

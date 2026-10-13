@@ -21,6 +21,12 @@ public class ListingResponse {
     private Double latitude;
     private Double longitude;
     private Long ownerId;
+    private String ownerName;
+    private String ownerPhone;
+    public String getOwnerName() { return ownerName; }
+    public void setOwnerName(String value) { ownerName = value; }
+    public String getOwnerPhone() { return ownerPhone; }
+    public void setOwnerPhone(String value) { ownerPhone = value; }
     private Long areaId;
     private String approvalStatus;
     private String rentalStatus;

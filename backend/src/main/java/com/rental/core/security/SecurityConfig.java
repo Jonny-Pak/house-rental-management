@@ -46,7 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/areas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/properties").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/listings/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/listings/public", "/api/v1/listings/public/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/listings/map").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

@@ -9,6 +9,31 @@ class ListingRepository {
 
   final ApiClient _apiClient;
 
+  Future<Listing> fetchDetail(int id) async {
+    final response = await _apiClient.get('/listings/public/$id');
+    return Listing.fromJson(Map<String, dynamic>.from(response.data));
+  }
+
+  Future<bool> isFavorite(int id) async {
+    final response = await _apiClient.get('/listings/$id/favorite');
+    return response.data['isFavorite'] == true;
+  }
+
+  Future<void> setFavorite(int id, bool saved) async {
+    if (saved) {
+      await _apiClient.put('/listings/$id/favorite', {});
+    } else {
+      await _apiClient.delete('/listings/$id/favorite');
+    }
+  }
+
+  Future<List<Listing>> fetchSavedListings() async {
+    final response = await _apiClient.get('/listings/favorites/me');
+    return (response.data as List)
+        .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
   Future<List<Listing>> fetchMyListings() async {
     final response = await _apiClient.get('/listings/me');
     return (response.data as List)

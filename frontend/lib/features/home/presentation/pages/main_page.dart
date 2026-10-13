@@ -5,7 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../../../favorites/presentation/pages/saved_properties_page.dart';
+import '../../../listing/presentation/pages/saved_listings_page.dart';
 import '../../../listing/presentation/pages/my_listings_page.dart';
 import '../../../user/data/datasources/user_remote_data_source.dart';
 import '../../../user/data/repositories/user_repository.dart';
@@ -58,7 +58,7 @@ class _MainPageState extends State<MainPage> {
       onMenu: () => _scaffold.currentState?.openDrawer(),
       onTabSelected: _select,
     ),
-    1 => const SavedPropertiesPage(),
+    1 => const SavedListingsPage(),
     2 => const MyListingsPage(),
     3 => const HomeNotificationsPage(),
     _ => const ProfilePage(),

@@ -89,6 +89,18 @@ public class ListingService {
                 .collect(Collectors.toList());
     }
 
+    public ListingResponse getPublicListing(Long id) {
+        Listing listing = listingRepository.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng."));
+        if (!"APPROVED".equals(listing.getApprovalStatus()) || !"AVAILABLE".equals(listing.getRentalStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng.");
+        }
+        ListingResponse response = toListingResponse(listing);
+        response.setOwnerName(listing.getOwner().getFullName());
+        response.setOwnerPhone(listing.getOwner().getPhoneNumber());
+        return response;
+    }
+
     private MapListingResponse toMapListingResponse(Listing listing) {
         MapListingResponse response = new MapListingResponse();
         response.setId(listing.getId());

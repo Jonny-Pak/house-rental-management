@@ -1,3 +1,8 @@
+import '../../../map/presentation/pages/listing_map_page.dart';
+import '../../data/models/listing_filter.dart';
+import '../widgets/listing_filter_bar.dart';
+import 'listing_detail_page.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -13,18 +18,20 @@ class ListingBrowsePage extends StatefulWidget {
     this.listingType,
     this.autofocus = false,
     this.repository,
+    this.initialFilter,
   });
   final String title;
   final String? listingType;
   final bool autofocus;
   final ListingRepository? repository;
+  final ListingFilter? initialFilter;
   @override
   State<ListingBrowsePage> createState() => _ListingBrowsePageState();
 }
 
 class _ListingBrowsePageState extends State<ListingBrowsePage> {
   late final ListingRepository _repository;
-  final _search = TextEditingController();
+  late ListingFilter _filter;
   List<Listing> _items = [];
   String? _error;
   bool _loading = true;
@@ -32,13 +39,9 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
   void initState() {
     super.initState();
     _repository = widget.repository ?? ListingRepository(ApiClient());
+    _filter =
+        widget.initialFilter ?? ListingFilter(listingType: widget.listingType);
     _load();
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -58,96 +61,50 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
 
   String _price(Listing l) =>
       '${NumberFormat.decimalPattern('vi_VN').format(l.rentPrice)} đ/tháng';
-  void _detail(Listing l) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (l.imageUrls.isNotEmpty)
-                  SizedBox(
-                    height: 180,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: l.imageUrls.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) => ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          l.imageUrls[i],
-                          width: 260,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Symbols.broken_image),
-                        ),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Text(
-                  l.title,
-                  style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _price(l),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFFFF751B),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text('${l.areaSqm} m² · ${l.address ?? ''}'),
-                const SizedBox(height: 16),
-                Text(
-                  l.description ?? 'Chưa có mô tả.',
-                  style: const TextStyle(height: 1.5),
-                ),
-              ],
-            ),
-          ),
-        ),
+  void _detail(Listing listing) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ListingDetailPage(listingId: listing.id, repository: _repository),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final query = _search.text.trim().toLowerCase();
-    final items = _items
-        .where(
-          (l) =>
-              (widget.listingType == null ||
-                  l.listingType == widget.listingType) &&
-              '${l.title} ${l.address ?? ''}'.toLowerCase().contains(query),
-        )
-        .toList();
+    final items = _filter.apply(_items);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _search,
-              autofocus: widget.autofocus,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                hintText: 'Tìm theo tiêu đề, địa chỉ…',
-                prefixIcon: Icon(Symbols.search),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            tooltip: 'Xem trên bản đồ',
+            icon: const Icon(Symbols.map),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ListingMapPage(initialFilter: _filter),
               ),
             ),
           ),
+        ],
+      ),
+      body: Column(
+        children: [
+          ListingFilterBar(
+            filter: _filter,
+            autofocus: widget.autofocus,
+            onChanged: (filter) => setState(() => _filter = filter),
+          ),
+          if (!_loading && _error == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('${items.length} tin phù hợp'),
+              ),
+            ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -174,7 +131,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                           const Padding(
                             padding: EdgeInsets.all(24),
                             child: Text(
-                              'Không có tin phù hợp. Hãy thử từ khóa khác.',
+                              'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.',
                             ),
                           ),
                         for (final l in items)

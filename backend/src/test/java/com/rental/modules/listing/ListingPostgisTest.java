@@ -32,7 +32,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({ListingService.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
-        com.rental.modules.property.service.PropertyService.class})
+        com.rental.modules.property.service.PropertyService.class,
+        com.rental.modules.favorite.service.ListingFavoriteService.class})
 @EnabledIfEnvironmentVariable(named = "RENTAL_POSTGIS_TESTS", matches = "true")
 class ListingPostgisTest {
     private static final String SCHEMA = "listing_flow_" + UUID.randomUUID().toString().replace("-", "");
@@ -80,6 +81,7 @@ class ListingPostgisTest {
     @Autowired javax.sql.DataSource dataSource;
     @Autowired com.rental.modules.area.service.AreaService areas;
     @Autowired com.rental.modules.property.service.PropertyService properties;
+    @Autowired com.rental.modules.favorite.service.ListingFavoriteService favorites;
 
     @Test void areaNameRepairRestoresVietnameseAndPreservesCustomNamesAndIds() {
         int areaCount = jdbc.queryForObject("SELECT count(*) FROM administrative_areas", Integer.class);
@@ -156,24 +158,42 @@ class ListingPostgisTest {
         request.setImageUrls(List.of("https://example.com/room.jpg"));
         Long id = listings.createListing(owner.getUserId(), request).getId();
         entityManager.flush(); entityManager.clear();
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> favorites.save(owner.getUserId(), id));
         assertEquals(List.of("https://example.com/room.jpg"), listings.getMyListings(owner.getUserId()).get(0).getImageUrls());
         assertTrue(listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).isEmpty());
         admin.approveListing(id, reviewer.getUserId());
         entityManager.flush(); entityManager.clear();
+        assertEquals(owner.getFullName(), listings.getPublicListing(id).getOwnerName());
+        assertEquals(request.getImageUrls(), listings.getPublicListing(id).getImageUrls());
+        favorites.save(owner.getUserId(), id);
+        favorites.save(owner.getUserId(), id);
+        assertTrue(favorites.isSaved(owner.getUserId(), id));
+        assertFalse(favorites.isSaved(reviewer.getUserId(), id));
+        assertEquals(1, favorites.getSaved(owner.getUserId()).size());
+        favorites.remove(reviewer.getUserId(), id);
+        assertTrue(favorites.isSaved(owner.getUserId(), id));
         assertEquals(id, listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).get(0).getId());
         assertTrue(listings.searchListingsInBoundingBox(11, 107, 12, 108).isEmpty());
         listings.updateListing(id, owner.getUserId(), request);
         entityManager.flush(); entityManager.clear();
         assertTrue(listings.getApprovedListings().isEmpty());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        assertTrue(favorites.getSaved(owner.getUserId()).isEmpty());
         assertEquals(1, listings.getMyListings(owner.getUserId()).get(0).getImageUrls().size());
         admin.approveListing(id, reviewer.getUserId());
         listings.updateRentalStatus(id, owner.getUserId(), "HIDDEN");
         entityManager.flush(); entityManager.clear();
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        assertTrue(favorites.getSaved(owner.getUserId()).isEmpty());
         assertTrue(listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).isEmpty());
         listings.updateRentalStatus(id, owner.getUserId(), "AVAILABLE");
         listings.deleteListing(id, owner.getUserId());
         entityManager.flush(); entityManager.clear();
         assertTrue(listings.getMyListings(owner.getUserId()).isEmpty());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        favorites.remove(owner.getUserId(), id);
+        assertFalse(favorites.isSaved(owner.getUserId(), id));
         assertTrue(listings.getApprovedListings().isEmpty());
     }
 }
