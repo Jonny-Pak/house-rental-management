@@ -6,6 +6,30 @@ class ContractRepository {
 
   ContractRepository(this._apiClient);
 
+  Future<Map<String, dynamic>> findTenant(String email, int listingId) async {
+    final response = await _apiClient.get(
+      '/contracts/tenant',
+      queryParams: {'email': email, 'listingId': listingId},
+    );
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<ContractModel> detail(int id) async {
+    final response = await _apiClient.get('/contracts/$id');
+    return ContractModel.fromJson(response.data);
+  }
+
+  Future<void> update(int id, CreateContractRequest request) async {
+    await _apiClient.put('/contracts/$id', request.toJson());
+  }
+
+  Future<void> status(int id, String status, int version) async {
+    await _apiClient.patch(
+      '/contracts/$id/status',
+      data: {'status': status, 'version': version},
+    );
+  }
+
   Future<List<ContractModel>> getMyContracts() async {
     final response = await _apiClient.get('/contracts/me');
     if (response.statusCode == 200) {
@@ -26,7 +50,7 @@ class ContractRepository {
 
   Future<ContractModel> createContract(CreateContractRequest request) async {
     final response = await _apiClient.post('/contracts', request.toJson());
-    if (response.statusCode == 200) {
+    if ((response.statusCode == 200 || response.statusCode == 201)) {
       final body = response.data;
       final data = (body is Map && body['data'] != null) ? body['data'] : body;
       return ContractModel.fromJson(data as Map<String, dynamic>);

@@ -1,4 +1,7 @@
 class ContractModel {
+  final int version;
+  final String myRole;
+  final String? address, note;
   final int id;
   final int? listingId;
   final String? listingName;
@@ -15,6 +18,10 @@ class ContractModel {
   final String? createdAt;
 
   ContractModel({
+    this.version = 0,
+    this.myRole = 'TENANT',
+    this.address,
+    this.note,
     required this.id,
     this.listingId,
     this.listingName,
@@ -37,6 +44,10 @@ class ContractModel {
     final tenant = json['tenant'] as Map<String, dynamic>?;
 
     return ContractModel(
+      version: json['version'] ?? 0,
+      myRole: json['myRole'] ?? 'TENANT',
+      address: json['address'],
+      note: json['note'],
       id: json['id'] ?? json['contract_id'] ?? 0,
       listingId: listing?['id'] ?? json['listingId'],
       listingName: listing?['title'] ?? listing?['name'] ?? json['listingName'],
@@ -46,8 +57,10 @@ class ContractModel {
       tenantName: tenant?['fullName'] ?? json['tenantName'],
       startDate: json['startDate'] ?? json['start_date'] ?? '',
       endDate: json['endDate'] ?? json['end_date'] ?? '',
-      monthlyRent: (json['monthlyRent'] ?? json['monthly_rent'] ?? 0).toDouble(),
-      depositAmount: (json['depositAmount'] ?? json['deposit_amount'] ?? 0).toDouble(),
+      monthlyRent: (json['monthlyRent'] ?? json['monthly_rent'] ?? 0)
+          .toDouble(),
+      depositAmount: (json['depositAmount'] ?? json['deposit_amount'] ?? 0)
+          .toDouble(),
       status: json['status'] ?? 'ACTIVE',
       contractFileUrl: json['contractFileUrl'] ?? json['contract_file_url'],
       createdAt: json['createdAt'] ?? json['created_at'],
@@ -56,6 +69,7 @@ class ContractModel {
 }
 
 class CreateContractRequest {
+  final String? note;
   final int listingId;
   final int tenantId;
   final String startDate;
@@ -64,6 +78,7 @@ class CreateContractRequest {
   final double depositAmount;
 
   CreateContractRequest({
+    this.note,
     required this.listingId,
     required this.tenantId,
     required this.startDate,
@@ -73,6 +88,7 @@ class CreateContractRequest {
   });
 
   Map<String, dynamic> toJson() => {
+    'note': note,
     'listingId': listingId,
     'tenantId': tenantId,
     'startDate': startDate,

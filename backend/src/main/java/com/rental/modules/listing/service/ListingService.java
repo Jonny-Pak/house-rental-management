@@ -22,7 +22,7 @@ import com.rental.modules.listing.domain.entity.ListingImage;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,28 +31,17 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final AdministrativeAreaRepository areaRepository;
+    private final com.rental.modules.contract.repository.ContractRepository contracts;
 
-    public ListingService(ListingRepository listingRepository, UserRepository userRepository, AdministrativeAreaRepository areaRepository) {
+    public ListingService(ListingRepository listingRepository, UserRepository userRepository, AdministrativeAreaRepository areaRepository, com.rental.modules.contract.repository.ContractRepository contracts) {
         this.listingRepository = listingRepository;
         this.userRepository = userRepository;
         this.areaRepository = areaRepository;
+        this.contracts = contracts;
     }
 
-
-    /**
-     * GeometryFactory vÃ¡Â»â€ºi SRID=4326 (WGS84 - hÃ¡Â»â€¡ tÃ¡Â»Âa Ã„â€˜Ã¡Â»â„¢ GPS chuÃ¡ÂºÂ©n quÃ¡Â»â€˜c tÃ¡ÂºÂ¿).
-     * PhÃ¡ÂºÂ£i khÃ¡Â»â€ºp vÃ¡Â»â€ºi kiÃ¡Â»Æ’u cÃ¡Â»â„¢t trong DB: geometry(Point, 4326).
-     */
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    /**
-     * TÃƒÂ¬m kiÃ¡ÂºÂ¿m Listing nÃ¡ÂºÂ±m trong vÃƒÂ¹ng nhÃƒÂ¬n thÃ¡ÂºÂ¥y trÃƒÂªn bÃ¡ÂºÂ£n Ã„â€˜Ã¡Â»â€œ (bounding box).
-     *
-     * @param minLat VÃ„Â© Ã„â€˜Ã¡Â»â„¢ nhÃ¡Â»Â nhÃ¡ÂºÂ¥t (gÃƒÂ³c dÃ†Â°Ã¡Â»â€ºi-trÃƒÂ¡i)
-     * @param minLng Kinh Ã„â€˜Ã¡Â»â„¢ nhÃ¡Â»Â nhÃ¡ÂºÂ¥t (gÃƒÂ³c dÃ†Â°Ã¡Â»â€ºi-trÃƒÂ¡i)
-     * @param maxLat VÃ„Â© Ã„â€˜Ã¡Â»â„¢ lÃ¡Â»â€ºn nhÃ¡ÂºÂ¥t (gÃƒÂ³c trÃƒÂªn-phÃ¡ÂºÂ£i)
-     * @param maxLng Kinh Ã„â€˜Ã¡Â»â„¢ lÃ¡Â»â€ºn nhÃ¡ÂºÂ¥t (gÃƒÂ³c trÃƒÂªn-phÃ¡ÂºÂ£i)
-     */
     public List<MapListingResponse> searchListingsInBoundingBox(
             double minLat, double minLng, double maxLat, double maxLng) {
 
@@ -61,37 +50,38 @@ public class ListingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vùng bản đồ không hợp lệ.");
         }
 
-        // TÃ¡ÂºÂ¡o Polygon Ã„â€˜Ã¡ÂºÂ¡i diÃ¡Â»â€¡n cho vÃƒÂ¹ng bÃ¡ÂºÂ£n Ã„â€˜Ã¡Â»â€œ Ã„â€˜ang hiÃ¡Â»Æ’n thÃ¡Â»â€¹.
-        // ThÃ¡Â»Â© tÃ¡Â»Â± Coordinate trong JTS lÃƒÂ  (longitude, latitude) tÃ¡Â»Â©c lÃƒÂ  (X, Y).
-        // Polygon phÃ¡ÂºÂ£i khÃƒÂ©p kÃƒÂ­n: Ã„â€˜iÃ¡Â»Æ’m Ã„â€˜Ã¡ÂºÂ§u vÃƒÂ  cuÃ¡Â»â€˜i PHÃ¡ÂºÂ¢I giÃ¡Â»â€˜ng nhau.
         Coordinate[] coordinates = new Coordinate[]{
-                new Coordinate(minLng, minLat), // DÃ†Â°Ã¡Â»â€ºi-TrÃƒÂ¡i
-                new Coordinate(minLng, maxLat), // TrÃƒÂªn-TrÃƒÂ¡i
-                new Coordinate(maxLng, maxLat), // TrÃƒÂªn-PhÃ¡ÂºÂ£i
-                new Coordinate(maxLng, minLat), // DÃ†Â°Ã¡Â»â€ºi-PhÃ¡ÂºÂ£i
-                new Coordinate(minLng, minLat)  // KhÃƒÂ©p kÃƒÂ­n vÃ¡Â»Â Ã„â€˜iÃ¡Â»Æ’m ban Ã„â€˜Ã¡ÂºÂ§u
+                new Coordinate(minLng, minLat),
+                new Coordinate(minLng, maxLat),
+                new Coordinate(maxLng, maxLat),
+                new Coordinate(maxLng, minLat),
+                new Coordinate(minLng, minLat)
         };
 
         Polygon bbox = geometryFactory.createPolygon(coordinates);
 
         List<Listing> listings = listingRepository.findListingsWithinBoundingBox(bbox);
 
-        return listings.stream()
-                .filter(l -> l.getLocation() != null)
-                .map(this::toMapListingResponse)
-                .collect(Collectors.toList());
+        List<MapListingResponse> result = new ArrayList<>();
+        for (Listing listing : listings) {
+            if (listing.getLocation() != null) {
+                result.add(toMapListingResponse(listing));
+            }
+        }
+        return result;
     }
 
     public List<ListingResponse> getApprovedListings() {
-        return listingRepository.findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc("APPROVED", "AVAILABLE")
-                .stream()
-                .map(this::toListingResponse)
-                .collect(Collectors.toList());
+        List<Listing> listings = listingRepository.findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc("APPROVED", "AVAILABLE");
+        return toListingResponses(listings);
     }
 
     public ListingResponse getPublicListing(Long id) {
-        Listing listing = listingRepository.findById(id).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng."));
+        java.util.Optional<Listing> listingResult = listingRepository.findById(id);
+        if (listingResult.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng.");
+        }
+        Listing listing = listingResult.get();
         if (!"APPROVED".equals(listing.getApprovalStatus()) || !"AVAILABLE".equals(listing.getRentalStatus())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng.");
         }
@@ -117,8 +107,11 @@ public class ListingService {
 
     @Transactional
     public ListingResponse createListing(Long ownerId, CreateListingRequest request) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        java.util.Optional<User> ownerResult = userRepository.findById(ownerId);
+        if (ownerResult.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        User owner = ownerResult.get();
         Listing listing = new Listing();
         listing.setOwner(owner);
         applyRequest(listing, request);
@@ -129,8 +122,8 @@ public class ListingService {
     }
 
     public List<ListingResponse> getMyListings(Long ownerId) {
-        return listingRepository.findByOwner_UserIdAndRentalStatusNotOrderByCreatedAtDesc(ownerId, "DELETED")
-                .stream().map(this::toListingResponse).toList();
+        List<Listing> listings = listingRepository.findByOwner_UserIdAndRentalStatusNotOrderByCreatedAtDesc(ownerId, "DELETED");
+        return toListingResponses(listings);
     }
 
     @Transactional
@@ -164,20 +157,29 @@ public class ListingService {
     }
 
     private Listing ownedListing(Long id, Long ownerId) {
-        Listing listing = listingRepository.findLockedById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found"));
+        java.util.Optional<Listing> listingResult = listingRepository.findLockedById(id);
+        if (listingResult.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found");
+        }
+        Listing listing = listingResult.get();
         if (!listing.getOwner().getUserId().equals(ownerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn chỉ được quản lý tin của mình.");
         }
         if ("DELETED".equals(listing.getRentalStatus())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found");
         }
+        if (contracts.existsByListing_IdAndStatusInAndIdNot(id, List.of("ACTIVE"), -1L)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tin đang có hợp đồng hiệu lực. Hãy quản lý hợp đồng trước khi thay đổi tin.");
+        }
         return listing;
     }
 
     private void applyRequest(Listing listing, CreateListingRequest request) {
-        AdministrativeArea area = areaRepository.findById(request.getAreaId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực không hợp lệ."));
+        java.util.Optional<AdministrativeArea> areaResult = areaRepository.findById(request.getAreaId());
+        if (areaResult.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực không hợp lệ.");
+        }
+        AdministrativeArea area = areaResult.get();
         if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn phường/xã/đặc khu.");
         }
@@ -202,12 +204,25 @@ public class ListingService {
         listing.replaceImages(request.getImageUrls());
     }
 
+    private List<ListingResponse> toListingResponses(List<Listing> listings) {
+        List<ListingResponse> result = new ArrayList<>();
+        for (Listing listing : listings) {
+            result.add(toListingResponse(listing));
+        }
+        return result;
+    }
+
     private ListingResponse toListingResponse(Listing listing) {
         ListingResponse response = new ListingResponse();
         response.setRejectionReason(listing.getRejectionReason());
-        List<String> images = listing.getImages().stream().map(ListingImage::getImageUrl).toList();
+        List<String> images = new ArrayList<>();
+        for (ListingImage image : listing.getImages()) {
+            images.add(image.getImageUrl());
+        }
         response.setImageUrls(images);
-        response.setImageUrl(images.isEmpty() ? null : images.get(0));
+        if (!images.isEmpty()) {
+            response.setImageUrl(images.get(0));
+        }
         response.setId(listing.getId());
         response.setTitle(listing.getTitle());
         response.setDescription(listing.getDescription());

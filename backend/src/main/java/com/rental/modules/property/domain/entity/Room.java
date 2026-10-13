@@ -64,14 +64,68 @@ public class Room {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
-    public Long getId() { return id; }    public void setId(Long id) { this.id = id; }
-    public Property getProperty() { return property; }    public void setProperty(Property property) { this.property = property; }
-    public String getName() { return name; }    public void setName(String name) { this.name = name; }
-    public Double getArea() { return area; }    public void setArea(Double area) { this.area = area; }
-    public BigDecimal getPrice() { return price; }    public void setPrice(BigDecimal price) { this.price = price; }
-    public Integer getMaxCapacity() { return maxCapacity; }    public void setMaxCapacity(Integer maxCapacity) { this.maxCapacity = maxCapacity; }
-    public String getStatus() { return status; }    public void setStatus(String status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public Property getProperty() {
+        return property;
+    }
+
+    public void setProperty(Property property) {
+        this.property = property;
+    }
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+    public Double getArea() {
+        return area;
+    }
+
+    public void setArea(Double area) {
+        this.area = area;
+    }
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+    public Integer getMaxCapacity() {
+        return maxCapacity;
+    }
+
+    public void setMaxCapacity(Integer maxCapacity) {
+        this.maxCapacity = maxCapacity;
+    }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
 }

@@ -21,13 +21,12 @@ public class RoomController {
         this.roomService = roomService;
     }
 
-
     @PostMapping
     public ResponseEntity<ApiResponse<RoomResponse>> addRoom(
             Principal principal,
             @PathVariable Long propertyId,
             @Valid @RequestBody RoomRequest request) {
-        
+
         RoomResponse response = roomService.addRoom(principal.getName(), propertyId, request);
         return ResponseEntity.ok(ApiResponse.success("ThÃªm phÃ²ng thÃ nh cÃ´ng", response));
     }

@@ -11,7 +11,13 @@ public class UpdateAvatarRequest {
     public UpdateAvatarRequest(String avatarUrl) {
         this.avatarUrl = avatarUrl;
     }
-    public String getAvatarUrl() { return avatarUrl; }    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
 
 }
 

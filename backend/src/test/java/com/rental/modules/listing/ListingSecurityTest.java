@@ -22,7 +22,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest({ListingController.class, AdminListingController.class,
-        com.rental.modules.favorite.controller.ListingFavoriteController.class})
+        com.rental.modules.favorite.controller.ListingFavoriteController.class,
+        com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
     @Autowired MockMvc mvc;
@@ -31,6 +32,15 @@ class ListingSecurityTest {
     @MockBean JwtService jwt;
     @MockBean CustomUserDetailsService users;
     @MockBean com.rental.modules.favorite.service.ListingFavoriteService favorites;
+    @MockBean com.rental.modules.contract.service.ContractService leases;
+    @Test void contractsRequireAuthenticationAndValidateRequests() throws Exception {
+        mvc.perform(get("/api/v1/contracts/me")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/contracts").header("Authorization","Bearer owner")
+                .contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/contracts/1/status").header("Authorization","Bearer owner")
+                .contentType("application/json").content("{\"status\":\"ACTIVE\"}")).andExpect(status().isBadRequest());
+        verifyNoInteractions(leases);
+    }
 
     @BeforeEach void tokens() {
         for (String token : new String[]{"owner", "admin"}) {

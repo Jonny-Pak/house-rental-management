@@ -46,7 +46,7 @@ class ListingWorkflowTest {
         when(listings.findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc("APPROVED", "AVAILABLE"))
                 .thenAnswer(call -> stored != null && "APPROVED".equals(stored.getApprovalStatus())
                         && "AVAILABLE".equals(stored.getRentalStatus()) ? List.of(stored) : List.of());
-        service = new ListingService(listings, users, areas);
+        service = new ListingService(listings, users, areas, mock(com.rental.modules.contract.repository.ContractRepository.class));
         admin = new AdminListingService(listings, users);
     }
 

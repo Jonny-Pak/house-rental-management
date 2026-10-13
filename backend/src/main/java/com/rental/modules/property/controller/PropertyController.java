@@ -21,12 +21,11 @@ public class PropertyController {
         this.propertyService = propertyService;
     }
 
-
     @PostMapping
     public ResponseEntity<ApiResponse<PropertyResponse>> createProperty(
             Principal principal,
             @Valid @RequestBody PropertyRequest request) {
-        
+
         PropertyResponse response = propertyService.createProperty(principal.getName(), request);
         return ResponseEntity.ok(ApiResponse.success("Táº¡o khu trá» thÃ nh cÃ´ng", response));
     }
@@ -51,7 +50,7 @@ public class PropertyController {
             @RequestParam(required = false) String propertyType,
             @RequestParam(required = false) java.math.BigDecimal minPrice,
             @RequestParam(required = false) java.math.BigDecimal maxPrice) {
-            
+
         List<PropertyResponse> properties = propertyService.getAllProperties(
                 provinceId, districtId, wardId, propertyType, minPrice, maxPrice);
         return ResponseEntity.ok(ApiResponse.success("Láº¥y danh sÃ¡ch táº¥t cáº£ khu trá» thÃ nh cÃ´ng", properties));

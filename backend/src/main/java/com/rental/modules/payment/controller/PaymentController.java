@@ -13,13 +13,11 @@ import java.util.Map;
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
 
-
     private final PaymentService paymentService;
 
     public PaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
     }
-
 
     @PostMapping("/create")
     @SuppressWarnings("all")
@@ -27,8 +25,7 @@ public class PaymentController {
             @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails,
             @RequestBody Map<String, Object> requestBody,
             HttpServletRequest request) {
-        
-        // Safely parse packageId to avoid ClassCastException
+
         Object packageIdObj = requestBody.get("packageId");
         Short packageId = null;
         if (packageIdObj instanceof Number) {
@@ -46,11 +43,12 @@ public class PaymentController {
     @GetMapping("/vnpay-return")
     public RedirectView vnpayReturn(@RequestParam Map<String, String> allParams) {
         boolean success = paymentService.processVnPayReturn(allParams);
-        
-        String redirectUrl = success 
-                ? "myapp://payment-result?status=success" 
-                : "myapp://payment-result?status=failed";
-                
+
+        String redirectUrl = "myapp://payment-result?status=failed";
+        if (success) {
+            redirectUrl = "myapp://payment-result?status=success";
+        }
+
         return new RedirectView(redirectUrl);
     }
 }

@@ -52,12 +52,6 @@ public class ListingController {
         this.listingService = listingService;
     }
 
-    /**
-     * GET /api/v1/listings/map?minLat=10.7&minLng=106.6&maxLat=10.9&maxLng=106.8
-     *
-     * Tráº£ vá» cÃ¡c Listing náº±m trong vÃ¹ng hiá»ƒn thá»‹ trÃªn báº£n Ä‘á»“ (bounding box).
-     * Flutter gá»i API nÃ y má»—i khi ngÆ°á»i dÃ¹ng pan/zoom báº£n Ä‘á»“.
-     */
     @GetMapping("/map")
     public ResponseEntity<List<MapListingResponse>> getListingsOnMap(
             @RequestParam double minLat,
@@ -71,11 +65,6 @@ public class ListingController {
         return ResponseEntity.ok(results);
     }
 
-    /**
-     * GET /api/v1/listings/public
-     *
-     * Trả về danh sách tất cả các bài đăng đã được duyệt (APPROVED).
-     */
     @GetMapping("/public")
     public ResponseEntity<List<ListingResponse>> getPublicListings() {
         List<ListingResponse> listings = listingService.getApprovedListings();
@@ -86,7 +75,7 @@ public class ListingController {
     public ResponseEntity<ListingResponse> createListing(
             @AuthenticationPrincipal com.rental.core.security.CustomUserDetails userDetails,
             @Valid @RequestBody CreateListingRequest request) {
-        
+
         ListingResponse response = listingService.createListing(userDetails.getUser().getUserId(), request);
         return ResponseEntity.status(201).body(response);
     }

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class PropertyService {
@@ -30,27 +30,39 @@ public class PropertyService {
         this.areaRepository = areaRepository;
     }
 
-
     @Transactional
     public PropertyResponse createProperty(String email, PropertyRequest request) {
-        var ward = areaRepository.findById(request.getWardId())
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.BAD_REQUEST, "Phường/xã/đặc khu không hợp lệ."));
-        var parent = ward.getParent();
+        java.util.Optional<com.rental.modules.area.domain.entity.AdministrativeArea> wardResult = areaRepository.findById(request.getWardId());
+        if (wardResult.isEmpty()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Phường/xã/đặc khu không hợp lệ.");
+        }
+        com.rental.modules.area.domain.entity.AdministrativeArea ward = wardResult.get();
+        com.rental.modules.area.domain.entity.AdministrativeArea parent = ward.getParent();
         if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(ward.getAreaType()) || parent == null) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST, "Phường/xã/đặc khu không hợp lệ.");
         }
-        Long provinceId = "PROVINCE".equals(parent.getAreaType()) ? parent.getAreaId()
-                : parent.getParent() == null ? null : parent.getParent().getAreaId();
-        Long districtId = "DISTRICT".equals(parent.getAreaType()) ? parent.getAreaId() : null;
+        Long provinceId = null;
+        Long districtId = null;
+        if ("PROVINCE".equals(parent.getAreaType())) {
+            provinceId = parent.getAreaId();
+        } else if (parent.getParent() != null) {
+            provinceId = parent.getParent().getAreaId();
+        }
+        if ("DISTRICT".equals(parent.getAreaType())) {
+            districtId = parent.getAreaId();
+        }
         if (!java.util.Objects.equals(provinceId, request.getProvinceId())
                 || !java.util.Objects.equals(districtId, request.getDistrictId())) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST, "Địa chỉ hành chính không khớp với phường/xã đã chọn.");
         }
-        User landlord = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
+        java.util.Optional<User> landlordResult = userRepository.findByEmail(email);
+        if (landlordResult.isEmpty()) {
+            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User landlord = landlordResult.get();
 
         Property property = new Property();
         property.setLandlord(landlord);
@@ -66,16 +78,14 @@ public class PropertyService {
 
         Property savedProperty = propertyRepository.save(property);
 
-        // Save Property Images if any
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            List<PropertyImage> images = request.getImageUrls().stream()
-                    .map(url -> {
-                        PropertyImage img = new PropertyImage();
-                        img.setProperty(savedProperty);
-                        img.setImageUrl(url);
-                        return img;
-                    })
-                    .collect(Collectors.toList());
+            List<PropertyImage> images = new ArrayList<>();
+            for (String url : request.getImageUrls()) {
+                PropertyImage image = new PropertyImage();
+                image.setProperty(savedProperty);
+                image.setImageUrl(url);
+                images.add(image);
+            }
             propertyImageRepository.saveAll(images);
         }
 
@@ -84,18 +94,23 @@ public class PropertyService {
 
     @Transactional(readOnly = true)
     public List<PropertyResponse> getMyProperties(String email) {
-        User landlord = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
+        java.util.Optional<User> landlordResult = userRepository.findByEmail(email);
+        if (landlordResult.isEmpty()) {
+            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User landlord = landlordResult.get();
 
-        return propertyRepository.findByLandlord(landlord).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Property> properties = propertyRepository.findByLandlord(landlord);
+        return toResponses(properties);
     }
 
     @Transactional(readOnly = true)
     public PropertyResponse getPropertyById(Long id) {
-        Property property = propertyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + id));
+        java.util.Optional<Property> propertyResult = propertyRepository.findById(id);
+        if (propertyResult.isEmpty()) {
+            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + id);
+        }
+        Property property = propertyResult.get();
         return mapToResponse(property);
     }
 
@@ -107,7 +122,7 @@ public class PropertyService {
             String propertyType,
             java.math.BigDecimal minPrice,
             java.math.BigDecimal maxPrice) {
-            
+
         org.springframework.data.jpa.domain.Specification<Property> spec = org.springframework.data.jpa.domain.Specification.where(
                 com.rental.modules.property.specification.PropertySpecification.hasProvinceId(provinceId))
                 .and(com.rental.modules.property.specification.PropertySpecification.hasDistrictId(districtId))
@@ -115,15 +130,24 @@ public class PropertyService {
                 .and(com.rental.modules.property.specification.PropertySpecification.hasPropertyType(propertyType))
                 .and(com.rental.modules.property.specification.PropertySpecification.hasRoomPriceBetween(minPrice, maxPrice));
 
-        return propertyRepository.findAll(spec).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<Property> properties = propertyRepository.findAll(spec);
+        return toResponses(properties);
+    }
+
+    private List<PropertyResponse> toResponses(List<Property> properties) {
+        List<PropertyResponse> result = new ArrayList<>();
+        for (Property property : properties) {
+            result.add(mapToResponse(property));
+        }
+        return result;
     }
 
     private PropertyResponse mapToResponse(Property property) {
-        List<String> imageUrls = propertyImageRepository.findByPropertyId(property.getId()).stream()
-                .map(PropertyImage::getImageUrl)
-                .collect(Collectors.toList());
+        List<String> imageUrls = new ArrayList<>();
+        List<PropertyImage> images = propertyImageRepository.findByPropertyId(property.getId());
+        for (PropertyImage image : images) {
+            imageUrls.add(image.getImageUrl());
+        }
 
         PropertyResponse response = new PropertyResponse();
         response.setId(property.getId());

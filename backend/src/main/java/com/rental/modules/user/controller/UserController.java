@@ -22,7 +22,6 @@ public class UserController {
         this.userService = userService;
     }
 
-
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
         String email = principal.getName();

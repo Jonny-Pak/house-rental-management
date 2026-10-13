@@ -18,7 +18,6 @@ public class ImageController {
         this.imageService = imageService;
     }
 
-
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<String>> uploadImage(@RequestParam("file") MultipartFile file) {
         try {

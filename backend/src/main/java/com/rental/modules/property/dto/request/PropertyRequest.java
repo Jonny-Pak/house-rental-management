@@ -44,15 +44,75 @@ public class PropertyRequest {
         this.waterPrice = waterPrice;
         this.imageUrls = imageUrls;
     }
-    public String getName() { return name; }    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }    public void setDescription(String description) { this.description = description; }
-    public String getAddress() { return address; }    public void setAddress(String address) { this.address = address; }
-    public Long getProvinceId() { return provinceId; }    public void setProvinceId(Long provinceId) { this.provinceId = provinceId; }
-    public Long getDistrictId() { return districtId; }    public void setDistrictId(Long districtId) { this.districtId = districtId; }
-    public Long getWardId() { return wardId; }    public void setWardId(Long wardId) { this.wardId = wardId; }
-    public String getPropertyType() { return propertyType; }    public void setPropertyType(String propertyType) { this.propertyType = propertyType; }
-    public BigDecimal getElectricityPrice() { return electricityPrice; }    public void setElectricityPrice(BigDecimal electricityPrice) { this.electricityPrice = electricityPrice; }
-    public BigDecimal getWaterPrice() { return waterPrice; }    public void setWaterPrice(BigDecimal waterPrice) { this.waterPrice = waterPrice; }
-    public List<String> getImageUrls() { return imageUrls; }    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+    public Long getProvinceId() {
+        return provinceId;
+    }
+
+    public void setProvinceId(Long provinceId) {
+        this.provinceId = provinceId;
+    }
+    public Long getDistrictId() {
+        return districtId;
+    }
+
+    public void setDistrictId(Long districtId) {
+        this.districtId = districtId;
+    }
+    public Long getWardId() {
+        return wardId;
+    }
+
+    public void setWardId(Long wardId) {
+        this.wardId = wardId;
+    }
+    public String getPropertyType() {
+        return propertyType;
+    }
+
+    public void setPropertyType(String propertyType) {
+        this.propertyType = propertyType;
+    }
+    public BigDecimal getElectricityPrice() {
+        return electricityPrice;
+    }
+
+    public void setElectricityPrice(BigDecimal electricityPrice) {
+        this.electricityPrice = electricityPrice;
+    }
+    public BigDecimal getWaterPrice() {
+        return waterPrice;
+    }
+
+    public void setWaterPrice(BigDecimal waterPrice) {
+        this.waterPrice = waterPrice;
+    }
+    public List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(List<String> imageUrls) {
+        this.imageUrls = imageUrls;
+    }
 
 }

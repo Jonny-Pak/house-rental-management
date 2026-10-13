@@ -34,9 +34,33 @@ public class PropertyImage {
         this.imageUrl = imageUrl;
         this.createdAt = createdAt;
     }
-    public Long getId() { return id; }    public void setId(Long id) { this.id = id; }
-    public Property getProperty() { return property; }    public void setProperty(Property property) { this.property = property; }
-    public String getImageUrl() { return imageUrl; }    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public LocalDateTime getCreatedAt() { return createdAt; }    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public Property getProperty() {
+        return property;
+    }
+
+    public void setProperty(Property property) {
+        this.property = property;
+    }
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
 }
