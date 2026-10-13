@@ -3,8 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../../core/network/api_client.dart';
-import '../../../../core/storage/token_storage.dart';
-import '../../../auth/presentation/pages/login_page.dart';
+import '../../../auth/presentation/logout.dart';
 import '../../../listing/presentation/pages/saved_listings_page.dart';
 import '../../../listing/presentation/pages/my_listings_page.dart';
 import '../../../user/data/datasources/user_remote_data_source.dart';
@@ -245,15 +244,7 @@ class _MainPageState extends State<MainPage> {
               color: HomeIconColors.forIcon(Symbols.logout),
             ),
             title: const Text('Đăng xuất'),
-            onTap: () async {
-              await TokenStorage.clearToken();
-              if (context.mounted) {
-                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (_) => false,
-                );
-              }
-            },
+            onTap: () => logout(context),
           ),
         ],
       ),

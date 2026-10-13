@@ -50,8 +50,16 @@ public class AuthService {
         if (request.getRole() == Role.ADMIN) {
             throw new IllegalArgumentException("Không thể tự đăng ký tài khoản Admin.");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email " + request.getEmail() + "Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng. Vui lÃ²ng sá»­ dá»¥ng email khÃ¡c.");
+        Optional<User> existing = userRepository.findByEmail(request.getEmail());
+        if (existing.isPresent()) {
+            User user = existing.get();
+            if (Boolean.TRUE.equals(user.getIsVerified())) {
+                throw new IllegalArgumentException("Email đã được sử dụng.");
+            }
+            if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+                throw new IllegalArgumentException("Email đã được đăng ký. Hãy dùng mật khẩu ban đầu để nhận lại mã.");
+            }
+            return resendOtp(request.getEmail());
         }
 
         User user = new User();
@@ -62,19 +70,41 @@ public class AuthService {
         user.setRole(request.getRole());
         user.setStatus(UserStatus.ACTIVE);
         user.setIsVerified(false);
-
         userRepository.save(user);
+        sendVerificationCode(request.getEmail());
+        return "Đã gửi mã xác thực. Vui lòng kiểm tra email và thư mục Spam.";
+    }
 
-        String otp = otpService.generateAndStoreOtp(request.getEmail());
-        emailService.sendOtpEmail(request.getEmail(), otp);
+    public String resendOtp(String email) {
+        User user = findUnverifiedUser(email);
+        sendVerificationCode(user.getEmail());
+        return "Đã gửi lại mã xác thực. Vui lòng kiểm tra email và thư mục Spam.";
+    }
 
-        return "ÄÄƒng kÃ½ thÃ nh cÃ´ng. Vui lÃ²ng kiá»ƒm tra email cá»§a báº¡n Ä‘á»ƒ nháº­n mÃ£ xÃ¡c minh.";
+    private User findUnverifiedUser(String email) {
+        Optional<User> result = userRepository.findByEmail(email);
+        if (result.isEmpty()) throw new IllegalArgumentException("Không tìm thấy tài khoản.");
+        User user = result.get();
+        if (Boolean.TRUE.equals(user.getIsVerified())) {
+            throw new IllegalArgumentException("Tài khoản đã xác thực. Vui lòng đăng nhập.");
+        }
+        return user;
+    }
+
+    private void sendVerificationCode(String email) {
+        String otp = otpService.generateAndStoreOtp(email);
+        try {
+            emailService.sendOtpEmail(email, otp);
+        } catch (RuntimeException exception) {
+            otpService.discardOtp(email);
+            throw exception;
+        }
     }
 
     public String verifyOtp(VerifyOtpRequest request) {
         boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (!valid) {
-            throw new IllegalArgumentException("MÃ£ xÃ¡c minh khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n.");
+            throw new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn.");
         }
 
         java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
@@ -86,7 +116,7 @@ public class AuthService {
         user.setIsVerified(true);
         userRepository.save(user);
 
-        return "TÃ i khoáº£n Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c minh thÃ nh cÃ´ng. Báº¡n cÃ³ thá»ƒ Ä‘Äƒng nháº­p ngay bÃ¢y giá».";
+        return "Tài khoản đã xác thực thành công. Vui lòng đăng nhập.";
     }
 
     public AuthResponse login(LoginRequest request) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/network/api_client.dart';
 import 'package:frontend/features/contract/data/models/contract_model.dart';
@@ -29,6 +30,13 @@ class FakeContracts extends ContractRepository {
   FakeContracts() : super(ApiClient());
   ContractModel current = lease();
   String? action;
+  String? contact;
+  @override
+  Future<Map<String, dynamic>> findTenant(String input, int listingId) async {
+    contact = input;
+    return {'id': 2, 'name': 'Người thuê'};
+  }
+
   int? version;
   CreateContractRequest? updated;
   @override
@@ -62,7 +70,52 @@ class ContractListings extends ListingRepository {
   ];
 }
 
+class TenantApi extends ApiClient {
+  Map<String, dynamic>? query;
+  @override
+  Future<Response> get(String path, {Map<String, dynamic>? queryParams}) async {
+    query = queryParams;
+    return Response(
+      requestOptions: RequestOptions(path: path),
+      statusCode: 200,
+      data: {'id': 2, 'name': 'Người thuê'},
+    );
+  }
+}
+
 void main() {
+  test('Tenant lookup sends phone or email and preserves listing ownership context', () async {
+    final api = TenantApi();
+    final repository = ContractRepository(api);
+    await repository.findTenant('0901234567', 10);
+    expect(api.query, {'listingId': 10, 'phone': '0901234567'});
+    await repository.findTenant('tenant@example.com', 10);
+    expect(api.query, {'listingId': 10, 'email': 'tenant@example.com'});
+  });
+  testWidgets('Landlord can find tenant using phone in the contract form', (
+    tester,
+  ) async {
+    final repository = FakeContracts();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ContractFormPage(
+          repository: repository,
+          existing: lease(role: 'LANDLORD'),
+          listings: ContractListings(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email hoặc số điện thoại người thuê'),
+      '0901234567',
+    );
+    await tester.tap(find.text('Tìm người thuê'));
+    await tester.pumpAndSettle();
+    expect(repository.contact, '0901234567');
+    expect(find.text('Người thuê: Người thuê'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   test(
     'DTO parses party role and version without nested private user data',
     () {

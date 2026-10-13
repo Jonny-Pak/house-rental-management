@@ -1,5 +1,8 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../core/storage/token_storage.dart';
+
 import '../../data/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -11,6 +14,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<RegisterRequested>(_onRegisterRequested);
     on<VerifyOtpRequested>(_onVerifyOtpRequested);
+    on<ResendOtpRequested>(_onResendOtpRequested);
+    on<LogoutRequested>(_onLogoutRequested);
+  }
+
+  Future<void> _onLogoutRequested(
+    LogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      await TokenStorage.clearToken();
+      emit(const AuthUnauthenticated());
+    } catch (_) {
+      emit(const AuthError('Chưa đăng xuất được. Vui lòng thử lại.'));
+    }
   }
 
   Future<void> _onLoginRequested(
@@ -41,6 +59,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } on DioException catch (e) {
       final message = _extractErrorMessage(e);
       emit(AuthError(message));
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onResendOtpRequested(
+    ResendOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      await _authRepository.resendOtp(event.email);
+      emit(const AuthOtpResent());
+    } on DioException catch (e) {
+      emit(AuthError(_extractErrorMessage(e)));
     } catch (e) {
       emit(AuthError(e.toString()));
     }

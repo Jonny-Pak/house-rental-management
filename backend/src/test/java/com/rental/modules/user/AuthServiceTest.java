@@ -19,8 +19,10 @@ class AuthServiceTest {
     UserRepository users = mock(UserRepository.class);
     AuthenticationManager authentication = mock(AuthenticationManager.class);
     JwtService jwt = mock(JwtService.class);
-    AuthService service = new AuthService(users, mock(PasswordEncoder.class), mock(OtpService.class),
-            mock(EmailService.class), authentication, jwt);
+    PasswordEncoder encoder=mock(PasswordEncoder.class);
+    OtpService otp=mock(OtpService.class);
+    EmailService mail=mock(EmailService.class);
+    AuthService service = new AuthService(users, encoder, otp, mail, authentication, jwt);
 
     @Test void verifiedUserStillReceivesTokensAndRole() {
         User user = new User();
@@ -48,4 +50,31 @@ class AuthServiceTest {
         assertThrows(IllegalStateException.class, () -> service.login(new LoginRequest("user@example.com", "password")));
         verifyNoInteractions(authentication, jwt);
     }
+    @Test void smtpFailurePreventsSuccessfulRegistrationResponseAndClearsCode() {
+        var request = new com.rental.modules.user.dto.request.RegisterRequest(
+                "Tenant", "tenant@example.com", "password", null, Role.USER);
+        when(users.findByEmail(request.getEmail())).thenReturn(Optional.empty());
+        when(otp.generateAndStoreOtp(request.getEmail())).thenReturn("123456");
+        doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
+                .when(mail).sendOtpEmail(request.getEmail(),"123456");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.register(request));
+        verify(otp).discardOtp(request.getEmail());
+    }
+    @Test void unverifiedRegistrationCanRetryUsingOriginalPassword() {
+        User user=new User(); user.setEmail("tenant@example.com"); user.setIsVerified(false);user.setPasswordHash("hash");
+        when(users.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(encoder.matches("password","hash")).thenReturn(true);
+        when(otp.generateAndStoreOtp(user.getEmail())).thenReturn("123456");
+        var request=new com.rental.modules.user.dto.request.RegisterRequest("Tenant",user.getEmail(),"password",null,Role.USER);
+        service.register(request);
+        verify(mail).sendOtpEmail(user.getEmail(),"123456");
+        verify(users,never()).save(any());
+    }
+    @Test void verifiedUserCannotRequestAnotherVerificationCode() {
+        User user=new User();user.setIsVerified(true);
+        when(users.findByEmail("tenant@example.com")).thenReturn(Optional.of(user));
+        assertThrows(IllegalArgumentException.class,()->service.resendOtp("tenant@example.com"));
+        verifyNoInteractions(mail,otp);
+    }
+
 }

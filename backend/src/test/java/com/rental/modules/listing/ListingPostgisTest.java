@@ -93,6 +93,24 @@ class ListingPostgisTest {
         listing.setLatitude(10.78); listing.setLongitude(106.7); listing.setImageUrls(List.of("https://example.com/a.jpg"));
         Long listingId=listings.createListing(owner.getUserId(),listing).getId();
         admin.approveListing(listingId,reviewer.getUserId());
+        renter.setPhoneNumber("0901234567");
+        users.saveAndFlush(renter);
+        assertEquals(renter.getUserId(), leases.findTenant(owner.getEmail(), null, "0901234567", listingId).get("id"));
+        assertEquals(renter.getUserId(), leases.findTenant(owner.getEmail(), null, "+84 901-234-567", listingId).get("id"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(outsider.getEmail(), null, "0901234567", listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), null, "abcdefghij", listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), null, "0909999999", listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), renter.getEmail(), "0901234567", listingId));
+        outsider.setPhoneNumber("+84901234567");
+        users.saveAndFlush(outsider);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), null, "0901234567", listingId));
+        outsider.setPhoneNumber(null);
+        users.saveAndFlush(outsider);
         var today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
         var request=new com.rental.modules.contract.dto.request.CreateContractRequest(listingId,renter.getUserId(),today,today.plusMonths(12),new BigDecimal("5000000"),BigDecimal.ZERO);
         assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(outsider.getEmail(),request));

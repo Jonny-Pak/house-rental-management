@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -8,11 +11,11 @@ import '../../data/models/auth_models.dart';
 import 'login_page.dart';
 
 // --- Design System Colors ---
-const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryDark = Color(0xFF2C1D11);
 const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground    = Color(0xFFFAF8F5);
-const kBorderColor   = Color(0xFFE8DED1);
-const kSubText       = Color(0xFF64748B);
+const kBackground = Color(0xFFFAF8F5);
+const kBorderColor = Color(0xFFE8DED1);
+const kSubText = Color(0xFF64748B);
 // ----------------------------
 
 class OtpPage extends StatefulWidget {
@@ -26,9 +29,22 @@ class OtpPage extends StatefulWidget {
 
 class _OtpPageState extends State<OtpPage> {
   final _otpCtrl = TextEditingController();
+  int _resendSeconds = 60;
+  Timer? _resendTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _resendSeconds > 0) {
+        setState(() => _resendSeconds--);
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _otpCtrl.dispose();
     super.dispose();
   }
@@ -42,10 +58,8 @@ class _OtpPageState extends State<OtpPage> {
       return;
     }
     context.read<AuthBloc>().add(
-          VerifyOtpRequested(
-            VerifyOtpRequest(email: widget.email, otp: otp),
-          ),
-        );
+      VerifyOtpRequested(VerifyOtpRequest(email: widget.email, otp: otp)),
+    );
   }
 
   @override
@@ -60,7 +74,11 @@ class _OtpPageState extends State<OtpPage> {
         backgroundColor: kBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: kPrimaryDark, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: kPrimaryDark,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -72,6 +90,15 @@ class _OtpPageState extends State<OtpPage> {
                 SnackBar(
                   content: Text(state.message),
                   backgroundColor: Colors.redAccent,
+                ),
+              );
+            } else if (state is AuthOtpResent) {
+              setState(() => _resendSeconds = 60);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Đã gửi lại mã. Vui lòng kiểm tra email và thư mục Spam.',
+                  ),
                 ),
               );
             } else if (state is AuthUnauthenticated) {
@@ -92,7 +119,10 @@ class _OtpPageState extends State<OtpPage> {
             final isLoading = state is AuthLoading;
             return Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 24,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -131,7 +161,7 @@ class _OtpPageState extends State<OtpPage> {
                             color: Colors.black.withValues(alpha: 0.03),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
-                          )
+                          ),
                         ],
                       ),
                       padding: const EdgeInsets.all(24),
@@ -142,7 +172,9 @@ class _OtpPageState extends State<OtpPage> {
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             maxLength: 6,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             style: const TextStyle(
                               fontSize: 28,
                               letterSpacing: 12,
@@ -151,29 +183,43 @@ class _OtpPageState extends State<OtpPage> {
                             ),
                             decoration: InputDecoration(
                               labelText: 'Nhập mã OTP',
-                              labelStyle: const TextStyle(color: kSubText, fontSize: 14, letterSpacing: 0),
-                              floatingLabelAlignment: FloatingLabelAlignment.center,
+                              labelStyle: const TextStyle(
+                                color: kSubText,
+                                fontSize: 14,
+                                letterSpacing: 0,
+                              ),
+                              floatingLabelAlignment:
+                                  FloatingLabelAlignment.center,
                               alignLabelWithHint: true,
                               filled: true,
                               fillColor: kBackground,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: kBorderColor),
+                                borderSide: const BorderSide(
+                                  color: kBorderColor,
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: kBorderColor),
+                                borderSide: const BorderSide(
+                                  color: kBorderColor,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
+                                borderSide: const BorderSide(
+                                  color: kPrimaryAccent,
+                                  width: 1.5,
+                                ),
                               ),
                               counterText: '',
                             ),
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
-                            onPressed: isLoading ? null : () => _onVerify(context),
+                            onPressed: isLoading
+                                ? null
+                                : () => _onVerify(context),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: kPrimaryAccent,
                               foregroundColor: Colors.white,
@@ -192,7 +238,27 @@ class _OtpPageState extends State<OtpPage> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text('Xác thực ngay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                : const Text(
+                                    'Xác thực ngay',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                          TextButton(
+                            onPressed: isLoading || _resendSeconds > 0
+                                ? null
+                                : () {
+                                    context.read<AuthBloc>().add(
+                                      ResendOtpRequested(widget.email),
+                                    );
+                                  },
+                            child: Text(
+                              _resendSeconds > 0
+                                  ? 'Gửi lại mã sau $_resendSeconds giây'
+                                  : 'Gửi lại mã',
+                            ),
                           ),
                         ],
                       ),

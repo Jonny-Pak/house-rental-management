@@ -34,7 +34,7 @@ class _ContractFormPageState extends State<ContractFormPage> {
   }
 
   final _form = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _contactController = TextEditingController();
   late final _rentController = TextEditingController(
     text: _amountText(widget.existing?.monthlyRent),
   );
@@ -63,7 +63,7 @@ class _ContractFormPageState extends State<ContractFormPage> {
   @override
   void dispose() {
     for (final c in [
-      _emailController,
+      _contactController,
       _rentController,
       _depositController,
       _noteController,
@@ -101,24 +101,27 @@ class _ContractFormPageState extends State<ContractFormPage> {
   }
 
   Future<void> _lookup() async {
-    if (_selectedListingId == null || _emailController.text.trim().isEmpty) {
-      setState(() => _error = 'Chọn tin đăng và nhập email người thuê.');
+    if (_selectedListingId == null || _contactController.text.trim().isEmpty) {
+      setState(
+        () => _error =
+            'Chọn tin đăng và nhập email hoặc số điện thoại người thuê.',
+      );
       return;
     }
-    final email = _emailController.text.trim();
+    final contact = _contactController.text.trim();
     final listing = _selectedListingId!;
     setState(() => _busy = true);
     try {
-      final result = await widget.repository.findTenant(email, listing);
-      if (mounted &&
-          email == _emailController.text.trim() &&
-          listing == _selectedListingId) {
-        setState(() {
-          _selectedTenantId = result['id'] as int;
-          _tenantName = result['name'] as String;
-          _error = null;
-        });
-      }
+      final result = await widget.repository.findTenant(contact, listing);
+      if (!mounted) return;
+      if (contact != _contactController.text.trim()) return;
+      if (listing != _selectedListingId) return;
+
+      setState(() {
+        _selectedTenantId = result['id'] as int;
+        _tenantName = result['name'] as String;
+        _error = null;
+      });
     } catch (e) {
       if (mounted) setState(() => _error = ListingRepository.errorMessage(e));
     } finally {
@@ -236,7 +239,7 @@ class _ContractFormPageState extends State<ContractFormPage> {
       _selectedListingId = listingId;
       _selectedTenantId = null;
       _tenantName = null;
-      _emailController.clear();
+      _contactController.clear();
       for (final listing in _listings) {
         if (listing.id == listingId) {
           _rentController.text = listing.rentPrice.toInt().toString();
@@ -283,11 +286,11 @@ class _ContractFormPageState extends State<ContractFormPage> {
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
-                  controller: _emailController,
+                  controller: _contactController,
                   enabled: !_busy,
-                  keyboardType: TextInputType.emailAddress,
+                  keyboardType: TextInputType.text,
                   decoration: const InputDecoration(
-                    labelText: 'Email tài khoản người thuê',
+                    labelText: 'Email hoặc số điện thoại người thuê',
                   ),
                   onChanged: (_) => setState(() {
                     _selectedTenantId = null;

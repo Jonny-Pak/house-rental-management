@@ -1,7 +1,7 @@
 # Quản lý hợp đồng thuê
 
 Chủ nhà mở **Chức năng → Quản lý hợp đồng → Tạo hợp đồng**, chọn một tin
-đã duyệt đang cho thuê của mình, nhập email tài khoản người thuê và tìm tài
+đã duyệt đang cho thuê của mình, nhập email hoặc số điện thoại tài khoản người thuê và tìm tài
 khoản. Sau khi chọn ngày bắt đầu/kết thúc, tiền thuê, tiền cọc và ghi chú,
 hợp đồng được lưu ở trạng thái `DRAFT` (chờ người thuê xác nhận).
 
@@ -30,7 +30,7 @@ các chỉnh sửa tin sau này. Trước xác nhận/hủy/kết thúc, client 
 API xác thực:
 
 - `GET /contracts/me`, `GET /contracts/{id}`: chỉ hai bên của hợp đồng.
-- `GET /contracts/tenant?email=...&listingId=...`: tra cứu email chính xác,
+- `GET /contracts/tenant?email=...&listingId=...` hoặc `?phone=...&listingId=...`: tra cứu email hoặc số điện thoại chính xác,
   chỉ chủ sở hữu tin; trả ID và tên, không trả hồ sơ tài khoản.
 - `POST /contracts`: tạo bản nháp, trả 201.
 - `PUT /contracts/{id}`: chủ nhà sửa bản nháp, không đổi tin.
