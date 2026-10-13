@@ -83,19 +83,101 @@ public class ContractService {
     }
 
     public Map<String, Object> findTenant(String email, String tenantEmail, Long listingId) {
+        return findTenant(email, tenantEmail, null, listingId);
+    }
+
+    public Map<String, Object> findTenant(String email, String tenantEmail, String phone, Long listingId) {
         User landlord = findUserByEmail(email);
         getOwnedListing(landlord, listingId);
-
-        Optional<User> found = users.findByEmail(tenantEmail.trim());
-        if (found.isEmpty()) {
-            throw error(HttpStatus.NOT_FOUND, "Chưa có tài khoản với email này.");
+        boolean hasEmail = tenantEmail != null && !tenantEmail.isBlank();
+        boolean hasPhone = phone != null && !phone.isBlank();
+        if (!hasEmail && !hasPhone) {
+            throw error(HttpStatus.BAD_REQUEST, "Nhập email hoặc số điện thoại người thuê.");
         }
-        User tenant = getValidTenant(found.get().getUserId(), landlord);
+        if (hasEmail && hasPhone) {
+            throw error(HttpStatus.BAD_REQUEST, "Nhập email hoặc số điện thoại người thuê.");
+        }
 
+        User found;
+        if (hasEmail) {
+            Optional<User> result = users.findByEmail(tenantEmail.trim());
+            if (result.isEmpty()) {
+                throw error(HttpStatus.NOT_FOUND, "Chưa có tài khoản với email này.");
+            }
+            found = result.get();
+        } else {
+            found = findUserByPhone(phone);
+        }
+        User tenant = getValidTenant(found.getUserId(), landlord);
         Map<String, Object> result = new HashMap<>();
         result.put("id", tenant.getUserId());
         result.put("name", tenant.getFullName());
         return result;
+    }
+
+    private User findUserByPhone(String phone) {
+        List<String> phoneNumbers = getPhoneFormats(phone);
+        List<User> matches = users.findByPhoneNumberIn(phoneNumbers);
+        if (matches.isEmpty()) {
+            throw error(HttpStatus.NOT_FOUND, "Chưa có tài khoản với số điện thoại này.");
+        }
+        if (matches.size() > 1) {
+            throw error(HttpStatus.CONFLICT, "Số điện thoại trùng nhiều tài khoản. Hãy tìm bằng email.");
+        }
+        return matches.get(0);
+    }
+
+    private List<String> getPhoneFormats(String phone) {
+        String input = phone.trim();
+        String number = cleanPhoneNumber(input);
+        checkPhoneNumber(number);
+        String localNumber = toLocalPhoneNumber(number);
+
+        List<String> formats = new ArrayList<>();
+        formats.add(input);
+        formats.add(number);
+        formats.add(localNumber);
+        if (localNumber.startsWith("0")) {
+            String withoutLeadingZero = localNumber.substring(1);
+            formats.add("+84" + withoutLeadingZero);
+            formats.add("84" + withoutLeadingZero);
+        }
+        return formats;
+    }
+
+    private String cleanPhoneNumber(String phone) {
+        String number = phone.replace(" ", "");
+        number = number.replace("-", "");
+        number = number.replace(".", "");
+        number = number.replace("(", "");
+        number = number.replace(")", "");
+        return number;
+    }
+
+    private void checkPhoneNumber(String number) {
+        String digits = number;
+        if (number.startsWith("+")) {
+            digits = number.substring(1);
+        }
+        if (digits.length() < 9 || digits.length() > 15) {
+            throw error(HttpStatus.BAD_REQUEST, "Số điện thoại không hợp lệ.");
+        }
+        for (int index = 0; index < digits.length(); index++) {
+            char character = digits.charAt(index);
+            if (character < '0' || character > '9') {
+                throw error(HttpStatus.BAD_REQUEST, "Số điện thoại không hợp lệ.");
+            }
+        }
+    }
+
+    private String toLocalPhoneNumber(String number) {
+        if (number.startsWith("+84")) {
+            return "0" + number.substring(3);
+        }
+        if (number.startsWith("84") && number.length() == 11) {
+            return "0" + number.substring(2);
+        }
+        return number;
     }
 
     public ContractResponse updateContract(String email, Long contractId, CreateContractRequest request) {

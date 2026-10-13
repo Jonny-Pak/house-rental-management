@@ -43,8 +43,9 @@ public class ContractController {
 
     @GetMapping("/tenant")
     public Map<String, Object> findTenant(
-            @RequestParam String email, @RequestParam Long listingId, Principal principal) {
-        return contractService.findTenant(principal.getName(), email, listingId);
+            @RequestParam(required = false) String email, @RequestParam(required = false) String phone,
+            @RequestParam Long listingId, Principal principal) {
+        return contractService.findTenant(principal.getName(), email, phone, listingId);
     }
 
     @PutMapping("/{id}")

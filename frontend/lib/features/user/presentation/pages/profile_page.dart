@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import '../../../auth/presentation/logout.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -301,9 +302,7 @@ class ProfileView extends StatelessWidget {
                   
                   // --- Logout Button ---
                   OutlinedButton.icon(
-                    onPressed: () {
-                      // Implement logout logic
-                    },
+                    onPressed: () => logout(context),
                     icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
                     label: const Text(
                       'Đăng xuất',

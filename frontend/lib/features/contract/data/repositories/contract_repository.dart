@@ -6,10 +6,16 @@ class ContractRepository {
 
   ContractRepository(this._apiClient);
 
-  Future<Map<String, dynamic>> findTenant(String email, int listingId) async {
+  Future<Map<String, dynamic>> findTenant(String contact, int listingId) async {
+    final query = <String, dynamic>{'listingId': listingId};
+    if (contact.contains('@')) {
+      query['email'] = contact.trim();
+    } else {
+      query['phone'] = contact.trim();
+    }
     final response = await _apiClient.get(
       '/contracts/tenant',
-      queryParams: {'email': email, 'listingId': listingId},
+      queryParams: query,
     );
     return Map<String, dynamic>.from(response.data);
   }

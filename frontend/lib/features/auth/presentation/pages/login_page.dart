@@ -325,8 +325,8 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 32),
 
                         // Register Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
                           children: [
                             const Text(
                               'Chưa có tài khoản? ',

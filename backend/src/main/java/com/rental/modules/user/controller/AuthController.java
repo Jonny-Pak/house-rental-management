@@ -34,6 +34,14 @@ public class AuthController {
                 .body(ApiResponse.success(message));
     }
 
+    public record ResendOtpRequest(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Email String email) {}
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<String>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.resendOtp(request.email())));
+    }
+
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<String>> verifyOtp(
             @Valid @RequestBody VerifyOtpRequest request) {
