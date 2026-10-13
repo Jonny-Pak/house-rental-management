@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class RoomService {
@@ -28,14 +28,19 @@ public class RoomService {
         this.userRepository = userRepository;
     }
 
-
     @Transactional
     public RoomResponse addRoom(String email, Long propertyId, RoomRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User user = userResult.get();
 
-        Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId));
+        java.util.Optional<Property> propertyResult = propertyRepository.findById(propertyId);
+        if (propertyResult.isEmpty()) {
+            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
+        }
+        Property property = propertyResult.get();
 
         if (!property.getLandlord().getUserId().equals(user.getUserId())) {
             throw new AccessDeniedException("Báº¡n khÃ´ng cÃ³ quyá»n thÃªm phÃ²ng vÃ o khu trá» nÃ y");
@@ -54,14 +59,17 @@ public class RoomService {
 
     @Transactional(readOnly = true)
     public List<RoomResponse> getRoomsByProperty(Long propertyId) {
-        // verify property exists first
+
         if (!propertyRepository.existsById(propertyId)) {
             throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
         }
 
-        return roomRepository.findByPropertyId(propertyId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        List<RoomResponse> result = new ArrayList<>();
+        List<Room> rooms = roomRepository.findByPropertyId(propertyId);
+        for (Room room : rooms) {
+            result.add(mapToResponse(room));
+        }
+        return result;
     }
 
     private RoomResponse mapToResponse(Room room) {

@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class AdminListingService {
@@ -23,40 +23,40 @@ public class AdminListingService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Returns all listings with PENDING approval status for admin review.
-     */
     @Transactional(readOnly = true)
     public List<AdminListingResponse> getPendingListings() {
-        return listingRepository.findByApprovalStatus("PENDING")
-                .stream()
-                .filter(l -> !"DELETED".equals(l.getRentalStatus()))
-                .map(this::toAdminListingResponse)
-                .collect(Collectors.toList());
+        List<AdminListingResponse> result = new ArrayList<>();
+        List<Listing> listings = listingRepository.findByApprovalStatus("PENDING");
+        for (Listing listing : listings) {
+            if (!"DELETED".equals(listing.getRentalStatus())) {
+                result.add(toAdminListingResponse(listing));
+            }
+        }
+        return result;
     }
 
-    /**
-     * Approves a listing. Sets approvalStatus = APPROVED and records who approved.
-     */
     @Transactional
     public AdminListingResponse approveListing(Long listingId, Long adminId) {
         return updateApprovalStatus(listingId, adminId, "APPROVED", null);
     }
 
-    /**
-     * Rejects a listing. Sets approvalStatus = REJECTED with a reason.
-     */
     @Transactional
     public AdminListingResponse rejectListing(Long listingId, Long adminId, String reason) {
         return updateApprovalStatus(listingId, adminId, "REJECTED", reason);
     }
 
     private AdminListingResponse updateApprovalStatus(Long listingId, Long adminId, String status, String reason) {
-        Listing listing = listingRepository.findLockedById(listingId)
-                .orElseThrow(() -> new IllegalArgumentException("Listing not found with id: " + listingId));
+        java.util.Optional<Listing> listingResult = listingRepository.findLockedById(listingId);
+        if (listingResult.isEmpty()) {
+            throw new IllegalArgumentException("Listing not found with id: " + listingId);
+        }
+        Listing listing = listingResult.get();
 
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new IllegalArgumentException("Admin user not found with id: " + adminId));
+        java.util.Optional<User> adminResult = userRepository.findById(adminId);
+        if (adminResult.isEmpty()) {
+            throw new IllegalArgumentException("Admin user not found with id: " + adminId);
+        }
+        User admin = adminResult.get();
 
         if (admin.getRole() != com.rental.modules.user.domain.enums.Role.ADMIN) {
             throw new org.springframework.security.access.AccessDeniedException("Admin required");
@@ -75,7 +75,11 @@ public class AdminListingService {
 
     private AdminListingResponse toAdminListingResponse(Listing listing) {
         AdminListingResponse response = new AdminListingResponse();
-        response.setImageUrls(listing.getImages().stream().map(com.rental.modules.listing.domain.entity.ListingImage::getImageUrl).toList());
+        List<String> imageUrls = new ArrayList<>();
+        for (com.rental.modules.listing.domain.entity.ListingImage image : listing.getImages()) {
+            imageUrls.add(image.getImageUrl());
+        }
+        response.setImageUrls(imageUrls);
         response.setId(listing.getId());
         response.setTitle(listing.getTitle());
         response.setDescription(listing.getDescription());
@@ -83,8 +87,10 @@ public class AdminListingService {
         response.setRentPrice(listing.getRentPrice());
         response.setAreaSqm(listing.getAreaSqm());
         response.setAddress(listing.getAddress());
-        response.setLatitude(listing.getLocation() != null ? listing.getLocation().getY() : null);
-        response.setLongitude(listing.getLocation() != null ? listing.getLocation().getX() : null);
+        if (listing.getLocation() != null) {
+            response.setLatitude(listing.getLocation().getY());
+            response.setLongitude(listing.getLocation().getX());
+        }
         response.setOwnerId(listing.getOwner().getUserId());
         response.setOwnerName(listing.getOwner().getFullName());
         response.setOwnerEmail(listing.getOwner().getEmail());
@@ -94,8 +100,10 @@ public class AdminListingService {
         response.setApprovalStatus(listing.getApprovalStatus());
         response.setRentalStatus(listing.getRentalStatus());
         response.setRejectionReason(listing.getRejectionReason());
-        response.setApprovedById(listing.getApprovedBy() != null ? listing.getApprovedBy().getUserId() : null);
-        response.setApprovedByName(listing.getApprovedBy() != null ? listing.getApprovedBy().getFullName() : null);
+        if (listing.getApprovedBy() != null) {
+            response.setApprovedById(listing.getApprovedBy().getUserId());
+            response.setApprovedByName(listing.getApprovedBy().getFullName());
+        }
         response.setHouseType(listing.getHouseType());
         response.setBedrooms(listing.getBedrooms());
         response.setBathrooms(listing.getBathrooms());

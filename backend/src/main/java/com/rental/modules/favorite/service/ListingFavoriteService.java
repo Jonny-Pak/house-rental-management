@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 import java.util.List;
+import java.util.ArrayList;
 
 @Service
 @Transactional(readOnly = true)
@@ -26,8 +27,11 @@ public class ListingFavoriteService {
     }
     @Transactional
     public void save(Long userId, Long listingId) {
-        var listing = repository.findLockedById(listingId).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng."));
+        java.util.Optional<com.rental.modules.listing.domain.entity.Listing> listingResult = repository.findLockedById(listingId);
+        if (listingResult.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng.");
+        }
+        com.rental.modules.listing.domain.entity.Listing listing = listingResult.get();
         if (!"APPROVED".equals(listing.getApprovalStatus()) || !"AVAILABLE".equals(listing.getRentalStatus())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng.");
         }
@@ -39,8 +43,14 @@ public class ListingFavoriteService {
         jdbc.update("DELETE FROM user_favorites WHERE user_id=? AND listing_id=?", userId, listingId);
     }
     public List<ListingResponse> getSaved(Long userId) {
-        return jdbc.queryForList("SELECT f.listing_id FROM user_favorites f JOIN listings l ON l.listing_id=f.listing_id "
+        List<Long> listingIds = jdbc.queryForList(
+                "SELECT f.listing_id FROM user_favorites f JOIN listings l ON l.listing_id=f.listing_id "
                 + "WHERE f.user_id=? AND l.approval_status='APPROVED' AND l.rental_status='AVAILABLE' ORDER BY f.created_at DESC, f.id DESC",
-                Long.class, userId).stream().map(listings::getPublicListing).toList();
+                Long.class, userId);
+        List<ListingResponse> result = new ArrayList<>();
+        for (Long listingId : listingIds) {
+            result.add(listings.getPublicListing(listingId));
+        }
+        return result;
     }
 }

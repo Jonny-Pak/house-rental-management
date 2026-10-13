@@ -25,5 +25,7 @@ public class ListingImage {
         this.thumbnail = index == 0;
         this.sortOrder = (short) index;
     }
-    public String getImageUrl() { return imageUrl; }
+    public String getImageUrl() {
+        return imageUrl;
+    }
 }

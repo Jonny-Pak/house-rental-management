@@ -12,7 +12,9 @@ import java.util.Map;
 @RequestMapping("/api/v1/listings")
 public class ListingFavoriteController {
     private final ListingFavoriteService favorites;
-    public ListingFavoriteController(ListingFavoriteService favorites) { this.favorites = favorites; }
+    public ListingFavoriteController(ListingFavoriteService favorites) {
+        this.favorites = favorites;
+    }
     @GetMapping("/favorites/me")
     public List<ListingResponse> getSaved(@AuthenticationPrincipal CustomUserDetails user) {
         return favorites.getSaved(user.getUser().getUserId());

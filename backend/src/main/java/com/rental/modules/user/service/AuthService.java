@@ -43,11 +43,8 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-
     @Value("${app.google.client-id}")
     private String googleClientId;
-
-    // â”€â”€ Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public String register(RegisterRequest request) {
         if (request.getRole() == Role.ADMIN) {
@@ -74,16 +71,17 @@ public class AuthService {
         return "ÄÄƒng kÃ½ thÃ nh cÃ´ng. Vui lÃ²ng kiá»ƒm tra email cá»§a báº¡n Ä‘á»ƒ nháº­n mÃ£ xÃ¡c minh.";
     }
 
-    // â”€â”€ Verify OTP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     public String verifyOtp(VerifyOtpRequest request) {
         boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (!valid) {
             throw new IllegalArgumentException("MÃ£ xÃ¡c minh khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n.");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + request.getEmail()));
+        java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + request.getEmail());
+        }
+        User user = userResult.get();
 
         user.setIsVerified(true);
         userRepository.save(user);
@@ -91,11 +89,12 @@ public class AuthService {
         return "TÃ i khoáº£n Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c minh thÃ nh cÃ´ng. Báº¡n cÃ³ thá»ƒ Ä‘Äƒng nháº­p ngay bÃ¢y giá».";
     }
 
-    // â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i vá»›i email: " + request.getEmail()));
+        java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i vá»›i email: " + request.getEmail());
+        }
+        User user = userResult.get();
 
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
             throw new IllegalStateException("TÃ i khoáº£n chÆ°a Ä‘Æ°á»£c xÃ¡c minh. Vui lÃ²ng xÃ¡c minh email cá»§a báº¡n báº±ng mÃ£ OTP.");
@@ -105,21 +104,17 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        String accessToken  = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-
-        AuthResponse response = new AuthResponse();
-        response.setAccessToken(accessToken);
-        response.setRefreshToken(refreshToken);
-        response.setUserId(user.getUserId());
-        response.setRole(user.getRole().name());
-        return response;
+        return createAuthResponse(user);
     }
 
-    // â”€â”€ Google Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     public AuthResponse googleLogin(GoogleLoginRequest request) {
-        // 1. Verify the Google ID Token
+
+        GoogleIdToken idToken = verifyGoogleToken(request.getIdToken());
+        User user = findOrCreateGoogleUser(idToken.getPayload());
+        return createAuthResponse(user);
+    }
+
+    private GoogleIdToken verifyGoogleToken(String token) {
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(), GsonFactory.getDefaultInstance())
                 .setAudience(Collections.singletonList(googleClientId))
@@ -127,7 +122,7 @@ public class AuthService {
 
         GoogleIdToken idToken;
         try {
-            idToken = verifier.verify(request.getIdToken());
+            idToken = verifier.verify(token);
         } catch (Exception e) {
             throw new IllegalArgumentException("Tháº¥t báº¡i khi xÃ¡c minh Google ID Token: " + e.getMessage());
         }
@@ -136,19 +131,20 @@ public class AuthService {
             throw new IllegalArgumentException("Token Google ID khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng thá»­ láº¡i.");
         }
 
-        // 2. Extract user info from payload
-        Payload payload   = idToken.getPayload();
+        return idToken;
+    }
+
+    private User findOrCreateGoogleUser(Payload payload) {
         String email      = payload.getEmail();
         String name       = (String) payload.get("name");
         String googleId   = payload.getSubject();
         String avatarUrl  = (String) payload.get("picture");
 
-        // 3. Find or create user
         Optional<User> existingUser = userRepository.findByEmail(email);
         User user;
 
         if (existingUser.isPresent()) {
-            // Update googleId and avatarUrl if they are currently null
+
             user = existingUser.get();
             if (user.getGoogleId() == null) {
                 user.setGoogleId(googleId);
@@ -159,7 +155,7 @@ public class AuthService {
             user.setIsVerified(true);
             userRepository.save(user);
         } else {
-            // Create a brand-new OAuth user
+
             user = new User();
             user.setEmail(email);
             user.setFullName(name);
@@ -172,7 +168,10 @@ public class AuthService {
             userRepository.save(user);
         }
 
-        // 4. Generate tokens and return
+        return user;
+    }
+
+    private AuthResponse createAuthResponse(User user) {
         String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
@@ -183,4 +182,5 @@ public class AuthService {
         response.setRole(user.getRole().name());
         return response;
     }
+
 }

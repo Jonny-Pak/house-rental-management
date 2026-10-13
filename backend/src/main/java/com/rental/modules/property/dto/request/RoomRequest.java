@@ -30,9 +30,33 @@ public class RoomRequest {
         this.price = price;
         this.maxCapacity = maxCapacity;
     }
-    public String getName() { return name; }    public void setName(String name) { this.name = name; }
-    public Double getArea() { return area; }    public void setArea(Double area) { this.area = area; }
-    public BigDecimal getPrice() { return price; }    public void setPrice(BigDecimal price) { this.price = price; }
-    public Integer getMaxCapacity() { return maxCapacity; }    public void setMaxCapacity(Integer maxCapacity) { this.maxCapacity = maxCapacity; }
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+    public Double getArea() {
+        return area;
+    }
+
+    public void setArea(Double area) {
+        this.area = area;
+    }
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+    public Integer getMaxCapacity() {
+        return maxCapacity;
+    }
+
+    public void setMaxCapacity(Integer maxCapacity) {
+        this.maxCapacity = maxCapacity;
+    }
 
 }

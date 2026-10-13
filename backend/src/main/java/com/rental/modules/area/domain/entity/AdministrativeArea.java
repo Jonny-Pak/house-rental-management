@@ -18,7 +18,7 @@ public class AdministrativeArea {
     private String areaName;
 
     @Column(name = "area_type", length = 10)
-    private String areaType; // PROVINCE, DISTRICT (legacy), WARD, COMMUNE, SPECIAL
+    private String areaType;
 
     @Column(name = "code", length = 20)
     private String code;
@@ -31,16 +31,40 @@ public class AdministrativeArea {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public Long getAreaId() { return areaId; }
-    public void setAreaId(Long areaId) { this.areaId = areaId; }
-    public String getAreaName() { return areaName; }
-    public void setAreaName(String areaName) { this.areaName = areaName; }
-    public String getAreaType() { return areaType; }
-    public void setAreaType(String areaType) { this.areaType = areaType; }
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
-    public AdministrativeArea getParent() { return parent; }
-    public void setParent(AdministrativeArea parent) { this.parent = parent; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getAreaId() {
+        return areaId;
+    }
+    public void setAreaId(Long areaId) {
+        this.areaId = areaId;
+    }
+    public String getAreaName() {
+        return areaName;
+    }
+    public void setAreaName(String areaName) {
+        this.areaName = areaName;
+    }
+    public String getAreaType() {
+        return areaType;
+    }
+    public void setAreaType(String areaType) {
+        this.areaType = areaType;
+    }
+    public String getCode() {
+        return code;
+    }
+    public void setCode(String code) {
+        this.code = code;
+    }
+    public AdministrativeArea getParent() {
+        return parent;
+    }
+    public void setParent(AdministrativeArea parent) {
+        this.parent = parent;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

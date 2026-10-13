@@ -15,11 +15,6 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface ListingRepository extends JpaRepository<Listing, Long> {
 
-    /**
-     * Tìm tất cả Listing đã được duyệt và đang còn trống nằm trong vùng bounding box.
-     * Dùng hàm within() của Hibernate Spatial (ánh xạ sang ST_Within của PostGIS).
-     * Chú ý: chỉ lọc các Listing CÓ tọa độ (location IS NOT NULL).
-     */
     @Query("SELECT l FROM Listing l " +
            "WHERE l.location IS NOT NULL " +
            "AND within(l.location, :bbox) = true " +

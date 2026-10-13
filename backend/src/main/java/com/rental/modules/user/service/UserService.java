@@ -22,17 +22,22 @@ public class UserService {
         this.userPreferenceRepository = userPreferenceRepository;
     }
 
-
     public UserProfileResponse getMyProfile(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         return mapToUserProfileResponse(user);
     }
 
     public UserProfileResponse updateMyProfile(String email, UpdateProfileRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         if (StringUtils.hasText(request.getFullName())) {
             user.setFullName(request.getFullName());
@@ -50,8 +55,11 @@ public class UserService {
     }
 
     public UserProfileResponse updateAvatar(String email, UpdateAvatarRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         user.setAvatarUrl(request.getAvatarUrl());
 
@@ -67,14 +75,19 @@ public class UserService {
         response.setEmail(user.getEmail());
         response.setPhoneNumber(user.getPhoneNumber());
         response.setAvatarUrl(user.getAvatarUrl());
-        response.setRole(user.getRole() != null ? user.getRole().name() : null);
-        response.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
+        if (user.getRole() != null) {
+            response.setRole(user.getRole().name());
+        }
+        if (user.getStatus() != null) {
+            response.setStatus(user.getStatus().name());
+        }
         return response;
     }
 
     public UserPreferenceDto getMyPreferences(String email) {
-        userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        if (userRepository.findByEmail(email).isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
 
         UserPreference preference = userPreferenceRepository.findByUser_Email(email).orElse(null);
 
@@ -91,8 +104,11 @@ public class UserService {
     }
 
     public UserPreferenceDto updateMyPreferences(String email, UserPreferenceDto request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         UserPreference preference = userPreferenceRepository.findByUser_Email(email).orElse(null);
 

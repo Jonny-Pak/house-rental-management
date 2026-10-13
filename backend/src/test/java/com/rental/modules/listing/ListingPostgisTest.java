@@ -33,7 +33,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({ListingService.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
-        com.rental.modules.favorite.service.ListingFavoriteService.class})
+        com.rental.modules.favorite.service.ListingFavoriteService.class,
+        com.rental.modules.contract.service.ContractService.class})
 @EnabledIfEnvironmentVariable(named = "RENTAL_POSTGIS_TESTS", matches = "true")
 class ListingPostgisTest {
     private static final String SCHEMA = "listing_flow_" + UUID.randomUUID().toString().replace("-", "");
@@ -82,6 +83,50 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.area.service.AreaService areas;
     @Autowired com.rental.modules.property.service.PropertyService properties;
     @Autowired com.rental.modules.favorite.service.ListingFavoriteService favorites;
+    @Autowired com.rental.modules.contract.service.ContractService leases;
+
+    @Test void contractLifecycleChecksOwnershipConsentVersionAndListingAvailability() {
+        User owner=user("leaseowner",Role.OWNER), renter=user("renter",Role.USER), outsider=user("outsider",Role.USER), reviewer=user("leaseadmin",Role.ADMIN);
+        CreateListingRequest listing=new CreateListingRequest();
+        listing.setTitle("Nhà cho thuê"); listing.setListingType("WHOLE_HOUSE"); listing.setAreaId(6L);
+        listing.setAddress("TP.HCM"); listing.setAreaSqm(new BigDecimal("50")); listing.setRentPrice(new BigDecimal("5000000"));
+        listing.setLatitude(10.78); listing.setLongitude(106.7); listing.setImageUrls(List.of("https://example.com/a.jpg"));
+        Long listingId=listings.createListing(owner.getUserId(),listing).getId();
+        admin.approveListing(listingId,reviewer.getUserId());
+        var today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var request=new com.rental.modules.contract.dto.request.CreateContractRequest(listingId,renter.getUserId(),today,today.plusMonths(12),new BigDecimal("5000000"),BigDecimal.ZERO);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(outsider.getEmail(),request));
+        assertEquals(renter.getUserId(),leases.findTenant(owner.getEmail(),renter.getEmail(),listingId).get("id"));
+        var draft=leases.createContract(owner.getEmail(),request);
+        assertEquals("DRAFT",draft.status()); assertEquals("LANDLORD",draft.myRole());
+        assertEquals("TENANT",leases.getContract(renter.getEmail(),draft.id()).myRole());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.getContract(outsider.getEmail(),draft.id()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(owner.getEmail(),request));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.changeStatus(owner.getEmail(),draft.id(),"ACTIVE",draft.version()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.updateContract(renter.getEmail(),draft.id(),request));
+        request.setMonthlyRent(new BigDecimal("5500000"));
+        var edited=leases.updateContract(owner.getEmail(),draft.id(),request);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.changeStatus(renter.getEmail(),draft.id(),"ACTIVE",draft.version()));
+        var active=leases.changeStatus(renter.getEmail(),draft.id(),"ACTIVE",edited.version());
+        assertEquals("ACTIVE",active.status()); assertEquals("RENTED",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->listings.updateRentalStatus(listingId,owner.getUserId(),"AVAILABLE"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->listings.getPublicListing(listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.changeStatus(renter.getEmail(),draft.id(),"TERMINATED",active.version()));
+        var ended=leases.changeStatus(owner.getEmail(),draft.id(),"TERMINATED",active.version());
+        assertEquals("TERMINATED",ended.status()); assertEquals("HIDDEN",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        listings.updateRentalStatus(listingId,owner.getUserId(),"AVAILABLE");
+        var second=leases.createContract(owner.getEmail(),request);
+        var cancelled=leases.changeStatus(renter.getEmail(),second.id(),"CANCELLED",second.version());
+        assertEquals("CANCELLED",cancelled.status());
+        var third=leases.createContract(owner.getEmail(),request);
+        leases.changeStatus(renter.getEmail(),third.id(),"ACTIVE",third.version());
+        jdbc.update("UPDATE contracts SET start_date=?, end_date=? WHERE contract_id=?",today.minusDays(5),today.minusDays(1),third.id());
+        entityManager.clear();
+        assertEquals("EXPIRED",leases.getContract(owner.getEmail(),third.id()).status());
+        assertEquals("HIDDEN",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        request.setEndDate(request.getStartDate());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(owner.getEmail(),request));
+    }
 
     @Test void areaNameRepairRestoresVietnameseAndPreservesCustomNamesAndIds() {
         int areaCount = jdbc.queryForObject("SELECT count(*) FROM administrative_areas", Integer.class);

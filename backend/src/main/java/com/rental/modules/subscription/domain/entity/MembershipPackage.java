@@ -41,12 +41,54 @@ public class MembershipPackage {
         this.refreshQuota = refreshQuota;
         this.description = description;
     }
-    public Short getId() { return id; }    public void setId(Short id) { this.id = id; }
-    public String getPackageName() { return packageName; }    public void setPackageName(String packageName) { this.packageName = packageName; }
-    public BigDecimal getPrice() { return price; }    public void setPrice(BigDecimal price) { this.price = price; }
-    public Short getStandardPostQuota() { return standardPostQuota; }    public void setStandardPostQuota(Short standardPostQuota) { this.standardPostQuota = standardPostQuota; }
-    public Short getVipPostQuota() { return vipPostQuota; }    public void setVipPostQuota(Short vipPostQuota) { this.vipPostQuota = vipPostQuota; }
-    public Short getRefreshQuota() { return refreshQuota; }    public void setRefreshQuota(Short refreshQuota) { this.refreshQuota = refreshQuota; }
-    public String getDescription() { return description; }    public void setDescription(String description) { this.description = description; }
+    public Short getId() {
+        return id;
+    }
+
+    public void setId(Short id) {
+        this.id = id;
+    }
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+    public Short getStandardPostQuota() {
+        return standardPostQuota;
+    }
+
+    public void setStandardPostQuota(Short standardPostQuota) {
+        this.standardPostQuota = standardPostQuota;
+    }
+    public Short getVipPostQuota() {
+        return vipPostQuota;
+    }
+
+    public void setVipPostQuota(Short vipPostQuota) {
+        this.vipPostQuota = vipPostQuota;
+    }
+    public Short getRefreshQuota() {
+        return refreshQuota;
+    }
+
+    public void setRefreshQuota(Short refreshQuota) {
+        this.refreshQuota = refreshQuota;
+    }
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
 }

@@ -42,7 +42,7 @@ public class Contract {
     private BigDecimal depositAmount;
 
     @Column(nullable = false, length = 15)
-    private String status = "ACTIVE";
+    private String status = "DRAFT";
 
     @Column(name = "contract_file_url", length = 255)
     private String contractFileUrl;
@@ -50,10 +50,36 @@ public class Contract {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(length=2000)
+    private String note;
+    public String getNote() {
+        return note;
+    }
+    public void setNote(String value) { note=value; }
+
+    @Version
+    private Long version;
+    public Long getVersion() {
+        return version;
+    }
+
+    @Column(name="listing_title",length=255)
+    private String listingTitle;
+    @Column(name="listing_address",length=255)
+    private String listingAddress;
+    public String getListingTitle() {
+        return listingTitle;
+    }
+    public String getListingAddress() {
+        return listingAddress;
+    }
+
     public Contract() {}
-    
+
     public Contract(Listing listing, User landlord, User tenant, LocalDate startDate, LocalDate endDate, BigDecimal monthlyRent, BigDecimal depositAmount, String status, String contractFileUrl, LocalDateTime createdAt) {
         this.listing = listing;
+        this.listingTitle = listing.getTitle();
+        this.listingAddress = listing.getAddress();
         this.landlord = landlord;
         this.tenant = tenant;
         this.startDate = startDate;
@@ -65,26 +91,70 @@ public class Contract {
         this.createdAt = createdAt;
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Listing getListing() { return listing; }
-    public void setListing(Listing listing) { this.listing = listing; }
-    public User getLandlord() { return landlord; }
-    public void setLandlord(User landlord) { this.landlord = landlord; }
-    public User getTenant() { return tenant; }
-    public void setTenant(User tenant) { this.tenant = tenant; }
-    public LocalDate getStartDate() { return startDate; }
-    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
-    public LocalDate getEndDate() { return endDate; }
-    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
-    public BigDecimal getMonthlyRent() { return monthlyRent; }
-    public void setMonthlyRent(BigDecimal monthlyRent) { this.monthlyRent = monthlyRent; }
-    public BigDecimal getDepositAmount() { return depositAmount; }
-    public void setDepositAmount(BigDecimal depositAmount) { this.depositAmount = depositAmount; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getContractFileUrl() { return contractFileUrl; }
-    public void setContractFileUrl(String contractFileUrl) { this.contractFileUrl = contractFileUrl; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public Listing getListing() {
+        return listing;
+    }
+    public void setListing(Listing listing) {
+        this.listing = listing;
+    }
+    public User getLandlord() {
+        return landlord;
+    }
+    public void setLandlord(User landlord) {
+        this.landlord = landlord;
+    }
+    public User getTenant() {
+        return tenant;
+    }
+    public void setTenant(User tenant) {
+        this.tenant = tenant;
+    }
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+    public BigDecimal getMonthlyRent() {
+        return monthlyRent;
+    }
+    public void setMonthlyRent(BigDecimal monthlyRent) {
+        this.monthlyRent = monthlyRent;
+    }
+    public BigDecimal getDepositAmount() {
+        return depositAmount;
+    }
+    public void setDepositAmount(BigDecimal depositAmount) {
+        this.depositAmount = depositAmount;
+    }
+    public String getStatus() {
+        return status;
+    }
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    public String getContractFileUrl() {
+        return contractFileUrl;
+    }
+    public void setContractFileUrl(String contractFileUrl) {
+        this.contractFileUrl = contractFileUrl;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

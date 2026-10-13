@@ -16,13 +16,12 @@ public class TestPaymentController {
         this.paymentService = paymentService;
     }
 
-
     @GetMapping
     public String testPayment(@RequestParam String email, @RequestParam Short packageId, HttpServletRequest request) {
         try {
             return paymentService.createPaymentUrl(email, packageId, request);
         } catch (Exception e) {
-            // Ignore stack trace to avoid SonarLint warning and bypass parser bug
+
             return "ERROR: " + e.getMessage() + " | " + e.getClass().getName();
         }
     }

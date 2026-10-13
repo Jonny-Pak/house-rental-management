@@ -38,21 +38,45 @@ public class UserPreference {
         this.preferredArea = preferredArea;
     }
 
-    public Long getPreferenceId() { return preferenceId; }
-    public void setPreferenceId(Long preferenceId) { this.preferenceId = preferenceId; }
+    public Long getPreferenceId() {
+        return preferenceId;
+    }
+    public void setPreferenceId(Long preferenceId) {
+        this.preferenceId = preferenceId;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public User getUser() {
+        return user;
+    }
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-    public Double getMinBudget() { return minBudget; }
-    public void setMinBudget(Double minBudget) { this.minBudget = minBudget; }
+    public Double getMinBudget() {
+        return minBudget;
+    }
+    public void setMinBudget(Double minBudget) {
+        this.minBudget = minBudget;
+    }
 
-    public Double getMaxBudget() { return maxBudget; }
-    public void setMaxBudget(Double maxBudget) { this.maxBudget = maxBudget; }
+    public Double getMaxBudget() {
+        return maxBudget;
+    }
+    public void setMaxBudget(Double maxBudget) {
+        this.maxBudget = maxBudget;
+    }
 
-    public Boolean getHasPet() { return hasPet; }
-    public void setHasPet(Boolean hasPet) { this.hasPet = hasPet; }
+    public Boolean getHasPet() {
+        return hasPet;
+    }
+    public void setHasPet(Boolean hasPet) {
+        this.hasPet = hasPet;
+    }
 
-    public String getPreferredArea() { return preferredArea; }
-    public void setPreferredArea(String preferredArea) { this.preferredArea = preferredArea; }
+    public String getPreferredArea() {
+        return preferredArea;
+    }
+    public void setPreferredArea(String preferredArea) {
+        this.preferredArea = preferredArea;
+    }
 }

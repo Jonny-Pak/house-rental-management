@@ -13,7 +13,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class FavoriteService {
@@ -30,19 +30,19 @@ public class FavoriteService {
         this.propertyImageRepository = propertyImageRepository;
     }
 
-
-    /**
-     * Toggle favorite for a property.
-     * @return true  if the property is now favorited,
-     *         false if the property was removed from favorites.
-     */
     @Transactional
     public boolean toggleFavorite(String email, Long propertyId) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User user = userResult.get();
 
-        Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId));
+        java.util.Optional<Property> propertyResult = propertyRepository.findById(propertyId);
+        if (propertyResult.isEmpty()) {
+            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
+        }
+        Property property = propertyResult.get();
 
         boolean alreadyFavorited = favoritePropertyRepository
                 .existsByUser_UserIdAndProperty_Id(user.getUserId(), propertyId);
@@ -57,22 +57,27 @@ public class FavoriteService {
         }
     }
 
-    /**
-     * Get all favorited properties for the authenticated user.
-     */
     public List<PropertyResponse> getMyFavoriteProperties(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User user = userResult.get();
 
-        return favoritePropertyRepository.findByUser_UserId(user.getUserId()).stream()
-                .map(fav -> mapToResponse(fav.getProperty()))
-                .collect(Collectors.toList());
+        List<PropertyResponse> result = new ArrayList<>();
+        List<FavoriteProperty> favorites = favoritePropertyRepository.findByUser_UserId(user.getUserId());
+        for (FavoriteProperty favorite : favorites) {
+            result.add(mapToResponse(favorite.getProperty()));
+        }
+        return result;
     }
 
     private PropertyResponse mapToResponse(Property property) {
-        List<String> imageUrls = propertyImageRepository.findByPropertyId(property.getId()).stream()
-                .map(PropertyImage::getImageUrl)
-                .collect(Collectors.toList());
+        List<String> imageUrls = new ArrayList<>();
+        List<PropertyImage> images = propertyImageRepository.findByPropertyId(property.getId());
+        for (PropertyImage image : images) {
+            imageUrls.add(image.getImageUrl());
+        }
 
         return new PropertyResponse(
                 property.getId(),

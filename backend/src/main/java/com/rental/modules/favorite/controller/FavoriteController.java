@@ -20,11 +20,6 @@ public class FavoriteController {
         this.favoriteService = favoriteService;
     }
 
-
-    /**
-     * Toggle favorite status of a property.
-     * POST /api/v1/favorites/{propertyId}
-     */
     @PostMapping("/{propertyId}")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> toggleFavorite(
             Principal principal,
@@ -32,17 +27,14 @@ public class FavoriteController {
 
         boolean isFavorite = favoriteService.toggleFavorite(principal.getName(), propertyId);
 
-        String message = isFavorite
-                ? "ÄÃ£ thÃªm khu trá» vÃ o danh sÃ¡ch yÃªu thÃ­ch."
-                : "ÄÃ£ xÃ³a khu trá» khá»i danh sÃ¡ch yÃªu thÃ­ch.";
+        String message = "ÄÃ£ xÃ³a khu trá» khá»i danh sÃ¡ch yÃªu thÃ­ch.";
+        if (isFavorite) {
+            message = "ÄÃ£ thÃªm khu trá» vÃ o danh sÃ¡ch yÃªu thÃ­ch.";
+        }
 
         return ResponseEntity.ok(ApiResponse.success(message, Map.of("isFavorite", isFavorite)));
     }
 
-    /**
-     * Get all favorited properties for the authenticated user.
-     * GET /api/v1/favorites/me
-     */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<PropertyResponse>>> getMyFavorites(Principal principal) {
         List<PropertyResponse> favorites = favoriteService.getMyFavoriteProperties(principal.getName());

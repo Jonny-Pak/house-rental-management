@@ -19,7 +19,6 @@ public class MembershipPackageController {
         this.membershipPackageService = membershipPackageService;
     }
 
-
     @GetMapping
     public ResponseEntity<List<MembershipPackage>> getAllPackages() {
         return ResponseEntity.ok(membershipPackageService.getAllPackages());

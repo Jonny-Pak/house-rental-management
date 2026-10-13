@@ -34,7 +34,7 @@ public class PaymentTransaction {
     private String vnpayTransactionRef;
 
     @Column(nullable = false, length = 15)
-    private String status = "PENDING"; // PENDING, SUCCESS, FAILED
+    private String status = "PENDING";
 
     @Column(name = "transaction_date", updatable = false)
     private LocalDateTime transactionDate = LocalDateTime.now();
@@ -50,14 +50,62 @@ public class PaymentTransaction {
         this.status = status;
         this.transactionDate = transactionDate;
     }
-    public Long getId() { return id; }    public void setId(Long id) { this.id = id; }
-    public User getUser() { return user; }    public void setUser(User user) { this.user = user; }
-    public UserSubscription getSubscription() { return subscription; }    public void setSubscription(UserSubscription subscription) { this.subscription = subscription; }
-    public BigDecimal getAmount() { return amount; }    public void setAmount(BigDecimal amount) { this.amount = amount; }
-    public String getPaymentMethod() { return paymentMethod; }    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
-    public String getVnpayTransactionRef() { return vnpayTransactionRef; }    public void setVnpayTransactionRef(String vnpayTransactionRef) { this.vnpayTransactionRef = vnpayTransactionRef; }
-    public String getStatus() { return status; }    public void setStatus(String status) { this.status = status; }
-    public LocalDateTime getTransactionDate() { return transactionDate; }    public void setTransactionDate(LocalDateTime transactionDate) { this.transactionDate = transactionDate; }
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+    public UserSubscription getSubscription() {
+        return subscription;
+    }
+
+    public void setSubscription(UserSubscription subscription) {
+        this.subscription = subscription;
+    }
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+    public String getVnpayTransactionRef() {
+        return vnpayTransactionRef;
+    }
+
+    public void setVnpayTransactionRef(String vnpayTransactionRef) {
+        this.vnpayTransactionRef = vnpayTransactionRef;
+    }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    public LocalDateTime getTransactionDate() {
+        return transactionDate;
+    }
+
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        this.transactionDate = transactionDate;
+    }
 
 }
 

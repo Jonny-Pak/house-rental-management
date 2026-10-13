@@ -16,7 +16,6 @@ public class MembershipPackageService {
         this.membershipPackageRepository = membershipPackageRepository;
     }
 
-
     @Transactional(readOnly = true)
     public List<MembershipPackage> getAllPackages() {
         return membershipPackageRepository.findAll();

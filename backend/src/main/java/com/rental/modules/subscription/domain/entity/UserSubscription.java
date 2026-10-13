@@ -53,31 +53,67 @@ public class UserSubscription {
         if (status != null) this.status = status;
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public User getUser() {
+        return user;
+    }
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-    public MembershipPackage getMembershipPackage() { return membershipPackage; }
-    public void setMembershipPackage(MembershipPackage membershipPackage) { this.membershipPackage = membershipPackage; }
+    public MembershipPackage getMembershipPackage() {
+        return membershipPackage;
+    }
+    public void setMembershipPackage(MembershipPackage membershipPackage) {
+        this.membershipPackage = membershipPackage;
+    }
 
-    public LocalDateTime getPurchasedAt() { return purchasedAt; }
-    public void setPurchasedAt(LocalDateTime purchasedAt) { this.purchasedAt = purchasedAt; }
+    public LocalDateTime getPurchasedAt() {
+        return purchasedAt;
+    }
+    public void setPurchasedAt(LocalDateTime purchasedAt) {
+        this.purchasedAt = purchasedAt;
+    }
 
-    public Short getRemainingStandardQuota() { return remainingStandardQuota; }
-    public void setRemainingStandardQuota(Short remainingStandardQuota) { this.remainingStandardQuota = remainingStandardQuota; }
+    public Short getRemainingStandardQuota() {
+        return remainingStandardQuota;
+    }
+    public void setRemainingStandardQuota(Short remainingStandardQuota) {
+        this.remainingStandardQuota = remainingStandardQuota;
+    }
 
-    public Short getRemainingVipQuota() { return remainingVipQuota; }
-    public void setRemainingVipQuota(Short remainingVipQuota) { this.remainingVipQuota = remainingVipQuota; }
+    public Short getRemainingVipQuota() {
+        return remainingVipQuota;
+    }
+    public void setRemainingVipQuota(Short remainingVipQuota) {
+        this.remainingVipQuota = remainingVipQuota;
+    }
 
-    public Short getRemainingRefreshQuota() { return remainingRefreshQuota; }
-    public void setRemainingRefreshQuota(Short remainingRefreshQuota) { this.remainingRefreshQuota = remainingRefreshQuota; }
+    public Short getRemainingRefreshQuota() {
+        return remainingRefreshQuota;
+    }
+    public void setRemainingRefreshQuota(Short remainingRefreshQuota) {
+        this.remainingRefreshQuota = remainingRefreshQuota;
+    }
 
-    public LocalDateTime getQuotaResetAt() { return quotaResetAt; }
-    public void setQuotaResetAt(LocalDateTime quotaResetAt) { this.quotaResetAt = quotaResetAt; }
+    public LocalDateTime getQuotaResetAt() {
+        return quotaResetAt;
+    }
+    public void setQuotaResetAt(LocalDateTime quotaResetAt) {
+        this.quotaResetAt = quotaResetAt;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getStatus() {
+        return status;
+    }
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }
 

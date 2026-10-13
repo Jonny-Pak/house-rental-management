@@ -37,16 +37,20 @@ public class PaymentService {
         this.userSubscriptionRepository = userSubscriptionRepository;
     }
 
-
     @Transactional
     public String createPaymentUrl(String userEmail, Short packageId, HttpServletRequest request) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-                
-        MembershipPackage membershipPackage = membershipPackageRepository.findById(packageId)
-                .orElseThrow(() -> new RuntimeException("Membership package not found"));
+        java.util.Optional<User> userResult = userRepository.findByEmail(userEmail);
+        if (userResult.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+        User user = userResult.get();
 
-        // Format: pkgId_userId_timestamp
+        java.util.Optional<MembershipPackage> membershipPackageResult = membershipPackageRepository.findById(packageId);
+        if (membershipPackageResult.isEmpty()) {
+            throw new RuntimeException("Membership package not found");
+        }
+        MembershipPackage membershipPackage = membershipPackageResult.get();
+
         String vnp_TxnRef = packageId + "_" + user.getUserId() + "_" + System.currentTimeMillis();
 
         PaymentTransaction transaction = new PaymentTransaction();
@@ -54,46 +58,45 @@ public class PaymentService {
         transaction.setAmount(membershipPackage.getPrice());
         transaction.setVnpayTransactionRef(vnp_TxnRef);
         transaction.setStatus("PENDING");
-        transaction.setPaymentMethod(membershipPackage.getPrice().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : "VNPAY");
+        if (membershipPackage.getPrice().compareTo(BigDecimal.ZERO) == 0) {
+            transaction.setPaymentMethod("FREE");
+        } else {
+            transaction.setPaymentMethod("VNPAY");
+        }
         transaction.setTransactionDate(LocalDateTime.now());
-        
+
         paymentTransactionRepository.save(transaction);
 
         long amount = membershipPackage.getPrice().multiply(new BigDecimal(100)).longValue();
 
         if (amount == 0) {
-            // Free package, grant immediately
+
             transaction.setStatus("SUCCESS");
             paymentTransactionRepository.save(transaction);
-            
-            UserSubscription subscription = userSubscriptionRepository.findByUser(user)
-                    .orElse(new UserSubscription());
-            subscription.setUser(user);
-            subscription.setMembershipPackage(membershipPackage);
-            subscription.setPurchasedAt(LocalDateTime.now());
-            subscription.setRemainingStandardQuota((short) (safeShort(subscription.getRemainingStandardQuota()) + safeShort(membershipPackage.getStandardPostQuota())));
-            subscription.setRemainingVipQuota((short) (safeShort(subscription.getRemainingVipQuota()) + safeShort(membershipPackage.getVipPostQuota())));
-            subscription.setRemainingRefreshQuota((short) (safeShort(subscription.getRemainingRefreshQuota()) + safeShort(membershipPackage.getRefreshQuota())));
-            subscription.setStatus("ACTIVE");
-            subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
-            userSubscriptionRepository.save(subscription);
+
+            addPackageToUser(user, membershipPackage);
 
             return "FREE_SUCCESS";
         }
 
+        return buildVnPayUrl(user, packageId, vnp_TxnRef, amount, request);
+    }
+
+    private String buildVnPayUrl(User user, Short packageId, String vnp_TxnRef,
+            long amount, HttpServletRequest request) {
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", "2.1.0");
         vnp_Params.put("vnp_Command", "pay");
         vnp_Params.put("vnp_TmnCode", vnPayConfig.getVnp_TmnCode());
         vnp_Params.put("vnp_Amount", String.valueOf(amount));
         vnp_Params.put("vnp_CurrCode", "VND");
-        
+
         vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
         vnp_Params.put("vnp_OrderInfo", "Payment for Package ID " + packageId + " by User " + user.getUserId());
         vnp_Params.put("vnp_OrderType", "other");
         vnp_Params.put("vnp_Locale", "vn");
         vnp_Params.put("vnp_ReturnUrl", vnPayConfig.getVnp_ReturnUrl());
-        
+
         String clientIp = request.getHeader("X-FORWARDED-FOR");
         if (clientIp == null || clientIp.isEmpty()) {
             clientIp = request.getRemoteAddr();
@@ -122,7 +125,7 @@ public class PaymentService {
                     hashData.append(fieldName);
                     hashData.append('=');
                     hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
-                    
+
                     query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()));
                     query.append('=');
                     query.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
@@ -139,7 +142,7 @@ public class PaymentService {
         String queryUrl = query.toString();
         String vnp_SecureHash = vnPayConfig.hmacSHA512(vnPayConfig.getVnp_HashSecret(), hashData.toString());
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
-        
+
         return vnPayConfig.getVnp_PayUrl() + "?" + queryUrl;
     }
 
@@ -187,25 +190,13 @@ public class PaymentService {
         if ("00".equals(responseCode)) {
             transaction.setStatus("SUCCESS");
             paymentTransactionRepository.save(transaction);
-            
+
             String[] parts = vnp_TxnRef.split("_");
             if (parts.length >= 2) {
                 Short packageId = Short.valueOf(parts[0]);
                 MembershipPackage pkg = membershipPackageRepository.findById(packageId).orElse(null);
                 if (pkg != null) {
-                    UserSubscription subscription = userSubscriptionRepository.findByUser(transaction.getUser())
-                            .orElse(new UserSubscription());
-                    subscription.setUser(transaction.getUser());
-                    subscription.setMembershipPackage(pkg);
-                    subscription.setPurchasedAt(LocalDateTime.now());
-                    
-                    subscription.setRemainingStandardQuota((short) (safeShort(subscription.getRemainingStandardQuota()) + safeShort(pkg.getStandardPostQuota())));
-                    subscription.setRemainingVipQuota((short) (safeShort(subscription.getRemainingVipQuota()) + safeShort(pkg.getVipPostQuota())));
-                    subscription.setRemainingRefreshQuota((short) (safeShort(subscription.getRemainingRefreshQuota()) + safeShort(pkg.getRefreshQuota())));
-                                    
-                    subscription.setStatus("ACTIVE");
-                    subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
-                    userSubscriptionRepository.save(subscription);
+                    addPackageToUser(transaction.getUser(), pkg);
                 }
             }
             return true;
@@ -216,7 +207,24 @@ public class PaymentService {
         }
     }
 
+    private void addPackageToUser(User user, MembershipPackage membershipPackage) {
+        UserSubscription subscription = userSubscriptionRepository.findByUser(user)
+                .orElse(new UserSubscription());
+        subscription.setUser(user);
+        subscription.setMembershipPackage(membershipPackage);
+        subscription.setPurchasedAt(LocalDateTime.now());
+        subscription.setRemainingStandardQuota((short) (safeShort(subscription.getRemainingStandardQuota()) + safeShort(membershipPackage.getStandardPostQuota())));
+        subscription.setRemainingVipQuota((short) (safeShort(subscription.getRemainingVipQuota()) + safeShort(membershipPackage.getVipPostQuota())));
+        subscription.setRemainingRefreshQuota((short) (safeShort(subscription.getRemainingRefreshQuota()) + safeShort(membershipPackage.getRefreshQuota())));
+        subscription.setStatus("ACTIVE");
+        subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
+        userSubscriptionRepository.save(subscription);
+    }
+
     private short safeShort(Short val) {
-        return val != null ? val : 0;
+        if (val == null) {
+            return 0;
+        }
+        return val;
     }
 }
