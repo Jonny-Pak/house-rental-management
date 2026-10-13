@@ -101,7 +101,7 @@ class _ListingAreaSelectorState extends State<ListingAreaSelector> {
     final ward = await showModalBottomSheet<Ward>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _WardSearchSheet(wards: _wards, selectedId: _ward),
+      builder: (context) => WardSearchSheet(wards: _wards, selectedId: _ward),
     );
     if (ward != null && mounted) {
       setState(() => _ward = ward.id);
@@ -179,16 +179,20 @@ class _ListingAreaSelectorState extends State<ListingAreaSelector> {
   );
 }
 
-class _WardSearchSheet extends StatefulWidget {
-  const _WardSearchSheet({required this.wards, required this.selectedId});
+class WardSearchSheet extends StatefulWidget {
+  const WardSearchSheet({
+    super.key,
+    required this.wards,
+    required this.selectedId,
+  });
   final List<Ward> wards;
   final int? selectedId;
 
   @override
-  State<_WardSearchSheet> createState() => _WardSearchSheetState();
+  State<WardSearchSheet> createState() => WardSearchSheetState();
 }
 
-class _WardSearchSheetState extends State<_WardSearchSheet> {
+class WardSearchSheetState extends State<WardSearchSheet> {
   String _query = '';
 
   String _searchKey(String text) {
