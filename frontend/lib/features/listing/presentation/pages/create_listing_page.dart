@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -134,36 +136,42 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Bạn muốn cho thuê loại bất động sản nào?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      body: AppContent(
+        maxWidth: AppLayout.formWidth,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bạn muốn cho thuê loại bất động sản nào?',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 32),
+                _TypeOptionCard(
+                  title: 'Nhà nguyên căn',
+                  subtitle: 'Cho thuê toàn bộ ngôi nhà, phù hợp cho gia đình.',
+                  icon: Icons.house_rounded,
+                  onTap: () {
+                    cubit.updatePropertyType('WHOLE_HOUSE');
+                    _nextStep();
+                  },
+                ),
+                const SizedBox(height: 16),
+                _TypeOptionCard(
+                  title: 'Phòng trọ',
+                  subtitle:
+                      'Cho thuê phòng riêng lẻ trong dãy trọ hoặc nhà chung.',
+                  icon: Icons.meeting_room_rounded,
+                  onTap: () {
+                    cubit.updatePropertyType('BOARDING_ROOM');
+                    _nextStep();
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 32),
-            _TypeOptionCard(
-              title: 'Nhà nguyên căn',
-              subtitle: 'Cho thuê toàn bộ ngôi nhà, phù hợp cho gia đình.',
-              icon: Icons.house_rounded,
-              onTap: () {
-                cubit.updatePropertyType('WHOLE_HOUSE');
-                _nextStep();
-              },
-            ),
-            const SizedBox(height: 16),
-            _TypeOptionCard(
-              title: 'Phòng trọ',
-              subtitle: 'Cho thuê phòng riêng lẻ trong dãy trọ hoặc nhà chung.',
-              icon: Icons.meeting_room_rounded,
-              onTap: () {
-                cubit.updatePropertyType('BOARDING_ROOM');
-                _nextStep();
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );

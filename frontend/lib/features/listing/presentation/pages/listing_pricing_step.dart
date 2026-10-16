@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -97,172 +99,175 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
           child: Container(height: 1, color: _kBorder),
         ),
       ),
-      body: BlocBuilder<CreateListingCubit, CreateListingState>(
-        builder: (context, state) {
-          final cubit = context.read<CreateListingCubit>();
+      body: AppContent(
+        maxWidth: AppLayout.formWidth,
+        child: BlocBuilder<CreateListingCubit, CreateListingState>(
+          builder: (context, state) {
+            final cubit = context.read<CreateListingCubit>();
 
-          return Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    _buildSectionTitle('Diện tích (m²) *'),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _areaController,
-                      hint: 'Ví dụ: 30',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (value) => cubit.updateArea(
-                        double.tryParse(value.replaceAll(',', '.')) ?? 0,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSectionTitle('Khu vực hành chính *'),
-                    const SizedBox(height: 12),
-                    ListingAreaSelector(onChanged: cubit.updateAreaId),
-                    const SizedBox(height: 24),
-                    // --- Hình ảnh ---
-                    _buildSectionTitle('Hình ảnh (Tối đa 10 ảnh) *'),
-                    const SizedBox(height: 12),
-                    _buildImageSection(context, state, cubit),
-                    const SizedBox(height: 24),
-
-                    // --- Giá thuê ---
-                    _buildSectionTitle('Giá cho thuê (VND/tháng) *'),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _priceController,
-                      hint: 'Nhập giá thuê',
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        final price = double.tryParse(val);
-                        cubit.updateRentPrice(price);
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- Tiền cọc ---
-                    _buildSectionTitle('Tiền cọc (VND)'),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _depositController,
-                      hint: 'Nhập số tiền cọc (nếu có)',
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) {
-                        final deposit = double.tryParse(val);
-                        cubit.updateDepositAmount(deposit);
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- Loại người đăng ---
-                    _buildSectionTitle('Bạn là *'),
-                    const SizedBox(height: 12),
-                    _buildDropdown(
-                      value: state.posterType,
-                      hint: 'Chọn tư cách người đăng',
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'CA_NHAN',
-                          child: Text('Cá nhân (Chủ nhà)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'MOI_GIOI',
-                          child: Text('Môi giới'),
-                        ),
-                      ],
-                      onChanged: (val) => cubit.updatePosterType(val),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- Tiêu đề ---
-                    _buildSectionTitle('Tiêu đề bài đăng *'),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _titleController,
-                      hint: 'VD: Cho thuê nhà nguyên căn 2 tầng...',
-                      onChanged: (val) => cubit.updateTitle(val),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- Mô tả ---
-                    _buildSectionTitle('Mô tả chi tiết *'),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      controller: _descController,
-                      hint: 'Mô tả thêm về tiện ích, an ninh, điện nước...',
-                      maxLines: 5,
-                      onChanged: (val) => cubit.updateDescription(val),
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- Bottom Navigation ---
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: _kBorder)),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: Row(
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _canProceed(state)
-                              ? widget.onPreview
-                              : null,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _kAccent,
-                            side: const BorderSide(color: _kAccent),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Xem trước',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      _buildSectionTitle('Diện tích (m²) *'),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _areaController,
+                        hint: 'Ví dụ: 30',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (value) => cubit.updateArea(
+                          double.tryParse(value.replaceAll(',', '.')) ?? 0,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _canProceed(state)
-                              ? widget.onSubmit
-                              : null,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _kAccent,
-                            disabledBackgroundColor: Colors.grey.shade300,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle('Khu vực hành chính *'),
+                      const SizedBox(height: 12),
+                      ListingAreaSelector(onChanged: cubit.updateAreaId),
+                      const SizedBox(height: 24),
+                      // --- Hình ảnh ---
+                      _buildSectionTitle('Hình ảnh (Tối đa 10 ảnh) *'),
+                      const SizedBox(height: 12),
+                      _buildImageSection(context, state, cubit),
+                      const SizedBox(height: 24),
+
+                      // --- Giá thuê ---
+                      _buildSectionTitle('Giá cho thuê (VND/tháng) *'),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _priceController,
+                        hint: 'Nhập giá thuê',
+                        keyboardType: TextInputType.number,
+                        onChanged: (val) {
+                          final price = double.tryParse(val);
+                          cubit.updateRentPrice(price);
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- Tiền cọc ---
+                      _buildSectionTitle('Tiền cọc (VND)'),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _depositController,
+                        hint: 'Nhập số tiền cọc (nếu có)',
+                        keyboardType: TextInputType.number,
+                        onChanged: (val) {
+                          final deposit = double.tryParse(val);
+                          cubit.updateDepositAmount(deposit);
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- Loại người đăng ---
+                      _buildSectionTitle('Bạn là *'),
+                      const SizedBox(height: 12),
+                      _buildDropdown(
+                        value: state.posterType,
+                        hint: 'Chọn tư cách người đăng',
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'CA_NHAN',
+                            child: Text('Cá nhân (Chủ nhà)'),
                           ),
-                          child: const Text(
-                            'Đăng tin',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          DropdownMenuItem(
+                            value: 'MOI_GIOI',
+                            child: Text('Môi giới'),
                           ),
-                        ),
+                        ],
+                        onChanged: (val) => cubit.updatePosterType(val),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- Tiêu đề ---
+                      _buildSectionTitle('Tiêu đề bài đăng *'),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _titleController,
+                        hint: 'VD: Cho thuê nhà nguyên căn 2 tầng...',
+                        onChanged: (val) => cubit.updateTitle(val),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- Mô tả ---
+                      _buildSectionTitle('Mô tả chi tiết *'),
+                      const SizedBox(height: 12),
+                      _buildTextField(
+                        controller: _descController,
+                        hint: 'Mô tả thêm về tiện ích, an ninh, điện nước...',
+                        maxLines: 5,
+                        onChanged: (val) => cubit.updateDescription(val),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+
+                // --- Bottom Navigation ---
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: _kBorder)),
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _canProceed(state)
+                                ? widget.onPreview
+                                : null,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _kAccent,
+                              side: const BorderSide(color: _kAccent),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Xem trước',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _canProceed(state)
+                                ? widget.onSubmit
+                                : null,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _kAccent,
+                              disabledBackgroundColor: Colors.grey.shade300,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Đăng tin',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

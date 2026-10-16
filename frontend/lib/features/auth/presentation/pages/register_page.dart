@@ -78,6 +78,18 @@ class _RegisterPageState extends State<RegisterPage> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          textInputAction: isPassword
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onFieldSubmitted: (_) {
+            if (isPassword) {
+              if (context.read<AuthBloc>().state is! AuthLoading) {
+                _onRegister(context);
+              }
+            } else {
+              FocusScope.of(context).nextFocus();
+            }
+          },
           obscureText: isPassword ? _obscurePassword : false,
           style: const TextStyle(fontSize: 15, color: kPrimaryDark),
           decoration: InputDecoration(

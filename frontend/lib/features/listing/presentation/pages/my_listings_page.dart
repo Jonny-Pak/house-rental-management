@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -215,62 +217,72 @@ class _MyListingsPageState extends State<MyListingsPage> {
         icon: const Icon(Icons.add),
         label: const Text('Đăng tin'),
       ),
-      body: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final status in ['ALL', 'PENDING', 'APPROVED', 'REJECTED'])
-                  Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: ChoiceChip(
-                      label: Text(
-                        status == 'ALL' ? 'Tất cả' : _approval(status),
-                      ),
-                      selected: _filter == status,
-                      onSelected: (_) => setState(() => _filter = status),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (_busy) const LinearProgressIndicator(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_error!),
-                        TextButton(
-                          onPressed: _load,
-                          child: const Text('Thử lại'),
+      body: AppContent(
+        maxWidth: AppLayout.contentWidth,
+        child: Column(
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final status in [
+                    'ALL',
+                    'PENDING',
+                    'APPROVED',
+                    'REJECTED',
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: ChoiceChip(
+                        label: Text(
+                          status == 'ALL' ? 'Tất cả' : _approval(status),
                         ),
-                      ],
+                        selected: _filter == status,
+                        onSelected: (_) => setState(() => _filter = status),
+                      ),
                     ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        if (visible.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text(
-                              'Chưa có tin đăng trong danh sách này.',
-                            ),
+                ],
+              ),
+            ),
+            if (_busy) const LinearProgressIndicator(),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_error!),
+                          TextButton(
+                            onPressed: _load,
+                            child: const Text('Thử lại'),
                           ),
-                        ...visible.map(_card),
-                      ],
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          if (visible.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'Chưa có tin đăng trong danh sách này.',
+                              ),
+                            ),
+                          ResponsiveCards(
+                            children: visible.map(_card).toList(),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

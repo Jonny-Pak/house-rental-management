@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -262,95 +264,111 @@ class _ContractFormPageState extends State<ContractFormPage> {
     appBar: AppBar(
       title: Text(widget.existing == null ? 'Tạo hợp đồng' : 'Sửa bản nháp'),
     ),
-    body: _loading
-        ? const Center(child: CircularProgressIndicator())
-        : Form(
-            key: _form,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                if (_listings.isEmpty) ...[
-                  const Text('Bạn chưa có tin đã duyệt đang cho thuê.'),
-                  TextButton(onPressed: _load, child: const Text('Tải lại')),
-                ],
-                DropdownButtonFormField<int>(
-                  initialValue: _selectedListingId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Tin cho thuê của bạn',
+    body: AppContent(
+      maxWidth: AppLayout.formWidth,
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _form,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  if (_listings.isEmpty) ...[
+                    const Text('Bạn chưa có tin đã duyệt đang cho thuê.'),
+                    TextButton(onPressed: _load, child: const Text('Tải lại')),
+                  ],
+                  DropdownButtonFormField<int>(
+                    initialValue: _selectedListingId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Tin cho thuê của bạn',
+                    ),
+                    items: _listingOptions(),
+                    onChanged: _busy || widget.existing != null
+                        ? null
+                        : _selectListing,
                   ),
-                  items: _listingOptions(),
-                  onChanged: _busy || widget.existing != null
-                      ? null
-                      : _selectListing,
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _contactController,
-                  enabled: !_busy,
-                  keyboardType: TextInputType.text,
-                  decoration: const InputDecoration(
-                    labelText: 'Email hoặc số điện thoại người thuê',
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _contactController,
+                    enabled: !_busy,
+                    keyboardType: TextInputType.text,
+                    decoration: const InputDecoration(
+                      labelText: 'Email hoặc số điện thoại người thuê',
+                    ),
+                    onChanged: (_) => setState(() {
+                      _selectedTenantId = null;
+                      _tenantName = null;
+                    }),
                   ),
-                  onChanged: (_) => setState(() {
-                    _selectedTenantId = null;
-                    _tenantName = null;
-                  }),
-                ),
-                TextButton(
-                  onPressed: _busy || _selectedListingId == null
-                      ? null
-                      : _lookup,
-                  child: const Text('Tìm người thuê'),
-                ),
-                if (_tenantName != null)
-                  Text(
-                    'Người thuê: $_tenantName',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  TextButton(
+                    onPressed: _busy || _selectedListingId == null
+                        ? null
+                        : _lookup,
+                    child: const Text('Tìm người thuê'),
                   ),
-                const SizedBox(height: 20),
-                OutlinedButton(
-                  onPressed: _busy ? null : () => _pick(true),
-                  child: Text(
-                    'Bắt đầu: ${_startDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_startDate!)}',
+                  if (_tenantName != null)
+                    Text(
+                      'Người thuê: $_tenantName',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  const SizedBox(height: 20),
+                  ResponsiveCards(
+                    minCardWidth: 280,
+                    children: [
+                      OutlinedButton(
+                        onPressed: _busy ? null : () => _pick(true),
+                        child: Text(
+                          'Bắt đầu: ${_startDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_startDate!)}',
+                        ),
+                      ),
+                      OutlinedButton(
+                        onPressed: _busy ? null : () => _pick(false),
+                        child: Text(
+                          'Kết thúc: ${_endDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                OutlinedButton(
-                  onPressed: _busy ? null : () => _pick(false),
-                  child: Text(
-                    'Kết thúc: ${_endDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                  const SizedBox(height: 20),
+                  ResponsiveCards(
+                    minCardWidth: 280,
+                    children: [
+                      _amount(
+                        'Tiền thuê / tháng (VNĐ)',
+                        _rentController,
+                        rent: true,
+                      ),
+                      _amount('Tiền cọc (VNĐ)', _depositController),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 20),
-                _amount('Tiền thuê / tháng (VNĐ)', _rentController, rent: true),
-                const SizedBox(height: 16),
-                _amount('Tiền cọc (VNĐ)', _depositController),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _noteController,
-                  maxLines: 3,
-                  maxLength: 2000,
-                  decoration: const InputDecoration(
-                    labelText: 'Ghi chú / thỏa thuận thêm',
-                  ),
-                ),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _noteController,
+                    maxLines: 3,
+                    maxLength: 2000,
+                    decoration: const InputDecoration(
+                      labelText: 'Ghi chú / thỏa thuận thêm',
                     ),
                   ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _busy || _listings.isEmpty ? null : _save,
-                  child: Text(
-                    _busy ? 'Đang xử lý…' : 'Lưu và chờ người thuê xác nhận',
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _busy || _listings.isEmpty ? null : _save,
+                    child: Text(
+                      _busy ? 'Đang xử lý…' : 'Lưu và chờ người thuê xác nhận',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+    ),
   );
 }

@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -149,81 +151,86 @@ class _EditListingPageState extends State<EditListingPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Sửa tin đăng')),
-    body: AbsorbPointer(
-      absorbing: _busy,
-      child: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            const Text(
-              'Sau khi lưu, tin sẽ tạm ngừng xuất hiện trên bản đồ để Admin duyệt lại.',
-            ),
-            const SizedBox(height: 20),
-            _field('title', 'Tiêu đề'),
-            _field('description', 'Mô tả', maxLines: 4),
-            _field('rentPrice', 'Giá thuê (VND/tháng)', number: true),
-            _field('areaSqm', 'Diện tích (m²)', number: true),
-            _field('address', 'Địa chỉ'),
-            _field('latitude', 'Vĩ độ', number: true),
-            _field('longitude', 'Kinh độ', number: true),
-            const Text('Ảnh tin đăng (1–10 ảnh)'),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final url in _images)
-                  InputChip(
-                    label: SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
-                            const Icon(Icons.broken_image),
+    body: AppContent(
+      maxWidth: AppLayout.formWidth,
+      child: AbsorbPointer(
+        absorbing: _busy,
+        child: Form(
+          key: _form,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              const Text(
+                'Sau khi lưu, tin sẽ tạm ngừng xuất hiện trên bản đồ để Admin duyệt lại.',
+              ),
+              const SizedBox(height: 20),
+              _field('title', 'Tiêu đề'),
+              _field('description', 'Mô tả', maxLines: 4),
+              _field('rentPrice', 'Giá thuê (VND/tháng)', number: true),
+              _field('areaSqm', 'Diện tích (m²)', number: true),
+              _field('address', 'Địa chỉ'),
+              _field('latitude', 'Vĩ độ', number: true),
+              _field('longitude', 'Kinh độ', number: true),
+              const Text('Ảnh tin đăng (1–10 ảnh)'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final url in _images)
+                    InputChip(
+                      label: SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) =>
+                              const Icon(Icons.broken_image),
+                        ),
                       ),
+                      onDeleted: () => setState(() => _images.remove(url)),
                     ),
-                    onDeleted: () => setState(() => _images.remove(url)),
-                  ),
-                for (final file in _newImages)
-                  InputChip(
-                    label: Text(file.name),
-                    onDeleted: () => setState(() => _newImages.remove(file)),
-                  ),
-              ],
-            ),
-            TextButton.icon(
-              onPressed: _images.length + _newImages.length >= 10
-                  ? null
-                  : () async {
-                      final files = await ImagePicker().pickMultiImage();
-                      if (mounted) {
-                        setState(
-                          () => _newImages.addAll(
-                            files.take(10 - _images.length - _newImages.length),
-                          ),
-                        );
-                      }
-                    },
-              icon: const Icon(Icons.add_photo_alternate),
-              label: const Text('Thêm ảnh'),
-            ),
-            SwitchListTile(
-              title: const Text('Thay đổi khu vực hành chính'),
-              value: _changeArea,
-              onChanged: (value) => setState(() {
-                _changeArea = value;
-                _areaId = value ? null : widget.listing.areaId;
-              }),
-            ),
-            if (_changeArea)
-              ListingAreaSelector(onChanged: (id) => _areaId = id),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'Đang lưu…' : 'Lưu và gửi duyệt lại'),
-            ),
-          ],
+                  for (final file in _newImages)
+                    InputChip(
+                      label: Text(file.name),
+                      onDeleted: () => setState(() => _newImages.remove(file)),
+                    ),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: _images.length + _newImages.length >= 10
+                    ? null
+                    : () async {
+                        final files = await ImagePicker().pickMultiImage();
+                        if (mounted) {
+                          setState(
+                            () => _newImages.addAll(
+                              files.take(
+                                10 - _images.length - _newImages.length,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                icon: const Icon(Icons.add_photo_alternate),
+                label: const Text('Thêm ảnh'),
+              ),
+              SwitchListTile(
+                title: const Text('Thay đổi khu vực hành chính'),
+                value: _changeArea,
+                onChanged: (value) => setState(() {
+                  _changeArea = value;
+                  _areaId = value ? null : widget.listing.areaId;
+                }),
+              ),
+              if (_changeArea)
+                ListingAreaSelector(onChanged: (id) => _areaId = id),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _busy ? null : _save,
+                child: Text(_busy ? 'Đang lưu…' : 'Lưu và gửi duyệt lại'),
+              ),
+            ],
+          ),
         ),
       ),
     ),

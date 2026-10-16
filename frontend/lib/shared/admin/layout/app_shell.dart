@@ -11,6 +11,7 @@ import '../../../app/admin/theme/app_theme.dart';
 import '../../../features/admin/presentation/screens/search/command_palette.dart';
 import '../../../app/admin/l10n/app_localizations.dart';
 import 'promo_card.dart';
+import '../../../core/layout/app_layout.dart';
 
 /// The persistent shell.
 ///
@@ -26,56 +27,62 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = KiteColors.of(context);
-    final mobile = KiteBreak.isMobile(context);
 
     // ⌘K on macOS, Ctrl+K elsewhere. Bound on the shell rather than per
     // screen, so it works from anywhere behind the auth guard.
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
-            showCommandPalette(context),
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
-            showCommandPalette(context),
-      },
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
-          backgroundColor: c.background,
-          drawer: mobile
-              ? Drawer(child: _SidebarBody(location: location))
-              : null,
-          bottomNavigationBar: mobile ? _BottomBar(location: location) : null,
-          body: SafeArea(
-            child: Row(
-              children: [
-                if (!mobile)
-                  SizedBox(
-                    width: 248,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: c.card,
-                        // Directional: in RTL the sidebar moves to the right edge, so its
-                        // divider has to move with it.
-                        border: BorderDirectional(
-                          end: BorderSide(color: c.border),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mobile = constraints.maxWidth < AppLayout.expanded;
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
+                showCommandPalette(context),
+            const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+                showCommandPalette(context),
+          },
+          child: Focus(
+            autofocus: true,
+            child: Scaffold(
+              backgroundColor: c.background,
+              drawer: mobile
+                  ? Drawer(child: _SidebarBody(location: location))
+                  : null,
+              bottomNavigationBar: mobile
+                  ? _BottomBar(location: location)
+                  : null,
+              body: SafeArea(
+                child: Row(
+                  children: [
+                    if (!mobile)
+                      SizedBox(
+                        width: 248,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: c.card,
+                            // Directional: in RTL the sidebar moves to the right edge, so its
+                            // divider has to move with it.
+                            border: BorderDirectional(
+                              end: BorderSide(color: c.border),
+                            ),
+                          ),
+                          child: _SidebarBody(location: location),
                         ),
                       ),
-                      child: _SidebarBody(location: location),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _TopBar(location: location, mobile: mobile),
+                          Expanded(child: child),
+                        ],
+                      ),
                     ),
-                  ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _TopBar(location: location, mobile: mobile),
-                      Expanded(child: child),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -102,7 +109,14 @@ class _SidebarBody extends StatelessWidget {
             children: [
               Icon(Icons.home_work_rounded, size: 22, color: c.primary),
               const SizedBox(width: KiteSpace.sm),
-              Text('Rental Admin', style: t.h4),
+              Expanded(
+                child: Text(
+                  'Rental Admin',
+                  style: t.h4,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -178,11 +192,15 @@ class _NavTile extends StatelessWidget {
                   color: active ? c.primary : c.mutedForeground,
                 ),
                 const SizedBox(width: KiteSpace.md),
-                Text(
-                  item.labelOf(L.of(context)),
-                  style: t.small.copyWith(
-                    color: active ? c.primary : c.mutedForeground,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    item.labelOf(L.of(context)),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.small.copyWith(
+                      color: active ? c.primary : c.mutedForeground,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -269,7 +287,9 @@ class _TopBar extends ConsumerWidget {
 
     return Container(
       height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: KiteSpace.xl),
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? KiteSpace.sm : KiteSpace.xl,
+      ),
       decoration: BoxDecoration(
         color: c.card,
         border: BorderDirectional(bottom: BorderSide(color: c.border)),
@@ -282,8 +302,14 @@ class _TopBar extends ConsumerWidget {
               color: c.mutedForeground,
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
-          Text(title, style: t.large),
-          const Spacer(),
+          Expanded(
+            child: Text(
+              title,
+              style: t.large,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           if (wide) ...[
             const _SearchTrigger(),
             const SizedBox(width: KiteSpace.md),

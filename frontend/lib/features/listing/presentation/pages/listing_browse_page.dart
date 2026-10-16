@@ -1,3 +1,4 @@
+import '../../../../core/layout/app_layout.dart';
 import '../../../map/presentation/pages/listing_map_page.dart';
 import '../../data/models/listing_filter.dart';
 import '../widgets/listing_filter_bar.dart';
@@ -90,124 +91,138 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ListingFilterBar(
-            filter: _filter,
-            autofocus: widget.autofocus,
-            onChanged: (filter) => setState(() => _filter = filter),
-          ),
-          if (!_loading && _error == null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('${items.length} tin phù hợp'),
-              ),
+      body: AppContent(
+        maxWidth: AppLayout.contentWidth,
+        child: Column(
+          children: [
+            ListingFilterBar(
+              filter: _filter,
+              autofocus: widget.autofocus,
+              onChanged: (filter) => setState(() => _filter = filter),
             ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_error!),
-                        TextButton(
-                          onPressed: _load,
-                          child: const Text('Thử lại'),
-                        ),
-                      ],
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        if (items.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text(
-                              'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.',
-                            ),
+            if (!_loading && _error == null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('${items.length} tin phù hợp'),
+                ),
+              ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_error!),
+                          TextButton(
+                            onPressed: _load,
+                            child: const Text('Thử lại'),
                           ),
-                        for (final l in items)
-                          Card(
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: () => _detail(l),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: l.imageUrl == null
-                                          ? const SizedBox(
-                                              width: 80,
-                                              height: 86,
-                                              child: Icon(
-                                                Symbols.home_work,
-                                                size: 40,
-                                              ),
-                                            )
-                                          : Image.network(
-                                              l.imageUrl!,
-                                              width: 80,
-                                              height: 86,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, _, _) =>
-                                                  const SizedBox(
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          if (items.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.',
+                              ),
+                            ),
+                          ResponsiveCards(
+                            children: [
+                              for (final l in items)
+                                Card(
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    onTap: () => _detail(l),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            child: l.imageUrl == null
+                                                ? const SizedBox(
                                                     width: 80,
                                                     height: 86,
                                                     child: Icon(
-                                                      Symbols.broken_image,
+                                                      Symbols.home_work,
+                                                      size: 40,
                                                     ),
+                                                  )
+                                                : Image.network(
+                                                    l.imageUrl!,
+                                                    width: 80,
+                                                    height: 86,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, _, _) =>
+                                                        const SizedBox(
+                                                          width: 80,
+                                                          height: 86,
+                                                          child: Icon(
+                                                            Symbols
+                                                                .broken_image,
+                                                          ),
+                                                        ),
                                                   ),
-                                            ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            l.title,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                            ),
                                           ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            _price(l),
-                                            style: const TextStyle(
-                                              color: Color(0xFFFF751B),
-                                              fontWeight: FontWeight.w600,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  l.title,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  _price(l),
+                                                  style: const TextStyle(
+                                                    color: Color(0xFFFF751B),
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                Text('${l.areaSqm} m²'),
+                                                Text(
+                                                  l.address ?? '',
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          Text('${l.areaSqm} m²'),
-                                          Text(
-                                            l.address ?? '',
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ),
+                            ],
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

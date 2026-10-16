@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kite_ui/shadcn.dart';
 
+import '../../core/layout/app_layout.dart';
+
 import 'l10n/locale_controller.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -15,7 +17,8 @@ class KiteApp extends ConsumerWidget {
     final theme = ref.watch(themeProvider);
     final locale = ref.watch(localeProvider);
     return ShadApp.router(
-      title: 'Kite',
+      title: 'Rental Admin',
+      scrollBehavior: const AppScrollBehavior(),
       themeMode: theme.mode,
       theme: theme.data(Brightness.light),
       darkTheme: theme.data(Brightness.dark),

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/layout/app_layout.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'House Rental Management',
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const AppScrollBehavior(),
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: const Color(0xFFD85D15),
