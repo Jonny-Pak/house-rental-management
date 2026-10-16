@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -66,70 +68,77 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
         ),
       ],
     ),
-    body: _loading
-        ? const Center(child: CircularProgressIndicator())
-        : RefreshIndicator(
-            onRefresh: _load,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: [
-                TextButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SavedPropertiesPage(),
-                    ),
-                  ),
-                  icon: const Icon(Symbols.home),
-                  label: const Text('Xem khu trọ đã lưu'),
-                ),
-                if (_error != null) ...[
-                  Text(_error!),
-                  TextButton(onPressed: _load, child: const Text('Thử lại')),
-                ] else if (_items.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'Chưa có tin yêu thích đang cho thuê. Hãy mở một tin và nhấn biểu tượng trái tim.',
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                else
-                  ..._items.map(
-                    (listing) => Card(
-                      child: ListTile(
-                        title: Text(listing.title),
-                        subtitle: Text(
-                          '${NumberFormat.decimalPattern('vi_VN').format(listing.rentPrice)} đ/tháng\n${listing.address ?? ''}',
-                        ),
-                        isThreeLine: true,
-                        trailing: IconButton(
-                          tooltip: 'Bỏ lưu tin',
-                          onPressed: () => _remove(listing),
-                          icon: const Icon(
-                            Symbols.favorite,
-                            fill: 1,
-                            color: Colors.red,
-                          ),
-                        ),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ListingDetailPage(
-                                listingId: listing.id,
-                                repository: _repository,
-                              ),
-                            ),
-                          );
-                          if (mounted) await _load();
-                        },
+    body: AppContent(
+      maxWidth: AppLayout.contentWidth,
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SavedPropertiesPage(),
                       ),
                     ),
+                    icon: const Icon(Symbols.home),
+                    label: const Text('Xem khu trọ đã lưu'),
                   ),
-              ],
+                  if (_error != null) ...[
+                    Text(_error!),
+                    TextButton(onPressed: _load, child: const Text('Thử lại')),
+                  ] else if (_items.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Text(
+                        'Chưa có tin yêu thích đang cho thuê. Hãy mở một tin và nhấn biểu tượng trái tim.',
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    ResponsiveCards(
+                      children: _items
+                          .map(
+                            (listing) => Card(
+                              child: ListTile(
+                                title: Text(listing.title),
+                                subtitle: Text(
+                                  '${NumberFormat.decimalPattern('vi_VN').format(listing.rentPrice)} đ/tháng\n${listing.address ?? ''}',
+                                ),
+                                isThreeLine: true,
+                                trailing: IconButton(
+                                  tooltip: 'Bỏ lưu tin',
+                                  onPressed: () => _remove(listing),
+                                  icon: const Icon(
+                                    Symbols.favorite,
+                                    fill: 1,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                onTap: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ListingDetailPage(
+                                        listingId: listing.id,
+                                        repository: _repository,
+                                      ),
+                                    ),
+                                  );
+                                  if (mounted) await _load();
+                                },
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                ],
+              ),
             ),
-          ),
+    ),
   );
 }

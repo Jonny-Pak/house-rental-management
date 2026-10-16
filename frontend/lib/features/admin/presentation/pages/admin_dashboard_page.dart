@@ -14,12 +14,14 @@ import '../bloc/admin_listing_state.dart';
 import '../../../../shared/admin/widgets/states.dart';
 
 class AdminDashboardPage extends StatelessWidget {
-  const AdminDashboardPage({super.key});
+  const AdminDashboardPage({super.key, this.repository});
+  final AdminListingRepository? repository;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AdminListingCubit(AdminListingRepository(ApiClient())),
+      create: (_) =>
+          AdminListingCubit(repository ?? AdminListingRepository(ApiClient())),
       child: const _AdminDashboardView(),
     );
   }
@@ -76,7 +78,12 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
     showDialog(
       context: context,
       builder: (ctx) {
+        final compact = MediaQuery.sizeOf(ctx).width < 600;
         return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           backgroundColor: c.card,
           shape: RoundedRectangleBorder(
             borderRadius: KiteRadius.allLg,
@@ -94,19 +101,20 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     // Header
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: c.primary.withValues(alpha: 0.1),
-                            borderRadius: KiteRadius.allSm,
+                        if (!compact)
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: c.primary.withValues(alpha: 0.1),
+                              borderRadius: KiteRadius.allSm,
+                            ),
+                            child: Icon(
+                              Icons.home_work_rounded,
+                              color: c.primary,
+                              size: 20,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.home_work_rounded,
-                            color: c.primary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: KiteSpace.md),
+                        if (!compact) const SizedBox(width: KiteSpace.md),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,8 +130,9 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                             ],
                           ),
                         ),
-                        const KiteBadge('Chờ duyệt', tone: KiteTone.warning),
-                        const SizedBox(width: KiteSpace.sm),
+                        if (!compact)
+                          const KiteBadge('Chờ duyệt', tone: KiteTone.warning),
+                        if (!compact) const SizedBox(width: KiteSpace.sm),
                         IconButton(
                           icon: Icon(
                             Icons.close,
@@ -134,6 +143,11 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                         ),
                       ],
                     ),
+                    if (compact)
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: KiteBadge('Chờ duyệt', tone: KiteTone.warning),
+                      ),
                     const SizedBox(height: KiteSpace.lg),
                     const Divider(height: 1),
                     const SizedBox(height: KiteSpace.lg),
@@ -247,32 +261,33 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     const SizedBox(height: KiteSpace.xl),
 
                     // Action buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      runSpacing: KiteSpace.sm,
                       children: [
-                        KiteButton.ghost(
+                        TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
                           child: const Text('Đóng'),
                         ),
                         const SizedBox(width: KiteSpace.sm),
-                        KiteButton.destructive(
-                          leading: const Icon(Icons.close, size: 16),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.close, size: 16),
                           onPressed: () {
                             Navigator.of(ctx).pop();
                             _showRejectDialog(context, listing.id);
                           },
-                          child: const Text('Từ chối'),
+                          label: const Text('Từ chối'),
                         ),
                         const SizedBox(width: KiteSpace.sm),
-                        KiteButton(
-                          leading: const Icon(Icons.check, size: 16),
+                        FilledButton.icon(
+                          icon: const Icon(Icons.check, size: 16),
                           onPressed: () {
                             Navigator.of(ctx).pop();
                             context.read<AdminListingCubit>().approveListing(
                               listing.id,
                             );
                           },
-                          child: const Text('Phê duyệt tin'),
+                          label: const Text('Phê duyệt tin'),
                         ),
                       ],
                     ),
@@ -302,57 +317,65 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.all(KiteSpace.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: c.destructive,
-                        size: 22,
-                      ),
-                      const SizedBox(width: KiteSpace.sm),
-                      Text('Từ chối bài đăng #$listingId', style: t.h4),
-                    ],
-                  ),
-                  const SizedBox(height: KiteSpace.md),
-                  Text(
-                    'Vui lòng nhập lý do từ chối để gửi phản hồi cho chủ bài đăng.',
-                    style: t.muted.copyWith(fontSize: 13),
-                  ),
-                  const SizedBox(height: KiteSpace.lg),
-                  KiteTextarea(
-                    controller: reasonController,
-                    placeholder: 'VD: Hình ảnh không hợp lệ, giá thuê hoặc địa chỉ chưa rõ ràng...',
-                  ),
-                  const SizedBox(height: KiteSpace.xl),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      KiteButton.ghost(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Hủy'),
-                      ),
-                      const SizedBox(width: KiteSpace.sm),
-                      KiteButton.destructive(
-                        onPressed: () {
-                          final text = reasonController.text.trim();
-                          if (text.isEmpty) return;
-                          Navigator.of(ctx).pop();
-                          context.read<AdminListingCubit>().rejectListing(
-                            listingId,
-                            text,
-                          );
-                        },
-                        child: const Text('Xác nhận từ chối'),
-                      ),
-                    ],
-                  ),
-                ],
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(KiteSpace.xl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: c.destructive,
+                          size: 22,
+                        ),
+                        const SizedBox(width: KiteSpace.sm),
+                        Expanded(
+                          child: Text(
+                            'Từ chối bài đăng #$listingId',
+                            style: t.h4,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: KiteSpace.md),
+                    Text(
+                      'Vui lòng nhập lý do từ chối để gửi phản hồi cho chủ bài đăng.',
+                      style: t.muted.copyWith(fontSize: 13),
+                    ),
+                    const SizedBox(height: KiteSpace.lg),
+                    KiteTextarea(
+                      controller: reasonController,
+                      placeholder: 'VD: Hình ảnh không hợp lệ, giá thuê hoặc địa chỉ chưa rõ ràng...',
+                    ),
+                    const SizedBox(height: KiteSpace.xl),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      runSpacing: KiteSpace.sm,
+                      children: [
+                        KiteButton.ghost(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Hủy'),
+                        ),
+                        const SizedBox(width: KiteSpace.sm),
+                        KiteButton.destructive(
+                          onPressed: () {
+                            final text = reasonController.text.trim();
+                            if (text.isEmpty) return;
+                            Navigator.of(ctx).pop();
+                            context.read<AdminListingCubit>().rejectListing(
+                              listingId,
+                              text,
+                            );
+                          },
+                          child: const Text('Xác nhận từ chối'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -730,8 +753,8 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                       ),
                     ),
                     // Type selector pills
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    Wrap(
+                      runSpacing: KiteSpace.sm,
                       children: [
                         for (final type in [
                           'Tất cả',
@@ -901,7 +924,63 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
   Widget _buildResponsiveList(
     BuildContext context,
     List<AdminListingModel> items,
-  ) {
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth >= 900) return _buildTable(context, items);
+      final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final item in items)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(item.address),
+                    Text(
+                      '${currency.format(item.rentPrice)} • ${item.areaSqm} m²',
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => _showReviewDialog(context, item),
+                          child: const Text('Xem xét'),
+                        ),
+                        FilledButton(
+                          onPressed: () => context
+                              .read<AdminListingCubit>()
+                              .approveListing(item.id),
+                          child: const Text('Phê duyệt'),
+                        ),
+                        TextButton(
+                          onPressed: () => _showRejectDialog(context, item.id),
+                          child: const Text('Từ chối'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+
+  Widget _buildTable(BuildContext context, List<AdminListingModel> items) {
     final c = KiteColors.of(context);
     final t = KiteText.of(context);
     final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
@@ -967,7 +1046,7 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                 ),
               ),
               SizedBox(
-                width: 190,
+                width: 240,
                 child: Text(
                   'THAO TÁC',
                   textAlign: TextAlign.right,
@@ -1138,7 +1217,7 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
 
                   // Actions
                   SizedBox(
-                    width: 190,
+                    width: 240,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [

@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -163,7 +165,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-        children: cards,
+        children: [ResponsiveCards(children: cards)],
       ),
     );
   }
@@ -190,19 +192,23 @@ class _MyContractsPageState extends State<MyContractsPage> {
         ],
       ),
       floatingActionButton: createButton,
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedStatus,
-              decoration: const InputDecoration(labelText: 'Trạng thái'),
-              items: _statusItems(),
-              onChanged: (status) => setState(() => _selectedStatus = status!),
+      body: AppContent(
+        maxWidth: AppLayout.contentWidth,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: DropdownButtonFormField<String>(
+                initialValue: _selectedStatus,
+                decoration: const InputDecoration(labelText: 'Trạng thái'),
+                items: _statusItems(),
+                onChanged: (status) =>
+                    setState(() => _selectedStatus = status!),
+              ),
             ),
-          ),
-          Expanded(child: _buildContractList()),
-        ],
+            Expanded(child: _buildContractList()),
+          ],
+        ),
       ),
     );
   }
@@ -379,7 +385,10 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           ),
         ],
       ),
-      body: _buildDetailsBody(),
+      body: AppContent(
+        maxWidth: AppLayout.formWidth,
+        child: _buildDetailsBody(),
+      ),
     );
   }
 }

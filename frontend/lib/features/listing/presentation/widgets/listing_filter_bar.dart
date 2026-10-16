@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -40,12 +43,23 @@ class _ListingFilterBarState extends State<ListingFilterBar> {
   }
 
   Future<void> _filters() async {
-    final result = await showModalBottomSheet<ListingFilter>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) =>
-          ListingFilterSheet(initial: widget.filter, areas: widget.areas),
+    final Widget sheet = ListingFilterSheet(
+      initial: widget.filter,
+      areas: widget.areas,
     );
+    final ListingFilter? result;
+    if (MediaQuery.sizeOf(context).width >= AppLayout.compact) {
+      result = await showDialog<ListingFilter>(
+        context: context,
+        builder: (_) => Dialog(child: SizedBox(width: 560, child: sheet)),
+      );
+    } else {
+      result = await showModalBottomSheet<ListingFilter>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => sheet,
+      );
+    }
     if (mounted && result != null) widget.onChanged(result);
   }
 

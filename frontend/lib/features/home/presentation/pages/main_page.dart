@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
+import 'dart:math' as math;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/layout/app_layout.dart';
 import '../../../auth/presentation/logout.dart';
 import '../../../listing/presentation/pages/saved_listings_page.dart';
 import '../../../listing/presentation/pages/my_listings_page.dart';
@@ -78,26 +82,101 @@ class _MainPageState extends State<MainPage> {
               await _navigators[_index].currentState?.maybePop() ?? false;
           if (!popped && mounted && _index != 0) _select(0);
         },
-        child: Scaffold(
-          key: _scaffold,
-          extendBody: _index == 0 && _atTabRoot[_index],
-          backgroundColor: const Color(0xFFF7F7F7),
-          drawer: _drawer(context),
-          body: IndexedStack(
-            index: _index,
-            children: [
-              for (var i = 0; i < 5; i++)
-                _visited.contains(i)
-                    ? Navigator(
-                        key: _navigators[i],
-                        observers: [_routeObservers[i]],
-                        onGenerateRoute: (_) =>
-                            MaterialPageRoute(builder: (_) => _page(i)),
-                      )
-                    : const SizedBox.shrink(),
-            ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final showRail = constraints.maxWidth >= AppLayout.compact;
+            return Scaffold(
+              key: _scaffold,
+              extendBody: !showRail && _index == 0 && _atTabRoot[_index],
+              backgroundColor: const Color(0xFFF7F7F7),
+              drawer: _drawer(context),
+              body: Row(
+                children: [
+                  if (showRail)
+                    _rail(context, constraints.maxWidth >= AppLayout.expanded),
+                  Expanded(
+                    key: const ValueKey('tab-content'),
+                    child: IndexedStack(
+                      index: _index,
+                      children: [
+                        for (var i = 0; i < 5; i++)
+                          _visited.contains(i)
+                              ? Navigator(
+                                  key: _navigators[i],
+                                  observers: [_routeObservers[i]],
+                                  onGenerateRoute: (_) => MaterialPageRoute(
+                                    builder: (_) => _page(i),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              bottomNavigationBar: !showRail && _atTabRoot[_index]
+                  ? _navigation(context)
+                  : null,
+            );
+          },
+        ),
+      ),
+    ),
+  );
+
+  Widget _rail(BuildContext context, bool extended) => SizedBox(
+    width: extended ? 240 : 88,
+    child: SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: SizedBox(
+            height: math.max(560, constraints.maxHeight),
+            child: NavigationRail(
+              extended: extended,
+              selectedIndex: _index,
+              onDestinationSelected: _select,
+              backgroundColor: Colors.white,
+              indicatorColor: const Color(0xFFFFD5A1),
+              labelType: extended
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.selected,
+              leading: IconButton(
+                tooltip: 'Mở menu',
+                onPressed: () => _scaffold.currentState?.openDrawer(),
+                icon: const Icon(Symbols.menu),
+              ),
+              trailing: Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: IconButton(
+                  tooltip: 'Đăng xuất',
+                  onPressed: () => logout(context),
+                  icon: const Icon(Symbols.logout),
+                ),
+              ),
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Symbols.home),
+                  label: Text('Trang chủ'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Symbols.favorite),
+                  label: Text('Yêu thích'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Symbols.view_list),
+                  label: Text('Quản lý tin đăng'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Symbols.notifications),
+                  label: Text('Thông báo'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Symbols.person),
+                  label: Text('Tài khoản'),
+                ),
+              ],
+            ),
           ),
-          bottomNavigationBar: _atTabRoot[_index] ? _navigation(context) : null,
         ),
       ),
     ),

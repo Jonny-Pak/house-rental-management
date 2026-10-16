@@ -1,3 +1,5 @@
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -257,62 +259,74 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
       ),
       bottomNavigationBar: listing == null || _loading
           ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: dial.isEmpty
-                            ? null
-                            : () => _open(Uri(scheme: 'sms', path: dial)),
-                        icon: const Icon(Symbols.sms),
-                        label: const Text('Nhắn SMS'),
+          : AppContent(
+              shrinkWrap: true,
+              maxWidth: AppLayout.formWidth,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: dial.isEmpty
+                              ? null
+                              : () => _open(Uri(scheme: 'sms', path: dial)),
+                          icon: const Icon(Symbols.sms),
+                          label: const Text('Nhắn SMS'),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: _accent),
-                        onPressed: dial.isEmpty
-                            ? null
-                            : () => _open(Uri(scheme: 'tel', path: dial)),
-                        icon: const Icon(Symbols.call),
-                        label: const Text('Gọi chủ nhà'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _accent,
+                          ),
+                          onPressed: dial.isEmpty
+                              ? null
+                              : () => _open(Uri(scheme: 'tel', path: dial)),
+                          icon: const Icon(Symbols.call),
+                          label: const Text('Gọi chủ nhà'),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : listing == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Symbols.info, size: 48),
-                    const SizedBox(height: 16),
-                    Text(
-                      _error ?? 'Không tải được tin đăng.',
-                      textAlign: TextAlign.center,
-                    ),
-                    TextButton(onPressed: _load, child: const Text('Thử lại')),
-                  ],
+      body: AppContent(
+        maxWidth: AppLayout.formWidth,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : listing == null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Symbols.info, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        _error ?? 'Không tải được tin đăng.',
+                        textAlign: TextAlign.center,
+                      ),
+                      TextButton(
+                        onPressed: _load,
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: _content(listing, phone),
                 ),
               ),
-            )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: _content(listing, phone),
-              ),
-            ),
+      ),
     );
   }
 

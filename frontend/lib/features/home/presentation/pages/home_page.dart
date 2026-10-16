@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/layout/app_layout.dart';
+
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../theme/home_icon_colors.dart';
@@ -177,7 +180,7 @@ class HomePage extends StatelessWidget {
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
+          constraints: const BoxConstraints(maxWidth: AppLayout.contentWidth),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final scale = (constraints.maxWidth / 430).clamp(0.85, 1.15);
@@ -248,11 +251,15 @@ class HomePage extends StatelessWidget {
                                         color: _ink,
                                       ),
                                       SizedBox(width: 10),
-                                      Text(
-                                        'Tìm kiếm',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: _ink,
+                                      Expanded(
+                                        child: Text(
+                                          'Tìm kiếm',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: _ink,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -494,8 +501,15 @@ class _ActionGrid extends StatelessWidget {
       children: [
         for (final action in actions)
           SizedBox(
-            width: constraints.maxWidth / 4,
-            height: rowHeight * scale,
+            width:
+                constraints.maxWidth /
+                (MediaQuery.textScalerOf(context).scale(14) > 18
+                    ? (constraints.maxWidth >= 900 ? 4 : 2)
+                    : (constraints.maxWidth >= 900 ? 8 : 4)),
+            height:
+                rowHeight * scale +
+                (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 56) *
+                    2.5,
             child: Semantics(
               button: true,
               label: action.label.replaceAll('\n', ' '),
@@ -598,7 +612,7 @@ class _DiscoveryCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Ink(
-          height: 88,
+          height: MediaQuery.textScalerOf(context).scale(88),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -641,6 +655,8 @@ class _DiscoveryCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
                         height: 1.2,
@@ -651,6 +667,8 @@ class _DiscoveryCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 8,
                         color: Color(0xFF164269),
