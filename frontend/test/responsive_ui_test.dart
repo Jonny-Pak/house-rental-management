@@ -7,6 +7,7 @@ import 'package:frontend/core/layout/app_layout.dart';
 import 'package:frontend/features/auth/presentation/pages/login_page.dart';
 import 'package:frontend/features/home/presentation/pages/main_page.dart';
 import 'package:frontend/features/home/presentation/pages/home_page.dart';
+import 'package:frontend/features/home/presentation/widgets/home_feature_icon.dart';
 import 'package:frontend/features/user/data/models/user_profile.dart';
 import 'package:frontend/features/user/data/repositories/user_repository.dart';
 
@@ -132,32 +133,35 @@ void main() {
     }
   });
 
-  testWidgets(
-    'Home supports large text on a narrow screen',
-    (tester) async {
-      await resize(tester, const Size(320, 720));
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-        return tester.binding.setSurfaceSize(null);
-      });
-      await tester.pumpWidget(
-        MaterialApp(
-          scrollBehavior: const AppScrollBehavior(),
-          home: MediaQuery(
-            data: const MediaQueryData(
-              size: Size(320, 720),
-              textScaler: TextScaler.linear(1.5),
-            ),
-            child: const HomePage(),
+  testWidgets('Home supports large text on a narrow screen', (tester) async {
+    await resize(tester, const Size(320, 720));
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      return tester.binding.setSurfaceSize(null);
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        scrollBehavior: const AppScrollBehavior(),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(320, 720),
+            textScaler: TextScaler.linear(1.5),
           ),
+          child: const HomePage(),
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Symbols.home_work), findsWidgets);
-      expect(tester.takeException(), isNull);
-    },
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is HomeFeatureIcon && widget.icon == Symbols.home_work,
+      ),
+      findsWidgets,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'All platforms can choose the user interface and return to the launcher',

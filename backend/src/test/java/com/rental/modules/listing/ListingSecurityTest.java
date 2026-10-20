@@ -35,6 +35,12 @@ class ListingSecurityTest {
     @MockBean com.rental.modules.contract.service.ContractService leases;
     @Test void contractsRequireAuthenticationAndValidateRequests() throws Exception {
         mvc.perform(get("/api/v1/contracts/me")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/contracts/preview").contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/contracts/preview").header("Authorization","Bearer owner")
+                .contentType("application/json")
+                .content("{\"listingId\":1,\"tenantId\":2,\"startDate\":\"2027-01-01\",\"endDate\":\"2028-01-01\",\"monthlyRent\":5000000,\"depositAmount\":0}"))
+                .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/contracts").header("Authorization","Bearer owner")
                 .contentType("application/json").content("{}")).andExpect(status().isBadRequest());
         mvc.perform(patch("/api/v1/contracts/1/status").header("Authorization","Bearer owner")

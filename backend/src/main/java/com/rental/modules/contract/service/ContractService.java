@@ -36,11 +36,13 @@ public class ContractService {
     private final ContractRepository contracts;
     private final UserRepository users;
     private final ListingRepository listings;
+    private final ContractDocumentService documents;
 
-    public ContractService(ContractRepository contracts, UserRepository users, ListingRepository listings) {
+    public ContractService(ContractRepository contracts, UserRepository users, ListingRepository listings, ContractDocumentService documents) {
         this.contracts = contracts;
         this.users = users;
         this.listings = listings;
+        this.documents = documents;
     }
 
     public ContractResponse createContract(String email, CreateContractRequest request) {
@@ -56,8 +58,22 @@ public class ContractService {
                 request.getMonthlyRent(), request.getDepositAmount(),
                 "DRAFT", null, LocalDateTime.now());
         contract.setNote(request.getNote());
+        documents.validate(request.getDetails(), contract.getStartDate(), contract.getEndDate());
         contracts.save(contract);
+        documents.prepare(contract, request.getDetails());
         return toResponse(contract, landlord);
+    }
+
+    public Map<String, String> previewContract(String email, CreateContractRequest request) {
+        validateRequest(request);
+        User landlord = findUserByEmail(email);
+        Listing listing = getOwnedListing(landlord, request.getListingId());
+        User tenant = getValidTenant(request.getTenantId(), landlord);
+        Contract contract = new Contract(listing, landlord, tenant, request.getStartDate(), request.getEndDate(),
+                request.getMonthlyRent(), request.getDepositAmount(), "DRAFT", null, LocalDateTime.now());
+        contract.setNote(request.getNote());
+        documents.prepare(contract, request.getDetails());
+        return Map.of("contractType", contract.getContractType(), "content", contract.getDocumentText());
     }
 
     public ContractResponse getContract(String email, Long contractId) {
@@ -203,6 +219,7 @@ public class ContractService {
         contract.setMonthlyRent(request.getMonthlyRent());
         contract.setDepositAmount(request.getDepositAmount());
         contract.setNote(request.getNote());
+        documents.prepare(contract, request.getDetails());
         return toResponse(contract, landlord);
     }
 
@@ -236,6 +253,10 @@ public class ContractService {
             throw error(HttpStatus.CONFLICT, "Hợp đồng không còn chờ xác nhận hoặc đã quá hạn.");
         }
         checkListingAvailable(contract.getListing(), contract.getId());
+        if (contract.getDocumentText() == null || contract.getDocumentText().isBlank()) {
+            throw error(HttpStatus.CONFLICT, "Chủ nhà cần bổ sung hợp đồng theo mẫu trước khi xác nhận.");
+        }
+        contract.setAcceptedAt(LocalDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")));
         contract.setStatus("ACTIVE");
         contract.getListing().setRentalStatus("RENTED");
     }
@@ -380,15 +401,16 @@ public class ContractService {
         if (isLandlord(contract, user)) {
             role = "LANDLORD";
         }
+        var details = documents.readDetails(contract);
         return new ContractResponse(
                 contract.getId(), contract.getListing().getId(),
                 contract.getListingTitle(), contract.getListingAddress(),
-                contract.getLandlord().getUserId(), contract.getLandlord().getFullName(),
-                contract.getTenant().getUserId(), contract.getTenant().getFullName(),
+                contract.getLandlord().getUserId(), details == null ? contract.getLandlord().getFullName() : details.getLandlordName(),
+                contract.getTenant().getUserId(), details == null ? contract.getTenant().getFullName() : details.getTenantName(),
                 contract.getStartDate(), contract.getEndDate(),
                 contract.getMonthlyRent(), contract.getDepositAmount(),
                 contract.getStatus(), contract.getNote(), contract.getCreatedAt(),
-                role, contract.getVersion());
+                role, contract.getVersion(), contract.getContractType(), details, contract.getDocumentText(), contract.getAcceptedAt());
     }
 
     private LocalDate today() {

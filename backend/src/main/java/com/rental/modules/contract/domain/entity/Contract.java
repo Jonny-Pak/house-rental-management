@@ -74,6 +74,23 @@ public class Contract {
         return listingAddress;
     }
 
+    @Column(name = "contract_type", length = 20)
+    private String contractType;
+    @Column(name = "details_json", columnDefinition = "text")
+    private String detailsJson;
+    @Column(name = "document_text", columnDefinition = "text")
+    private String documentText;
+    @Column(name = "accepted_at")
+    private LocalDateTime acceptedAt;
+    public String getContractType() { return contractType; }
+    public void setContractType(String value) { contractType = value; }
+    public String getDetailsJson() { return detailsJson; }
+    public void setDetailsJson(String value) { detailsJson = value; }
+    public String getDocumentText() { return documentText; }
+    public void setDocumentText(String value) { documentText = value; }
+    public LocalDateTime getAcceptedAt() { return acceptedAt; }
+    public void setAcceptedAt(LocalDateTime value) { acceptedAt = value; }
+
     public Contract() {}
 
     public Contract(Listing listing, User landlord, User tenant, LocalDate startDate, LocalDate endDate, BigDecimal monthlyRent, BigDecimal depositAmount, String status, String contractFileUrl, LocalDateTime createdAt) {

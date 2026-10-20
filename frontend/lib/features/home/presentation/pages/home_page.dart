@@ -4,7 +4,7 @@ import '../../../../core/layout/app_layout.dart';
 
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../theme/home_icon_colors.dart';
+import '../widgets/home_feature_icon.dart';
 
 import '../../../contract/presentation/pages/my_contracts_page.dart';
 import '../../../listing/presentation/pages/create_listing_page.dart';
@@ -14,8 +14,8 @@ import '../../../map/presentation/pages/listing_map_page.dart';
 import '../../../membership/presentation/pages/membership_page.dart';
 
 const _orange = Color(0xFFFF751B);
-const _ink = Color(0xFF262626);
-const _background = Color(0xFFF7F7F7);
+const _ink = Color(0xFF0B1535);
+const _background = Color(0xFFF8F9FB);
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key, this.onMenu, this.onTabSelected});
@@ -43,7 +43,7 @@ class HomePage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 36, color: HomeIconColors.forIcon(icon)),
+              HomeFeatureIcon(icon: icon, size: 48),
               const SizedBox(height: 16),
               Text(
                 title,
@@ -123,7 +123,7 @@ class HomePage extends StatelessWidget {
   List<_Action> _secondary(BuildContext context) => [
     _Action(
       'Giới Thiệu',
-      Symbols.tune,
+      Symbols.menu_book,
       () => _information(
         context,
         'Giới thiệu',
@@ -174,273 +174,139 @@ class HomePage extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _background,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppLayout.contentWidth),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final scale = (constraints.maxWidth / 430).clamp(0.85, 1.15);
-              final side = 20.0 * scale;
-              return SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      height: 188 * scale + MediaQuery.paddingOf(context).top,
-                      decoration: const BoxDecoration(
-                        color: _orange,
-                        borderRadius: BorderRadius.vertical(
-                          bottom: Radius.circular(24),
-                        ),
-                      ),
-                      padding: EdgeInsets.fromLTRB(
-                        12 * scale,
-                        MediaQuery.paddingOf(context).top + 16,
-                        12 * scale,
-                        0,
-                      ),
-                      alignment: Alignment.topCenter,
-                      child: Row(
+  Widget build(BuildContext context) => Material(
+    color: _background,
+    child: AppContent(
+      child: SingleChildScrollView(
+        key: const PageStorageKey('home-scroll'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _HomeHero(
+              onMenu: onMenu ?? () => Scaffold.maybeOf(context)?.openDrawer(),
+              onSearch: () => _open(
+                context,
+                const ListingBrowsePage(
+                  title: 'Tìm kiếm nhà cho thuê',
+                  autofocus: true,
+                ),
+              ),
+              onNotifications: () {
+                if (onTabSelected != null) {
+                  onTabSelected!(3);
+                } else {
+                  _information(
+                    context,
+                    'Thông báo',
+                    'Chức năng thông báo hệ thống đang được phát triển.',
+                    Symbols.notifications,
+                  );
+                }
+              },
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+              child: Column(
+                children: [
+                  _SectionHeader(
+                    title: 'Chức năng',
+                    onMore: () => _showAll(context),
+                  ),
+                  const SizedBox(height: 16),
+                  _ActionGrid(actions: _primary(context)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SectionHeader(
+                    title: 'Khám Phá Thêm',
+                    onMore: () => _open(
+                      context,
+                      const ListingBrowsePage(title: 'Khám phá tin cho thuê'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stacked =
+                          constraints.maxWidth < 340 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 19;
+                      final width = stacked
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth - 12) / 2;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          IconButton(
-                            tooltip: 'Mở menu',
-                            onPressed:
-                                onMenu ??
-                                () => Scaffold.maybeOf(context)?.openDrawer(),
-                            icon: const Icon(
-                              Symbols.menu,
-                              size: 29,
-                              weight: 600,
-                              color: _ink,
-                            ),
-                          ),
-                          Expanded(
-                            child: Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(24),
-                                onTap: () => _open(
-                                  context,
-                                  const ListingBrowsePage(
-                                    title: 'Tìm kiếm nhà cho thuê',
-                                    autofocus: true,
-                                  ),
-                                ),
-                                child: Container(
-                                  height: 34,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(
-                                      color: const Color(0xFFFFC69F),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Icon(
-                                        Symbols.search,
-                                        size: 21,
-                                        color: _ink,
-                                      ),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          'Tìm kiếm',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: _ink,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                          SizedBox(
+                            width: width,
+                            child: _DiscoveryCard(
+                              title: 'TÌM NHÀ ĐÚNG Ý',
+                              subtitle: 'Khám phá hàng trăm căn nhà phù hợp với nhu cầu',
+                              image: 'assets/images/home/townhouse.webp',
+                              onTap: () => _open(
+                                context,
+                                const ListingBrowsePage(
+                                  title: 'Thuê nhà',
+                                  listingType: 'WHOLE_HOUSE',
                                 ),
                               ),
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Thông báo',
-                            onPressed: () {
-                              if (onTabSelected != null) {
-                                onTabSelected!(3);
-                              } else {
-                                _information(
-                                  context,
-                                  'Thông báo',
-                                  'Chức năng thông báo hệ thống đang được phát triển.',
-                                  Symbols.notifications,
-                                );
-                              }
-                            },
-                            icon: const Icon(
-                              Symbols.notifications,
-                              size: 27,
-                              color: _ink,
-                              weight: 500,
+                          SizedBox(
+                            width: width,
+                            child: _DiscoveryCard(
+                              title: 'PHÒNG TRỌ QUANH BẠN',
+                              subtitle: 'Xem vị trí trên bản đồ dễ dàng',
+                              image: 'assets/images/home/room.webp',
+                              onTap: () =>
+                                  _open(context, const ListingMapPage()),
                             ),
                           ),
                         ],
-                      ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 22),
+                  _SectionHeader(
+                    title: 'Các Chức Năng Khác',
+                    onMore: () => _showAll(context),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    Transform.translate(
-                      offset: Offset(0, -43 * scale),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: side),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  9 * scale,
-                                  26 * scale,
-                                  9 * scale,
-                                  14 * scale,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: _More(
-                                        onTap: () => _showAll(context),
-                                        compact: true,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    _ActionGrid(
-                                      actions: _primary(context),
-                                      scale: scale,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: -9,
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: ClipPath(
-                                  clipper: _RibbonClipper(),
-                                  child: Container(
-                                    width: 146 * scale,
-                                    height: 23,
-                                    decoration: const BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Color(0xFFFFEFBA),
-                                          Color(0xFFFFD77B),
-                                          Color(0xFFFFEFBA),
-                                        ],
-                                      ),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: const Text(
-                                      'Chức năng',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                    child: Column(
+                      children: [
+                        _ActionGrid(
+                          actions: _secondary(context).sublist(0, 4),
+                          round: true,
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        _ContactTile(action: _secondary(context).last),
+                      ],
                     ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: side + 6),
-                      child: Transform.translate(
-                        offset: Offset(0, -22 * scale),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _SectionHeader(
-                              title: 'Khám Phá Thêm',
-                              onMore: () => _open(
-                                context,
-                                const ListingBrowsePage(
-                                  title: 'Khám phá tin cho thuê',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _DiscoveryCard(
-                                    title: 'TÌM NHÀ\nĐÚNG Ý',
-                                    subtitle: 'Khám phá tổ ấm mới',
-                                    icon: Symbols.home_work,
-                                    colors: const [
-                                      Color(0xFFE3F8FC),
-                                      Color(0xFF2FC4E0),
-                                    ],
-                                    onTap: () => _open(
-                                      context,
-                                      const ListingBrowsePage(
-                                        title: 'Thuê nhà',
-                                        listingType: 'WHOLE_HOUSE',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _DiscoveryCard(
-                                    title: 'PHÒNG TRỌ\nQUANH BẠN',
-                                    subtitle: 'Xem vị trí trên bản đồ',
-                                    icon: Symbols.apartment,
-                                    colors: const [
-                                      Color(0xFFE7F3FF),
-                                      Color(0xFF71A8EF),
-                                    ],
-                                    onTap: () =>
-                                        _open(context, const ListingMapPage()),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 22),
-                            _SectionHeader(
-                              title: 'Các Chức Năng Khác',
-                              onMore: () => _showAll(context),
-                            ),
-                            const SizedBox(height: 14),
-                            _ActionGrid(
-                              actions: _secondary(context),
-                              scale: scale,
-                              rowHeight: 91,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 96),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 124),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 
   void _showAll(BuildContext context) {
     showModalBottomSheet<void>(
@@ -449,34 +315,273 @@ class HomePage extends StatelessWidget {
       isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Tất cả chức năng',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 20),
-                _ActionGrid(
-                  actions: [..._primary(context), ..._secondary(context)]
-                      .map(
-                        (a) => _Action(a.label, a.icon, () {
-                          Navigator.pop(sheetContext);
-                          a.onTap();
-                        }),
-                      )
-                      .toList(),
-                  scale: 1,
-                ),
-              ],
-            ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Tất cả chức năng',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 20),
+              _ActionGrid(
+                actions: [
+                  for (final action in [
+                    ..._primary(context),
+                    ..._secondary(context),
+                  ])
+                    _Action(action.label, action.icon, () {
+                      Navigator.pop(sheetContext);
+                      action.onTap();
+                    }),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+class _HomeHero extends StatefulWidget {
+  const _HomeHero({
+    required this.onMenu,
+    required this.onSearch,
+    required this.onNotifications,
+  });
+  final VoidCallback onMenu, onSearch, onNotifications;
+  @override
+  State<_HomeHero> createState() => _HomeHeroState();
+}
+
+class _HomeHeroState extends State<_HomeHero> {
+  int _index = 0;
+  static const _slides = [
+    (
+      'Quản lý nhà cho thuê',
+      'Dễ dàng\nHiệu quả hơn',
+      'Quản lý phòng, hợp đồng, thanh toán\ntất cả trong một ứng dụng',
+    ),
+    (
+      'Tìm nơi ở phù hợp',
+      'Nhà đẹp\nTrong tầm tay',
+      'Khám phá tin thuê theo khu vực,\ngiá và nhu cầu của bạn',
+    ),
+    (
+      'Kết nối chủ nhà và người thuê',
+      'An tâm thuê\nDễ quản lý',
+      'Theo dõi tin đăng và hợp đồng\nngay trên ứng dụng',
+    ),
+  ];
+  void _slide(int index) => setState(() => _index = index);
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 760;
+      final top = MediaQuery.paddingOf(context).top;
+      return GestureDetector(
+        onHorizontalDragEnd: (details) {
+          final speed = details.primaryVelocity ?? 0;
+          if (speed < -100) {
+            _slide((_index + 1) % _slides.length);
+          }
+          if (speed > 100) {
+            _slide((_index + _slides.length - 1) % _slides.length);
+          }
+        },
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: (wide ? 350 : 280) + top),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/images/home/townhouse.webp',
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(.35, .1),
+                ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFFFFAF3).withValues(alpha: .97),
+                        const Color(0xFFFFFAF3).withValues(alpha: .70),
+                        Colors.white.withValues(alpha: .04),
+                      ],
+                      stops: const [0, .43, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(8, top + 12, 8, 0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Mở menu',
+                          onPressed: widget.onMenu,
+                          icon: const Icon(Symbols.menu, color: _ink, size: 28),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Material(
+                            color: Colors.white.withValues(alpha: .97),
+                            borderRadius: BorderRadius.circular(32),
+                            elevation: 5,
+                            shadowColor: const Color(0x15233057),
+                            child: InkWell(
+                              key: const ValueKey('home-search'),
+                              borderRadius: BorderRadius.circular(32),
+                              onTap: widget.onSearch,
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 15,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Symbols.search, size: 24, color: _ink),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Tìm kiếm nhà, phòng trọ...',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF778096),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Colors.white, Color(0xFFFFF3E7)],
+                            ),
+                            border: Border.all(color: const Color(0xFFEAD8C5)),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x183F2918),
+                                blurRadius: 16,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            tooltip: 'Thông báo',
+                            onPressed: widget.onNotifications,
+                            style: IconButton.styleFrom(
+                              foregroundColor: const Color(0xFF573B28),
+                              fixedSize: const Size(48, 48),
+                              shape: const CircleBorder(),
+                            ),
+                            icon: const Icon(
+                              Symbols.notifications,
+                              size: 25,
+                              weight: 300,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(wide ? 36 : 20, 24, 16, 0),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: SizedBox(
+                        width: wide ? 500 : constraints.maxWidth * .78,
+                        child: Column(
+                          key: ValueKey(_index),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _slides[_index].$1,
+                              style: TextStyle(
+                                fontSize: wide ? 18 : 14,
+                                color: _ink,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _slides[_index].$2,
+                              style: TextStyle(
+                                fontSize: wide ? 44 : 30,
+                                height: 1.08,
+                                letterSpacing: -.8,
+                                fontWeight: FontWeight.w800,
+                                color: _ink,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _slides[_index].$3,
+                              style: TextStyle(
+                                fontSize: wide ? 16 : 12.5,
+                                height: 1.4,
+                                color: const Color(0xFF46516A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(wide ? 30 : 14, 8, 0, 24),
+                    child: Row(
+                      children: [
+                        for (var index = 0; index < _slides.length; index++)
+                          Semantics(
+                            selected: _index == index,
+                            child: IconButton(
+                              key: ValueKey('home-slide-$index'),
+                              tooltip: 'Trang giới thiệu ${index + 1}',
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 32,
+                              ),
+                              padding: const EdgeInsets.all(6),
+                              onPressed: () => _slide(index),
+                              icon: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _index == index
+                                      ? _orange
+                                      : const Color(0xFFD4CEC8),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _Action {
@@ -487,61 +592,105 @@ class _Action {
 }
 
 class _ActionGrid extends StatelessWidget {
-  const _ActionGrid({
-    required this.actions,
-    required this.scale,
-    this.rowHeight = 85,
-  });
+  const _ActionGrid({required this.actions, this.round = false});
   final List<_Action> actions;
-  final double scale;
-  final double rowHeight;
+  final bool round;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => Wrap(
-      children: [
-        for (final action in actions)
-          SizedBox(
-            width:
-                constraints.maxWidth /
-                (MediaQuery.textScalerOf(context).scale(14) > 18
-                    ? (constraints.maxWidth >= 900 ? 4 : 2)
-                    : (constraints.maxWidth >= 900 ? 8 : 4)),
-            height:
-                rowHeight * scale +
-                (MediaQuery.textScalerOf(context).scale(14) - 14).clamp(0, 56) *
-                    2.5,
-            child: Semantics(
-              button: true,
-              label: action.label.replaceAll('\n', ' '),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: action.onTap,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      action.icon,
-                      size: 34 * scale,
-                      weight: 550,
-                      opticalSize: 40,
-                      color: HomeIconColors.forIcon(action.icon),
+    builder: (context, constraints) {
+      final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+      final columns = constraints.maxWidth < 330 || largeText
+          ? 2
+          : (constraints.maxWidth >= 1000 && !round ? 8 : 4);
+      final width = constraints.maxWidth / columns;
+      return Wrap(
+        runSpacing: 18,
+        children: [
+          for (final action in actions)
+            SizedBox(
+              width: width,
+              child: Semantics(
+                button: true,
+                label: action.label.replaceAll('\n', ' '),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: action.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
                     ),
-                    SizedBox(height: 5 * scale),
-                    Text(
-                      action.label,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11 * scale,
-                        color: _ink,
-                        height: 1.3,
-                      ),
+                    child: Column(
+                      children: [
+                        _ActionIcon(action: action, round: round),
+                        const SizedBox(height: 8),
+                        Text(
+                          action.label,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.15,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
+        ],
+      );
+    },
+  );
+}
+
+class _ActionIcon extends StatelessWidget {
+  const _ActionIcon({required this.action, this.round = false});
+  final _Action action;
+  final bool round;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: round ? 62 : 72,
+      height: round ? 62 : 72,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFAF5),
+        border: Border.all(color: const Color(0xFFF3DDCD)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: Alignment.center,
+      child: HomeFeatureIcon(icon: action.icon, size: round ? 48 : 56),
+    );
+  }
+}
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({required this.action});
+  final _Action action;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(18),
+    onTap: action.onTap,
+    child: Padding(
+      padding: const EdgeInsets.all(5),
+      child: Row(
+        children: [
+          _ActionIcon(action: action, round: true),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              action.label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _ink,
+              ),
+            ),
           ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -553,40 +702,44 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
+      Container(
+        width: 4,
+        height: 18,
+        decoration: BoxDecoration(
+          color: _orange,
+          borderRadius: BorderRadius.circular(3),
+        ),
+      ),
+      const SizedBox(width: 8),
       Expanded(
         child: Text(
           title,
           style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: _ink,
           ),
         ),
       ),
-      _More(onTap: onMore),
-    ],
-  );
-}
-
-class _More extends StatelessWidget {
-  const _More({required this.onTap, this.compact = false});
-  final VoidCallback onTap;
-  final bool compact;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(8),
-    onTap: onTap,
-    child: Padding(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 2, vertical: 5),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Xem thêm', style: TextStyle(fontSize: 11, color: _ink)),
-          SizedBox(width: 4),
-          Icon(Symbols.chevron_right, size: 16, color: _ink),
-        ],
+      TextButton(
+        onPressed: onMore,
+        style: TextButton.styleFrom(
+          foregroundColor: _ink,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Xem tất cả',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
+            ),
+            SizedBox(width: 4),
+            Icon(Symbols.chevron_right, size: 18),
+          ],
+        ),
       ),
-    ),
+    ],
   );
 }
 
@@ -594,86 +747,65 @@ class _DiscoveryCard extends StatelessWidget {
   const _DiscoveryCard({
     required this.title,
     required this.subtitle,
-    required this.icon,
-    required this.colors,
+    required this.image,
     required this.onTap,
   });
-  final String title, subtitle;
-  final IconData icon;
-  final List<Color> colors;
+  final String title, subtitle, image;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
-    label: title.replaceAll('\n', ' '),
+    label: title,
     child: Material(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Ink(
-          height: MediaQuery.textScalerOf(context).scale(88),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: colors,
-            ),
-          ),
+        child: SizedBox(
+          height: MediaQuery.textScalerOf(context).scale(155),
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              Positioned(
-                right: -18,
-                bottom: -22,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.3),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 4,
-                bottom: 9,
-                child: Transform.rotate(
-                  angle: -0.08,
-                  child: Icon(
-                    icon,
-                    size: 57,
-                    fill: 0,
-                    weight: 400,
-                    color: const Color(0xFF1162A5),
+              Image.asset(image, fit: BoxFit.cover),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xE60B1931)],
+                    stops: [.2, 1],
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
                       title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.2,
-                        color: Color(0xFF124B91),
-                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 8,
-                        color: Color(0xFF164269),
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        height: 1.25,
+                        color: Colors.white,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    const CircleAvatar(
+                      radius: 11,
+                      backgroundColor: Colors.white,
+                      child: Icon(Symbols.arrow_forward, size: 16, color: _ink),
                     ),
                   ],
                 ),
@@ -684,18 +816,4 @@ class _DiscoveryCard extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _RibbonClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) => Path()
-    ..moveTo(0, 0)
-    ..lineTo(size.width, 0)
-    ..lineTo(size.width - 17, size.height / 2)
-    ..lineTo(size.width, size.height)
-    ..lineTo(0, size.height)
-    ..lineTo(17, size.height / 2)
-    ..close();
-  @override
-  bool shouldReclip(_RibbonClipper oldClipper) => false;
 }

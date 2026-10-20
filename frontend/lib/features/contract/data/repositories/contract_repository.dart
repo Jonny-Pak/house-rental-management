@@ -6,6 +6,14 @@ class ContractRepository {
 
   ContractRepository(this._apiClient);
 
+  Future<String> preview(CreateContractRequest request) async {
+    final response = await _apiClient.post(
+      '/contracts/preview',
+      request.toJson(),
+    );
+    return response.data['content'] as String;
+  }
+
   Future<Map<String, dynamic>> findTenant(String contact, int listingId) async {
     final query = <String, dynamic>{'listingId': listingId};
     if (contact.contains('@')) {
