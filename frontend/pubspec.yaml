@@ -49,6 +49,7 @@ dependencies:
   geolocator: ^14.1.1
   geocoding: ^5.0.0
   material_symbols_icons: ^4.2960.0
+  flutter_svg: ^2.3.0
 
   flutter_localizations:
     sdk: flutter
@@ -82,6 +83,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/images/home/
+    - assets/icons/home/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

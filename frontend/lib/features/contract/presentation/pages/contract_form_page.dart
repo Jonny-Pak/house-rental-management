@@ -9,6 +9,8 @@ import '../../../listing/data/models/listing_model.dart';
 import '../../../listing/data/repositories/listing_repository.dart';
 import '../../data/models/contract_model.dart';
 import '../../data/repositories/contract_repository.dart';
+import '../widgets/contract_terms_form.dart';
+import '../widgets/contract_document_view.dart';
 
 class ContractFormPage extends StatefulWidget {
   const ContractFormPage({
@@ -36,6 +38,7 @@ class _ContractFormPageState extends State<ContractFormPage> {
   }
 
   final _form = GlobalKey<FormState>();
+  final _terms = GlobalKey<ContractTermsFormState>();
   final _contactController = TextEditingController();
   late final _rentController = TextEditingController(
     text: _amountText(widget.existing?.monthlyRent),
@@ -181,8 +184,15 @@ class _ContractFormPageState extends State<ContractFormPage> {
       monthlyRent: double.parse(_rentController.text),
       depositAmount: double.parse(_depositController.text),
       note: _noteController.text.trim(),
+      details: _terms.currentState!.values(
+        DateFormat('yyyy-MM-dd').format(_startDate!),
+      ),
     );
     try {
+      final content = await widget.repository.preview(request);
+      if (!mounted) return;
+      final confirmed = await _preview(content);
+      if (confirmed != true || !mounted) return;
       if (widget.existing == null) {
         await widget.repository.createContract(request);
       } else {
@@ -195,6 +205,55 @@ class _ContractFormPageState extends State<ContractFormPage> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  Future<bool?> _preview(String content) => showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: AppLayout.formWidth,
+          maxHeight: MediaQuery.sizeOf(context).height * .85,
+        ),
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Xem trước hợp đồng',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ContractDocumentView(content: content),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Quay lại chỉnh sửa'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Xác nhận gửi hợp đồng'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   String? _validateAmount(String? text, bool isRent) {
     final amount = double.tryParse(text ?? '');
@@ -270,103 +329,115 @@ class _ContractFormPageState extends State<ContractFormPage> {
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _form,
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
-                children: [
-                  if (_listings.isEmpty) ...[
-                    const Text('Bạn chưa có tin đã duyệt đang cho thuê.'),
-                    TextButton(onPressed: _load, child: const Text('Tải lại')),
-                  ],
-                  DropdownButtonFormField<int>(
-                    initialValue: _selectedListingId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Tin cho thuê của bạn',
-                    ),
-                    items: _listingOptions(),
-                    onChanged: _busy || widget.existing != null
-                        ? null
-                        : _selectListing,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _contactController,
-                    enabled: !_busy,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      labelText: 'Email hoặc số điện thoại người thuê',
-                    ),
-                    onChanged: (_) => setState(() {
-                      _selectedTenantId = null;
-                      _tenantName = null;
-                    }),
-                  ),
-                  TextButton(
-                    onPressed: _busy || _selectedListingId == null
-                        ? null
-                        : _lookup,
-                    child: const Text('Tìm người thuê'),
-                  ),
-                  if (_tenantName != null)
-                    Text(
-                      'Người thuê: $_tenantName',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  const SizedBox(height: 20),
-                  ResponsiveCards(
-                    minCardWidth: 280,
-                    children: [
-                      OutlinedButton(
-                        onPressed: _busy ? null : () => _pick(true),
-                        child: Text(
-                          'Bắt đầu: ${_startDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_startDate!)}',
-                        ),
-                      ),
-                      OutlinedButton(
-                        onPressed: _busy ? null : () => _pick(false),
-                        child: Text(
-                          'Kết thúc: ${_endDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_endDate!)}',
-                        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_listings.isEmpty) ...[
+                      const Text('Bạn chưa có tin đã duyệt đang cho thuê.'),
+                      TextButton(
+                        onPressed: _load,
+                        child: const Text('Tải lại'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-                  ResponsiveCards(
-                    minCardWidth: 280,
-                    children: [
-                      _amount(
-                        'Tiền thuê / tháng (VNĐ)',
-                        _rentController,
-                        rent: true,
+                    DropdownButtonFormField<int>(
+                      initialValue: _selectedListingId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tin cho thuê của bạn',
                       ),
-                      _amount('Tiền cọc (VNĐ)', _depositController),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _noteController,
-                    maxLines: 3,
-                    maxLength: 2000,
-                    decoration: const InputDecoration(
-                      labelText: 'Ghi chú / thỏa thuận thêm',
+                      items: _listingOptions(),
+                      onChanged: _busy || widget.existing != null
+                          ? null
+                          : _selectListing,
                     ),
-                  ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _contactController,
+                      enabled: !_busy,
+                      keyboardType: TextInputType.text,
+                      decoration: const InputDecoration(
+                        labelText: 'Email hoặc số điện thoại người thuê',
+                      ),
+                      onChanged: (_) => setState(() {
+                        _selectedTenantId = null;
+                        _tenantName = null;
+                      }),
+                    ),
+                    TextButton(
+                      onPressed: _busy || _selectedListingId == null
+                          ? null
+                          : _lookup,
+                      child: const Text('Tìm người thuê'),
+                    ),
+                    if (_tenantName != null)
+                      Text(
+                        'Người thuê: $_tenantName',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    const SizedBox(height: 20),
+                    ResponsiveCards(
+                      minCardWidth: 280,
+                      children: [
+                        OutlinedButton(
+                          onPressed: _busy ? null : () => _pick(true),
+                          child: Text(
+                            'Bắt đầu: ${_startDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_startDate!)}',
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: _busy ? null : () => _pick(false),
+                          child: Text(
+                            'Kết thúc: ${_endDate == null ? 'Chọn ngày' : DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    ResponsiveCards(
+                      minCardWidth: 280,
+                      children: [
+                        _amount(
+                          'Tiền thuê / tháng (VNĐ)',
+                          _rentController,
+                          rent: true,
+                        ),
+                        _amount('Tiền cọc (VNĐ)', _depositController),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ContractTermsForm(
+                      key: _terms,
+                      initial: widget.existing?.details ?? const {},
+                    ),
+                    TextFormField(
+                      controller: _noteController,
+                      maxLines: 3,
+                      maxLength: 2000,
+                      decoration: const InputDecoration(
+                        labelText: 'Ghi chú / thỏa thuận thêm',
+                      ),
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _busy || _listings.isEmpty ? null : _save,
                       child: Text(
-                        _error!,
-                        style: const TextStyle(color: Colors.red),
+                        _busy
+                            ? 'Đang xử lý…'
+                            : 'Lưu và chờ người thuê xác nhận',
                       ),
                     ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _busy || _listings.isEmpty ? null : _save,
-                    child: Text(
-                      _busy ? 'Đang xử lý…' : 'Lưu và chờ người thuê xác nhận',
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     ),

@@ -9,8 +9,25 @@ import 'package:frontend/features/contract/presentation/pages/contract_form_page
 import 'package:frontend/features/listing/data/models/listing_model.dart';
 import 'package:frontend/features/listing/data/repositories/listing_repository.dart';
 
+const contractDetails = <String, dynamic>{
+  'landlordIdentity': 'CCCD chủ nhà mẫu',
+  'landlordAddress': 'Địa chỉ chủ nhà mẫu',
+  'tenantIdentity': 'CCCD người thuê mẫu',
+  'tenantAddress': 'Địa chỉ người thuê mẫu',
+  'signingPlace': 'TP.HCM',
+  'signingDate': '2026-12-25',
+  'handoverDate': '2027-01-01',
+  'paymentDay': 5,
+  'paymentMethod': 'Chuyển khoản theo tài khoản đã xác nhận',
+  'electricityTerms': 'Theo hóa đơn điện',
+  'waterTerms': 'Theo hóa đơn nước',
+};
+
 ContractModel lease({String role = 'TENANT', String status = 'DRAFT'}) =>
     ContractModel.fromJson({
+      'details': contractDetails,
+      'contractType': 'HOUSE',
+      'documentText': 'HỢP ĐỒNG THUÊ NHÀ Ở\nNội dung thỏa thuận của hai bên.',
       'id': 1,
       'listingId': 10,
       'listingName': 'Nhà cho thuê',
@@ -29,6 +46,13 @@ ContractModel lease({String role = 'TENANT', String status = 'DRAFT'}) =>
 class FakeContracts extends ContractRepository {
   FakeContracts() : super(ApiClient());
   ContractModel current = lease();
+  CreateContractRequest? previewed;
+  @override
+  Future<String> preview(CreateContractRequest request) async {
+    previewed = request;
+    return 'HỢP ĐỒNG THUÊ NHÀ Ở\nNội dung dự thảo đã điền đầy đủ.';
+  }
+
   String? action;
   String? contact;
   @override
@@ -139,6 +163,22 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Đồng ý hợp đồng'),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.ensureVisible(
+        find.text('Tôi đã đọc toàn bộ và đồng ý nội dung hợp đồng'),
+      );
+      await tester.tap(
+        find.text('Tôi đã đọc toàn bộ và đồng ý nội dung hợp đồng'),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Đồng ý hợp đồng'));
       await tester.tap(find.text('Đồng ý hợp đồng'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Xác nhận'));
@@ -163,6 +203,11 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Đồng ý hợp đồng'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Hủy bản nháp'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Hủy bản nháp'), findsOneWidget);
   });
   testWidgets(
@@ -197,6 +242,7 @@ void main() {
       await tester.tap(find.text('Lưu và chờ người thuê xác nhận'));
       await tester.pumpAndSettle();
       expect(repo.updated, isNull);
+      expect(repo.previewed, isNull);
       await tester.scrollUntilVisible(
         find.widgetWithText(TextFormField, 'Tiền thuê / tháng (VNĐ)'),
         300,
@@ -213,9 +259,23 @@ void main() {
       );
       await tester.tap(find.text('Lưu và chờ người thuê xác nhận'));
       await tester.pumpAndSettle();
+      expect(repo.updated, isNull);
+      expect(find.text('Xem trước hợp đồng'), findsOneWidget);
+      await tester.tap(find.text('Quay lại chỉnh sửa'));
+      await tester.pumpAndSettle();
+      expect(repo.updated, isNull);
+      await tester.ensureVisible(find.text('Lưu và chờ người thuê xác nhận'));
+      await tester.tap(find.text('Lưu và chờ người thuê xác nhận'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xác nhận gửi hợp đồng'));
+      await tester.pumpAndSettle();
       expect(repo.updated?.listingId, 10);
       expect(repo.updated?.tenantId, 2);
       expect(repo.updated?.monthlyRent, 5500000);
+      expect(
+        repo.updated?.details['tenantIdentity'],
+        contractDetails['tenantIdentity'],
+      );
 
       expect(tester.takeException(), isNull);
     },

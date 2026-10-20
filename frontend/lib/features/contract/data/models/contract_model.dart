@@ -1,4 +1,6 @@
 class ContractModel {
+  final String? contractType, documentText, acceptedAt;
+  final Map<String, dynamic> details;
   final int version;
   final String myRole;
   final String? address, note;
@@ -18,6 +20,10 @@ class ContractModel {
   final String? createdAt;
 
   ContractModel({
+    this.contractType,
+    this.documentText,
+    this.acceptedAt,
+    this.details = const {},
     this.version = 0,
     this.myRole = 'TENANT',
     this.address,
@@ -44,6 +50,10 @@ class ContractModel {
     final tenant = json['tenant'] as Map<String, dynamic>?;
 
     return ContractModel(
+      contractType: json['contractType'],
+      documentText: json['documentText'],
+      acceptedAt: json['acceptedAt'],
+      details: Map<String, dynamic>.from(json['details'] ?? {}),
       version: json['version'] ?? 0,
       myRole: json['myRole'] ?? 'TENANT',
       address: json['address'],
@@ -69,6 +79,7 @@ class ContractModel {
 }
 
 class CreateContractRequest {
+  final Map<String, dynamic> details;
   final String? note;
   final int listingId;
   final int tenantId;
@@ -78,6 +89,7 @@ class CreateContractRequest {
   final double depositAmount;
 
   CreateContractRequest({
+    this.details = const {},
     this.note,
     required this.listingId,
     required this.tenantId,
@@ -88,6 +100,7 @@ class CreateContractRequest {
   });
 
   Map<String, dynamic> toJson() => {
+    'details': details,
     'note': note,
     'listingId': listingId,
     'tenantId': tenantId,

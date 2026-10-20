@@ -4,6 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class CreateContractRequest {
+    @jakarta.validation.Valid
+    @jakarta.validation.constraints.NotNull
+    private ContractDetails details;
+    public ContractDetails getDetails() { return details; }
+    public void setDetails(ContractDetails value) { details = value; }
+
     @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive
     private Long listingId;
     @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive

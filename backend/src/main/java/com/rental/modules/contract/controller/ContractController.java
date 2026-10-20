@@ -31,6 +31,11 @@ public class ContractController {
         return ResponseEntity.status(201).body(contract);
     }
 
+    @PostMapping("/preview")
+    public Map<String, String> previewContract(@Valid @RequestBody CreateContractRequest request, Principal principal) {
+        return contractService.previewContract(principal.getName(), request);
+    }
+
     @GetMapping("/me")
     public List<ContractResponse> getMyContracts(Principal principal) {
         return contractService.getMyContracts(principal.getName());

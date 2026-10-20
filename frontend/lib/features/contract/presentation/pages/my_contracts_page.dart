@@ -9,6 +9,7 @@ import '../../../listing/data/repositories/listing_repository.dart';
 import '../../data/models/contract_model.dart';
 import '../../data/repositories/contract_repository.dart';
 import 'contract_form_page.dart';
+import '../widgets/contract_document_view.dart';
 
 String contractStatus(String status) {
   if (status == 'DRAFT') return 'Chờ người thuê xác nhận';
@@ -230,6 +231,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
   ContractModel? _contract;
   String? _error;
   bool _busy = false;
+  bool _readContract = false;
   @override
   void initState() {
     super.initState();
@@ -241,6 +243,7 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
       final c = await widget.repository.detail(widget.id);
       if (mounted) {
         setState(() {
+          if (_contract?.version != c.version) _readContract = false;
           _contract = c;
           _error = null;
         });
@@ -332,6 +335,30 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         _row('Tiền cọc', contractMoney(contract.depositAmount)),
         if (contract.note?.isNotEmpty == true) _row('Ghi chú', contract.note!),
         const SizedBox(height: 20),
+        if (contract.documentText?.isNotEmpty == true)
+          ContractDocumentView(content: contract.documentText!)
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              contract.status == 'DRAFT'
+                  ? 'Hợp đồng cũ chưa có toàn văn theo mẫu. Chủ nhà cần bổ sung bản nháp trước khi người thuê xác nhận.'
+                  : 'Hợp đồng cũ chưa có toàn văn theo mẫu. Hai bên đối chiếu bản hợp đồng đã lưu hoặc ký trước đây.',
+            ),
+          ),
+        if (contract.acceptedAt != null)
+          _row('Người thuê xác nhận trong hệ thống', contract.acceptedAt!),
+        if (contract.status == 'DRAFT' &&
+            contract.myRole == 'TENANT' &&
+            contract.documentText?.isNotEmpty == true)
+          CheckboxListTile(
+            value: _readContract,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text('Tôi đã đọc toàn bộ và đồng ý nội dung hợp đồng'),
+            onChanged: _busy
+                ? null
+                : (value) => setState(() => _readContract = value ?? false),
+          ),
         if (contract.status == 'DRAFT' && contract.myRole == 'LANDLORD')
           OutlinedButton(
             onPressed: _busy
@@ -352,7 +379,12 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
           ),
         if (contract.status == 'DRAFT' && contract.myRole == 'TENANT')
           FilledButton(
-            onPressed: _busy ? null : () => _action('ACTIVE'),
+            onPressed:
+                _busy ||
+                    !_readContract ||
+                    contract.documentText?.isNotEmpty != true
+                ? null
+                : () => _action('ACTIVE'),
             child: const Text('Đồng ý hợp đồng'),
           ),
         if (contract.status == 'DRAFT')

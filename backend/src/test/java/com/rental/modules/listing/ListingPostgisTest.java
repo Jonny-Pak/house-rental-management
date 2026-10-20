@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import({ListingService.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
         com.rental.modules.favorite.service.ListingFavoriteService.class,
-        com.rental.modules.contract.service.ContractService.class})
+        com.rental.modules.contract.service.ContractService.class, com.rental.modules.contract.service.ContractDocumentService.class})
 @EnabledIfEnvironmentVariable(named = "RENTAL_POSTGIS_TESTS", matches = "true")
 class ListingPostgisTest {
     private static final String SCHEMA = "listing_flow_" + UUID.randomUUID().toString().replace("-", "");
@@ -85,6 +85,51 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.favorite.service.ListingFavoriteService favorites;
     @Autowired com.rental.modules.contract.service.ContractService leases;
 
+    @Test void roomContractRequiresCompleteSnapshotAndRejectsOutdatedConsent() {
+        User owner = user("roomleaseowner", Role.OWNER), renter = user("roomleaserenter", Role.USER), reviewer = user("roomleaseadmin", Role.ADMIN);
+        CreateListingRequest listing = new CreateListingRequest();
+        listing.setTitle("Phòng trọ theo mẫu"); listing.setListingType("BOARDING_ROOM"); listing.setAreaId(6L);
+        listing.setAddress("TP.HCM"); listing.setAreaSqm(new BigDecimal("25")); listing.setRentPrice(new BigDecimal("3000000"));
+        listing.setLatitude(10.78); listing.setLongitude(106.7); listing.setImageUrls(List.of("https://example.com/room.jpg"));
+        Long listingId = listings.createListing(owner.getUserId(), listing).getId();
+        admin.approveListing(listingId, reviewer.getUserId());
+        var start = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var request = new com.rental.modules.contract.dto.request.CreateContractRequest(listingId, renter.getUserId(), start, start.plusMonths(6), new BigDecimal("3000000"), new BigDecimal("1000000"));
+        var details = contractDetails(start); request.setDetails(details);
+        details.setTenantIdentity(" ");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.previewContract(owner.getEmail(), request));
+        details.setTenantIdentity("Giấy tờ người thuê mẫu");
+        var draft = leases.createContract(owner.getEmail(), request);
+        assertEquals("ROOM", draft.contractType());
+        assertTrue(draft.documentText().contains("HỢP ĐỒNG THUÊ PHÒNG TRỌ"));
+        entityManager.flush();
+        jdbc.update("update contracts set document_text=null where contract_id=?", draft.id());
+        var legacy = leases.getContract(renter.getEmail(), draft.id());
+        assertNull(legacy.documentText());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", legacy.version()));
+        var updated = leases.updateContract(owner.getEmail(), draft.id(), request);
+        assertNotNull(updated.documentText());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", draft.version()));
+        var active = leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", updated.version());
+        assertNotNull(active.acceptedAt());
+        assertEquals("ACTIVE", active.status());
+        assertEquals("RENTED", jdbc.queryForObject("select rental_status from listings where listing_id=?", String.class, listingId));
+        String agreedDocument = active.documentText();
+        owner.setFullName("Tên chủ nhà đã thay đổi"); users.saveAndFlush(owner);
+        assertEquals(agreedDocument, leases.getContract(renter.getEmail(), draft.id()).documentText());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.updateContract(owner.getEmail(), draft.id(), request));
+    }
+
+    private com.rental.modules.contract.dto.request.ContractDetails contractDetails(java.time.LocalDate start) {
+        var details = new com.rental.modules.contract.dto.request.ContractDetails();
+        details.setLandlordIdentity("CCCD chủ nhà mẫu"); details.setLandlordAddress("Địa chỉ chủ nhà mẫu");
+        details.setTenantIdentity("CCCD người thuê mẫu"); details.setTenantAddress("Địa chỉ người thuê mẫu");
+        details.setSigningPlace("TP.HCM"); details.setSigningDate(start.toString()); details.setHandoverDate(start.toString());
+        details.setPaymentMethod("Chuyển khoản theo tài khoản được hai bên xác nhận");
+        details.setElectricityTerms("Theo hóa đơn điện"); details.setWaterTerms("Theo hóa đơn nước");
+        return details;
+    }
+
     @Test void contractLifecycleChecksOwnershipConsentVersionAndListingAvailability() {
         User owner=user("leaseowner",Role.OWNER), renter=user("renter",Role.USER), outsider=user("outsider",Role.USER), reviewer=user("leaseadmin",Role.ADMIN);
         CreateListingRequest listing=new CreateListingRequest();
@@ -113,9 +158,16 @@ class ListingPostgisTest {
         users.saveAndFlush(outsider);
         var today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
         var request=new com.rental.modules.contract.dto.request.CreateContractRequest(listingId,renter.getUserId(),today,today.plusMonths(12),new BigDecimal("5000000"),BigDecimal.ZERO);
+        request.setDetails(contractDetails(today));
         assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(outsider.getEmail(),request));
         assertEquals(renter.getUserId(),leases.findTenant(owner.getEmail(),renter.getEmail(),listingId).get("id"));
+        long countBeforePreview = jdbc.queryForObject("select count(*) from contracts", Long.class);
+        var preview = leases.previewContract(owner.getEmail(), request);
+        assertTrue(preview.get("content").contains("HỢP ĐỒNG THUÊ NHÀ Ở"));
+        assertEquals(countBeforePreview, jdbc.queryForObject("select count(*) from contracts", Long.class));
         var draft=leases.createContract(owner.getEmail(),request);
+        assertNotNull(draft.documentText());
+        assertEquals("HOUSE", draft.contractType());
         assertEquals("DRAFT",draft.status()); assertEquals("LANDLORD",draft.myRole());
         assertEquals("TENANT",leases.getContract(renter.getEmail(),draft.id()).myRole());
         assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.getContract(outsider.getEmail(),draft.id()));
