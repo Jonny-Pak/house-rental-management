@@ -107,6 +107,39 @@ void main() {
       isNull,
     );
   });
+  testWidgets(
+    'Rental cards and search adapt to narrow screens and large text',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final width in [320.0, 800.0, 1440.0]) {
+        await tester.binding.setSurfaceSize(Size(width, 850));
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: ListingBrowsePage(
+              title: 'Thuê nhà',
+              repository: SearchRepository(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text('Phòng thoáng 1'),
+          180,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Bộ lọc'), findsOneWidget);
+        expect(find.byTooltip('Xem trên bản đồ'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('Search updates results, reset clears query and filters', (
     tester,
   ) async {

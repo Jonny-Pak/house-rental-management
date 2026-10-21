@@ -67,6 +67,47 @@ Future<void> showDetail(
 }
 
 void main() {
+  testWidgets(
+    'Saved cards and empty state support large text and responsive widths',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = DetailRepository()..saved = true;
+      for (final width in [320.0, 800.0, 1440.0]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.binding.setSurfaceSize(Size(width, 850));
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: SavedListingsPage(repository: repository),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text('50 m²'),
+          180,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Bỏ lưu tin'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+      repository.saved = false;
+      await tester.binding.setSurfaceSize(const Size(320, 850));
+      await tester.pumpWidget(
+        MaterialApp(home: SavedListingsPage(repository: repository)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Lưu lại nơi bạn muốn gọi là nhà'), findsOneWidget);
+      expect(find.text('Xem khu trọ đã lưu'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Saved listings uses listing favorites and supports removal', (
     tester,
   ) async {

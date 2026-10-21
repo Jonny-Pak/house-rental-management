@@ -1,281 +1,511 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../../core/layout/app_layout.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../home/presentation/widgets/home_feature_icon.dart';
 import '../../data/models/membership_package_model.dart';
 import '../../data/repositories/membership_repository.dart';
 import '../bloc/membership_cubit.dart';
 import '../bloc/membership_state.dart';
-
+import '../widgets/membership_comparison.dart';
 import '../../../payment/data/repositories/payment_repository.dart';
 import '../../../payment/presentation/cubit/payment_cubit.dart';
 import '../../../payment/presentation/cubit/payment_state.dart';
 
+const _accent = Color(0xFFD76B28);
+const _ink = Color(0xFF38291F);
+const _muted = Color(0xFF8A7464);
+const _border = Color(0xFFEEDFD1);
+
 class MembershipPage extends StatelessWidget {
-  const MembershipPage({super.key});
+  const MembershipPage({super.key, this.repository, this.paymentRepository});
+  final MembershipRepository? repository;
+  final PaymentRepository? paymentRepository;
 
   @override
-  Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => MembershipCubit(
-            repository: MembershipRepository(ApiClient()),
-          )..fetchPackages(),
+  Widget build(BuildContext context) => MultiBlocProvider(
+    providers: [
+      BlocProvider(
+        create: (_) => MembershipCubit(
+          repository: repository ?? MembershipRepository(ApiClient()),
+        )..fetchPackages(),
+      ),
+      BlocProvider(
+        create: (_) => PaymentCubit(
+          repository: paymentRepository ?? PaymentRepository(ApiClient()),
         ),
-        BlocProvider(
-          create: (context) => PaymentCubit(
-            repository: PaymentRepository(ApiClient()),
-          ),
-        ),
-      ],
-      child: const MembershipView(),
-    );
-  }
+      ),
+    ],
+    child: const MembershipView(),
+  );
 }
 
 class MembershipView extends StatelessWidget {
   const MembershipView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const kAccentOrange = Color(0xFFF67522);
-    const kBackground = Color(0xFFF9F9F9);
-
-    return Scaffold(
-      backgroundColor: kBackground,
-      body: BlocConsumer<PaymentCubit, PaymentState>(
-        listener: (context, state) {
-          if (state is PaymentError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message, style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red),
-            );
-          } else if (state is PaymentSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đăng ký gói thành công!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
-            );
-            if (state.paymentUrl == 'FREE_SUCCESS') {
-              Future.delayed(const Duration(seconds: 1), () {
-                if (context.mounted) Navigator.pop(context);
-              });
-            }
-          }
-        },
-        builder: (context, paymentState) {
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  _buildHeader(context, kAccentOrange),
-                  Expanded(
-                    child: BlocBuilder<MembershipCubit, MembershipState>(
-                      builder: (context, state) {
-                        if (state is MembershipLoading || state is MembershipInitial) {
-                          return const Center(child: CircularProgressIndicator(color: kAccentOrange));
-                        } else if (state is MembershipError) {
-                          return Center(child: Text('Lỗi: ${state.message}', style: const TextStyle(color: Colors.red)));
-                        } else if (state is MembershipLoaded) {
-                          final uniquePackages = <int, MembershipPackage>{};
-                          for (var p in state.packages) {
-                            uniquePackages[p.id] = p;
-                          }
-                          final packages = uniquePackages.values.toList()..sort((a, b) => a.price.compareTo(b.price));
-                          if (packages.isEmpty) {
-                            return const Center(child: Text('Chưa có gói dịch vụ nào.'));
-                          }
-
-                          return ListView(
-                            padding: EdgeInsets.zero,
-                            children: [
-                              const SizedBox(height: 24),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                                child: RichText(
-                                  textAlign: TextAlign.center,
-                                  text: const TextSpan(
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                      height: 1.4,
-                                    ),
-                                    children: [
-                                      TextSpan(text: 'Nâng cấp để tận hưởng nhiều đặc\nquyền và quyền lợi hơn của '),
-                                      TextSpan(text: 'NhaTot', style: TextStyle(color: kAccentOrange)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              ...packages.map((package) {
-                                return _buildPackageCard(context, package, kAccentOrange);
-                              }),
-                              const SizedBox(height: 40),
-                            ],
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              if (paymentState is PaymentLoading)
-                Container(
-                  color: Colors.black54,
-                  child: const Center(
-                    child: CircularProgressIndicator(color: kAccentOrange),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, Color accentOrange) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 16,
-        bottom: 20,
-        left: 16,
-        right: 16,
-      ),
-      decoration: BoxDecoration(
-        color: accentOrange,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-            },
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+  Widget build(
+    BuildContext context,
+  ) => BlocConsumer<PaymentCubit, PaymentState>(
+    listener: (context, state) {
+      if (state is PaymentError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.message),
+            backgroundColor: const Color(0xFFAE5141),
           ),
-          const Expanded(
-            child: Text(
-              'Gói dịch vụ',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+        );
+      } else if (state is PaymentSuccess) {
+        final free = state.paymentUrl == 'FREE_SUCCESS';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              free ? 'Đăng ký gói thành công!' : 'Đã mở trang thanh toán. Vui lòng hoàn tất thanh toán để đăng ký gói.',
+            ),
+            backgroundColor: const Color(0xFF387960),
+          ),
+        );
+        if (free) {
+          Future.delayed(const Duration(seconds: 1), () {
+            if (context.mounted) Navigator.maybePop(context);
+          });
+        }
+      }
+    },
+    builder: (context, paymentState) {
+      final busy = paymentState is PaymentLoading;
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAF8F5),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFAF8F5),
+          surfaceTintColor: Colors.transparent,
+          centerTitle: true,
+          title: const Text(
+            'Gói dịch vụ',
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: _ink,
             ),
           ),
-          const SizedBox(width: 28),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: IconButton(
+                tooltip: 'Tải lại gói dịch vụ',
+                onPressed: busy
+                    ? null
+                    : () => context.read<MembershipCubit>().fetchPackages(),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: _muted,
+                  side: const BorderSide(color: _border),
+                ),
+                icon: const Icon(Symbols.refresh, size: 21),
+              ),
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            AppContent(
+              maxWidth: AppLayout.contentWidth,
+              child: BlocBuilder<MembershipCubit, MembershipState>(
+                builder: (context, state) {
+                  if (state is MembershipLoading ||
+                      state is MembershipInitial) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: _accent),
+                    );
+                  }
+                  if (state is MembershipError) {
+                    return Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Symbols.cloud_off,
+                              size: 42,
+                              color: _muted,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Không tải được gói dịch vụ',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: _ink,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.message,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: _muted,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: () => context
+                                  .read<MembershipCubit>()
+                                  .fetchPackages(),
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (state is! MembershipLoaded) {
+                    return const SizedBox.shrink();
+                  }
+                  final unique = <int, MembershipPackage>{};
+                  for (final package in state.packages) {
+                    unique[package.id] = package;
+                  }
+                  final packages = unique.values.toList()
+                    ..sort((a, b) => a.price.compareTo(b.price));
+                  return RefreshIndicator(
+                    onRefresh: () =>
+                        context.read<MembershipCubit>().fetchPackages(),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                      children: [
+                        _hero(),
+                        const SizedBox(height: 28),
+                        const Text(
+                          'Chọn gói phù hợp',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'So sánh lượt đăng tin và quyền lợi của từng gói.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: _muted,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (packages.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: _border),
+                            ),
+                            child: const Text(
+                              'Chưa có gói dịch vụ nào.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: _muted),
+                            ),
+                          ),
+                        ResponsiveCards(
+                          children: [
+                            for (final package in packages)
+                              _packageCard(context, package, busy),
+                          ],
+                        ),
+                        if (packages.isNotEmpty) ...[
+                          const SizedBox(height: 32),
+                          const Text(
+                            'So sánh các gói',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: _ink,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Đối chiếu quyền lợi để chọn đúng nhu cầu. Cuộn ngang để xem tất cả gói.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.5,
+                              color: _muted,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          MembershipComparison(packages: packages),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (busy) ...[
+              const Positioned.fill(
+                child: ModalBarrier(
+                  dismissible: false,
+                  color: Color(0x6638291F),
+                ),
+              ),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: _accent),
+                      SizedBox(height: 16),
+                      Text(
+                        'Đang xử lý yêu cầu…',
+                        style: TextStyle(fontSize: 13, color: _muted),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    },
+  );
+
+  Widget _hero() => Container(
+    padding: const EdgeInsets.all(26),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF253A40), Color(0xFF10282F)],
+      ),
+      borderRadius: BorderRadius.circular(28),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1DF),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const HomeFeatureIcon(icon: Symbols.payments, size: 72),
+            ),
+            const Spacer(),
+            const Icon(
+              Symbols.auto_awesome,
+              color: Color(0xFFE8C49A),
+              size: 30,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'GÓI DỊCH VỤ CHO BẠN',
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 1.8,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFFE8C49A),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Đầu tư cho tin đăng.\nMở thêm cơ hội.',
+          style: TextStyle(
+            fontSize: 28,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Chọn quyền lợi phù hợp, nâng tầm cách bạn giới thiệu không gian cho thuê.',
+          style: TextStyle(fontSize: 13, height: 1.6, color: Color(0xFFD4DEDC)),
+        ),
+      ],
+    ),
+  );
+
+  Widget _packageCard(
+    BuildContext context,
+    MembershipPackage package,
+    bool busy,
+  ) {
+    final free = package.price == 0;
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: free ? _border : const Color(0xFFE9BD96)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: free
+                    ? [const Color(0xFFF7F3EC), const Color(0xFFFFFCF8)]
+                    : [const Color(0xFFFFE7CD), const Color(0xFFFFF7EE)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    HomeFeatureIcon(
+                      icon: free
+                          ? Symbols.home_work
+                          : package.vipPostQuota > 0
+                          ? Symbols.payments
+                          : Symbols.assignment,
+                      size: 82,
+                    ),
+                    const Spacer(),
+                    Icon(
+                      package.vipPostQuota > 0
+                          ? Symbols.auto_awesome
+                          : Symbols.verified,
+                      color: const Color(0xFFC3976C),
+                      size: 24,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  free
+                      ? 'KHỞI ĐẦU'
+                      : package.vipPostQuota > 0
+                      ? 'CÓ TIN VIP'
+                      : 'THÊM LƯỢT ĐĂNG',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    letterSpacing: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: _muted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  package.packageName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: _ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            free
+                ? 'Miễn phí'
+                : '${NumberFormat.decimalPattern('vi_VN').format(package.price)} đ',
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: _accent,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Giá gói dịch vụ',
+            style: TextStyle(fontSize: 11, color: _muted),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Divider(height: 1, color: Color(0xFFF3ECE4)),
+          ),
+          const Text(
+            'Quyền lợi của bạn',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (package.standardPostQuota > 0)
+            _feature(
+              '${package.standardPostQuota} tin đăng thường',
+              icon: Symbols.post_add,
+            ),
+          if (package.vipPostQuota > 0)
+            _feature(
+              '${package.vipPostQuota} tin đăng VIP',
+              icon: Symbols.workspace_premium,
+            ),
+          if (package.refreshQuota > 0)
+            _feature(
+              '${package.refreshQuota} lượt làm mới tin',
+              icon: Symbols.refresh,
+            ),
+          if (package.description?.isNotEmpty == true)
+            _feature(package.description!),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: busy
+                ? null
+                : () =>
+                      context.read<PaymentCubit>().initiatePayment(package.id),
+            style: FilledButton.styleFrom(
+              backgroundColor: free ? const Color(0xFFFFEBD9) : _accent,
+              foregroundColor: free ? const Color(0xFFAF541E) : Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              free ? 'Chọn gói miễn phí' : 'Đăng ký ngay',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildPackageCard(
-    BuildContext context,
-    MembershipPackage package, 
-    Color accentOrange,
-  ) {
-    final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentOrange, width: 1.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
+  Widget _feature(String text, {IconData icon = Symbols.check_circle}) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              package.packageName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '${currencyFormatter.format(package.price)} / vĩnh viễn',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Divider(color: accentOrange, thickness: 1.5),
-            const SizedBox(height: 16),
-            const Text(
-              'Quyền lợi:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (package.standardPostQuota > 0)
-              _buildFeatureRow('${package.standardPostQuota} tin đăng thường'),
-            if (package.vipPostQuota > 0)
-              _buildFeatureRow('${package.vipPostQuota} tin đăng VIP'),
-            if (package.refreshQuota > 0)
-              _buildFeatureRow('${package.refreshQuota} lượt làm mới tin'),
-            if (package.description != null && package.description!.isNotEmpty)
-              _buildFeatureRow(package.description!),
-            const SizedBox(height: 32),
-            Center(
-              child: SizedBox(
-                width: 180,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentOrange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    context.read<PaymentCubit>().initiatePayment(package.id);
-                  },
-                  child: const Text(
-                    'Đăng ký ngay',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
+            Icon(icon, size: 19, color: const Color(0xFFC08852)),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: _muted,
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureRow(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      );
 }

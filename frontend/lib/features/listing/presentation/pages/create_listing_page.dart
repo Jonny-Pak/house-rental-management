@@ -2,6 +2,9 @@ import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../../../home/presentation/widgets/home_feature_icon.dart';
 
 import '../cubit/create_listing_cubit.dart';
 import 'listing_details_step.dart';
@@ -129,48 +132,143 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
   Widget _buildTypeSelectionStep(BuildContext context) {
     final cubit = context.read<CreateListingCubit>();
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8F5),
       appBar: AppBar(
-        title: const Text('Đăng tin mới'),
+        backgroundColor: const Color(0xFFFAF8F5),
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        title: const Text(
+          'Đăng tin mới',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF38291F),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          tooltip: 'Đóng',
+          icon: const Icon(Symbols.close, size: 23),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: AppContent(
         maxWidth: AppLayout.formWidth,
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Bạn muốn cho thuê loại bất động sản nào?',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBD9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'BƯỚC 01 / 04',
+                      style: TextStyle(
+                        color: Color(0xFFAF541E),
+                        fontSize: 10,
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Loại bất động sản',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF927C6D)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              const Text(
+                'Bắt đầu từ một\nkhông gian của bạn',
+                style: TextStyle(
+                  fontSize: 28,
+                  height: 1.2,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF38291F),
                 ),
-                const SizedBox(height: 32),
-                _TypeOptionCard(
-                  title: 'Nhà nguyên căn',
-                  subtitle: 'Cho thuê toàn bộ ngôi nhà, phù hợp cho gia đình.',
-                  icon: Icons.house_rounded,
-                  onTap: () {
-                    cubit.updatePropertyType('WHOLE_HOUSE');
-                    _nextStep();
-                  },
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Chọn loại bất động sản bạn muốn cho thuê.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: Color(0xFF8A7464),
                 ),
-                const SizedBox(height: 16),
-                _TypeOptionCard(
-                  title: 'Phòng trọ',
-                  subtitle:
-                      'Cho thuê phòng riêng lẻ trong dãy trọ hoặc nhà chung.',
-                  icon: Icons.meeting_room_rounded,
-                  onTap: () {
-                    cubit.updatePropertyType('BOARDING_ROOM');
-                    _nextStep();
-                  },
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 28),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 560;
+                  final width = wide
+                      ? (constraints.maxWidth - 16) / 2
+                      : constraints.maxWidth;
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      SizedBox(
+                        width: width,
+                        child: _TypeOptionCard(
+                          title: 'Nhà nguyên căn',
+                          subtitle: 'Không gian riêng cho gia đình, cho thuê toàn bộ ngôi nhà.',
+                          icon: Symbols.home_work,
+                          onTap: () {
+                            cubit.updatePropertyType('WHOLE_HOUSE');
+                            _nextStep();
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: width,
+                        child: _TypeOptionCard(
+                          title: 'Phòng trọ',
+                          subtitle: 'Phòng riêng trong dãy trọ hoặc nhà chung, tiện lợi và linh hoạt.',
+                          icon: Symbols.apartment,
+                          onTap: () {
+                            cubit.updatePropertyType('BOARDING_ROOM');
+                            _nextStep();
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Symbols.verified_user,
+                    size: 18,
+                    color: Color(0xFFAD8A68),
+                  ),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Tin đăng sẽ được kiểm duyệt trước khi hiển thị công khai.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: Color(0xFF927C6D),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -179,11 +277,6 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
 }
 
 class _TypeOptionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-
   const _TypeOptionCard({
     required this.title,
     required this.subtitle,
@@ -191,51 +284,74 @@ class _TypeOptionCard extends StatelessWidget {
     required this.onTap,
   });
 
+  final String title, subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: const BorderSide(color: Color(0xFFEEDFD1)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD85D15).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: const Color(0xFFD85D15), size: 32),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+            Row(
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFF2E4), Color(0xFFFFFAF5)],
                     ),
+                    borderRadius: BorderRadius.circular(22),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  child: Center(child: HomeFeatureIcon(icon: icon, size: 64)),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFAF5EF),
+                    shape: BoxShape.circle,
                   ),
-                ],
+                  child: const Icon(
+                    Symbols.arrow_forward,
+                    size: 19,
+                    color: Color(0xFFAE6B3B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF38291F),
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            const SizedBox(height: 7),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: Color(0xFF8A7464),
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

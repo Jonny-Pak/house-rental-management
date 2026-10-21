@@ -6,6 +6,8 @@
   final String? avatarUrl;
   final String? role;
   final String? status;
+  final String? membershipPackageName, subscriptionStatus;
+  final int? remainingStandardQuota, remainingVipQuota, remainingRefreshQuota;
 
   const UserProfile({
     required this.id,
@@ -15,6 +17,11 @@
     this.avatarUrl,
     this.role,
     this.status,
+    this.membershipPackageName,
+    this.subscriptionStatus,
+    this.remainingStandardQuota,
+    this.remainingVipQuota,
+    this.remainingRefreshQuota,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -26,6 +33,11 @@
       avatarUrl: json['avatarUrl'] as String?,
       role: json['role'] as String?,
       status: json['status'] as String?,
+      membershipPackageName: json['membershipPackageName'] as String?,
+      subscriptionStatus: json['subscriptionStatus'] as String?,
+      remainingStandardQuota: (json['remainingStandardQuota'] as num?)?.toInt(),
+      remainingVipQuota: (json['remainingVipQuota'] as num?)?.toInt(),
+      remainingRefreshQuota: (json['remainingRefreshQuota'] as num?)?.toInt(),
     );
   }
 }

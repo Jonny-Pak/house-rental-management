@@ -23,7 +23,12 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../listing/presentation/pages/my_listings_page.dart';
 
 class ListingMapPage extends StatefulWidget {
-  const ListingMapPage({super.key, this.initialFilter = const ListingFilter()});
+  const ListingMapPage({
+    super.key,
+    this.initialFilter = const ListingFilter(),
+    this.repository,
+  });
+  final ListingRepository? repository;
   final ListingFilter initialFilter;
 
   @override
@@ -33,14 +38,15 @@ class ListingMapPage extends StatefulWidget {
 class _ListingMapPageState extends State<ListingMapPage>
     with WidgetsBindingObserver {
   late final HomeMapCubit _cubit;
+  late final ListingRepository _repository;
   Timer? _refresh;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _cubit = HomeMapCubit(ListingRepository(ApiClient()))
-      ..fetchApprovedListings();
+    _repository = widget.repository ?? ListingRepository(ApiClient());
+    _cubit = HomeMapCubit(_repository)..fetchApprovedListings();
     _startRefresh();
   }
 
@@ -74,13 +80,20 @@ class _ListingMapPageState extends State<ListingMapPage>
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _cubit,
-      child: _ListingMapPageContent(initialFilter: widget.initialFilter),
+      child: _ListingMapPageContent(
+        initialFilter: widget.initialFilter,
+        repository: _repository,
+      ),
     );
   }
 }
 
 class _ListingMapPageContent extends StatefulWidget {
-  const _ListingMapPageContent({required this.initialFilter});
+  const _ListingMapPageContent({
+    required this.initialFilter,
+    required this.repository,
+  });
+  final ListingRepository repository;
   final ListingFilter initialFilter;
   @override
   State<_ListingMapPageContent> createState() => _ListingMapPageContentState();
@@ -131,7 +144,6 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
     if (state is HomeMapLoaded) _fit(state.listings);
   }
 
-  // Định dạng tiền tệ VND
   String _formatPrice(double price) {
     final format = NumberFormat.currency(
       locale: 'vi_VN',
@@ -141,119 +153,185 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
     return format.format(price);
   }
 
-  // Hiển thị Bottom Sheet chi tiết bài đăng
   void _showListingDetail(BuildContext context, Listing listing) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      constraints: BoxConstraints(
+        maxWidth: 560,
+        maxHeight: MediaQuery.sizeOf(context).height * .85,
       ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Ảnh đầu tiên (nếu có) hoặc placeholder
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: listing.imageUrl != null && listing.imageUrl!.isNotEmpty
+                borderRadius: BorderRadius.circular(20),
+                child: listing.imageUrl?.isNotEmpty == true
                     ? Image.network(
                         listing.imageUrl!,
-                        height: 140,
+                        height: 170,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _buildPlaceholder(),
+                        errorBuilder: (_, _, _) => _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),
-              const SizedBox(height: 12),
-
-              // Tiêu đề
+              const SizedBox(height: 18),
               Text(
                 listing.title,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF38291F),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 8),
-
-              // Giá thuê và Diện tích
-              Row(
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 14,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    _formatPrice(listing.rentPrice),
+                    '${_formatPrice(listing.rentPrice)}/tháng',
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFD76B28),
                     ),
                   ),
-                  const SizedBox(width: 16),
                   Text(
-                    '${listing.areaSqm} m²',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    '${NumberFormat.decimalPattern('vi_VN').format(listing.areaSqm)} m²',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF8A7464),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              // Nút xem chi tiết
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Symbols.location_on,
+                    size: 18,
+                    color: Color(0xFFC3976C),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      listing.address ?? 'Chưa có địa chỉ',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: Color(0xFF8A7464),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: FilledButton(
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            ListingDetailPage(listingId: listing.id),
+                        builder: (_) => ListingDetailPage(
+                          listingId: listing.id,
+                          repository: widget.repository,
+                        ),
                       ),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD76B28),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text('Xem chi tiết'),
+                  child: const Text(
+                    'Xem chi tiết',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPlaceholder() {
-    return Container(
-      height: 140,
-      width: double.infinity,
-      color: Colors.grey.shade200,
-      child: const Center(
-        child: Icon(Symbols.home, size: 50, color: Colors.grey),
+        ),
       ),
     );
   }
 
+  Widget _buildPlaceholder() => Container(
+    height: 170,
+    width: double.infinity,
+    color: const Color(0xFFFFF0E1),
+    child: const Center(
+      child: Icon(Symbols.home_work, size: 50, color: Color(0xFFC99D74)),
+    ),
+  );
+
+  Widget _marker(Listing listing) => Tooltip(
+    message: listing.title,
+    child: Material(
+      color: const Color(0xFF573B28),
+      shape: const CircleBorder(
+        side: BorderSide(color: Colors.white, width: 2),
+      ),
+      elevation: 3,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('map-listing-${listing.id}'),
+        onTap: () => _showListingDetail(context, listing),
+        child: const Center(
+          child: Icon(Symbols.home, size: 24, color: Color(0xFFFFD2A5)),
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8F5),
       appBar: AppBar(
-        title: const Text('Bản đồ nhà cho thuê'),
+        backgroundColor: const Color(0xFFFAF8F5),
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Bản đồ nhà cho thuê',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF38291F),
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'Xem danh sách',
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8A7464),
+              side: const BorderSide(color: Color(0xFFEEDFD1)),
+            ),
             icon: const Icon(Symbols.list),
             onPressed: () => Navigator.push(
               context,
@@ -268,12 +346,55 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ListingFilterBar(filter: _filter, onChanged: _changeFilter),
+          Theme(
+            data: Theme.of(context).copyWith(
+              scaffoldBackgroundColor: const Color(0xFFFAF8F5),
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: const Color(0xFFD76B28),
+                secondaryContainer: const Color(0xFFFFEBD9),
+                onSecondaryContainer: const Color(0xFFAF541E),
+              ),
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: Colors.white,
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFFAA998A),
+                ),
+                prefixIconColor: const Color(0xFF8A7464),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: const BorderSide(color: Color(0xFFD76B28)),
+                ),
+              ),
+              iconButtonTheme: IconButtonThemeData(
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            child: ListingFilterBar(filter: _filter, onChanged: _changeFilter),
+          ),
           Expanded(
             child: Stack(
               children: [
-                // Bản đồ toàn màn hình
                 BlocConsumer<HomeMapCubit, HomeMapState>(
                   listener: (_, state) {
                     if (_needsFit && state is HomeMapLoaded) {
@@ -298,16 +419,9 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                           .map((item) {
                             return Marker(
                               point: LatLng(item.latitude!, item.longitude!),
-                              width: 40,
-                              height: 40,
-                              child: GestureDetector(
-                                onTap: () => _showListingDetail(context, item),
-                                child: const Icon(
-                                  Symbols.location_on,
-                                  color: Colors.red,
-                                  size: 40,
-                                ),
-                              ),
+                              width: 44,
+                              height: 44,
+                              child: _marker(item),
                             );
                           })
                           .toList();
@@ -336,77 +450,52 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                 ),
 
                 Positioned(
-                  top: 48,
-                  right: 12,
-                  child: Column(
-                    children: [
-                      FloatingActionButton.small(
-                        heroTag: 'refresh-map',
-                        onPressed: () => context
-                            .read<HomeMapCubit>()
-                            .fetchApprovedListings(),
-                        child: const Icon(Symbols.refresh),
-                      ),
-                      const SizedBox(height: 12),
-                      FloatingActionButton.small(
-                        heroTag: 'manage-listings',
-                        onPressed: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MyListingsPage(),
-                            ),
-                          );
-                          if (context.mounted) {
-                            context
-                                .read<HomeMapCubit>()
-                                .fetchApprovedListings();
-                          }
-                        },
-                        child: const Icon(Symbols.post_add),
-                      ),
-                    ],
-                  ),
-                ),
-
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  right: 12,
-                  child: BlocBuilder<HomeMapCubit, HomeMapState>(
-                    builder: (_, state) {
-                      if (state is! HomeMapLoaded) {
-                        return const SizedBox.shrink();
-                      }
-                      final matches = _filter.apply(state.listings);
-                      final count = matches
-                          .where(
-                            (l) =>
-                                l.latitude != null &&
-                                l.longitude != null &&
-                                l.latitude!.isFinite &&
-                                l.longitude!.isFinite &&
-                                l.latitude!.abs() <= 90 &&
-                                l.longitude!.abs() <= 180,
-                          )
-                          .length;
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Text(
-                            count == 0
-                                ? (matches.isEmpty
-                                      ? 'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.'
-                                      : 'Tin phù hợp chưa có tọa độ. Xem trong danh sách.')
-                                : '$count tin phù hợp trên bản đồ',
-                          ),
+                  top: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        FloatingActionButton.small(
+                          heroTag: 'refresh-map',
+                          tooltip: 'Làm mới bản đồ',
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF8A7464),
+                          elevation: 2,
+                          shape: const CircleBorder(),
+                          onPressed: () => context
+                              .read<HomeMapCubit>()
+                              .fetchApprovedListings(),
+                          child: const Icon(Symbols.refresh),
                         ),
-                      );
-                    },
+                        const SizedBox(height: 12),
+                        FloatingActionButton.small(
+                          heroTag: 'manage-listings',
+                          tooltip: 'Quản lý tin đăng',
+                          backgroundColor: const Color(0xFFD76B28),
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shape: const CircleBorder(),
+                          onPressed: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MyListingsPage(),
+                              ),
+                            );
+                            if (context.mounted) {
+                              context
+                                  .read<HomeMapCubit>()
+                                  .fetchApprovedListings();
+                            }
+                          },
+                          child: const Icon(Symbols.post_add),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
-                // Trạng thái đang tải (Loading)
                 BlocBuilder<HomeMapCubit, HomeMapState>(
                   builder: (context, state) {
                     if (state is HomeMapLoading) {
@@ -426,8 +515,8 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                         right: 20,
                         child: Material(
                           elevation: 4,
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(18),
+                          color: const Color(0xFFAE5141),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -460,6 +549,53 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                   },
                 ),
               ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: BlocBuilder<HomeMapCubit, HomeMapState>(
+              builder: (_, state) {
+                if (state is! HomeMapLoaded) {
+                  return const SizedBox.shrink();
+                }
+                final matches = _filter.apply(state.listings);
+                final count = matches
+                    .where(
+                      (l) =>
+                          l.latitude != null &&
+                          l.longitude != null &&
+                          l.latitude!.isFinite &&
+                          l.longitude!.isFinite &&
+                          l.latitude!.abs() <= 90 &&
+                          l.longitude!.abs() <= 180,
+                    )
+                    .length;
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Color(0xFFEEDFD1))),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    child: Text(
+                      count == 0
+                          ? (matches.isEmpty
+                                ? 'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.'
+                                : 'Tin phù hợp chưa có tọa độ. Xem trong danh sách.')
+                          : '$count tin phù hợp trên bản đồ',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF573B28),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],

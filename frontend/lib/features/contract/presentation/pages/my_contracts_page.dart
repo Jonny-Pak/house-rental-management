@@ -10,6 +10,7 @@ import '../../data/models/contract_model.dart';
 import '../../data/repositories/contract_repository.dart';
 import 'contract_form_page.dart';
 import '../widgets/contract_document_view.dart';
+import '../../../home/presentation/widgets/home_feature_icon.dart';
 
 String contractStatus(String status) {
   if (status == 'DRAFT') return 'Chờ người thuê xác nhận';
@@ -119,18 +120,185 @@ class _MyContractsPageState extends State<MyContractsPage> {
     if (contract.myRole == 'LANDLORD') {
       otherParty = 'Người thuê: ${contract.tenantName}';
     }
-    return Card(
-      child: ListTile(
-        title: Text(contract.listingName ?? 'Hợp đồng #${contract.id}'),
-        subtitle: Text(
-          '${contractStatus(contract.status)}\n$otherParty\n${contractMoney(contract.monthlyRent)}/tháng',
-        ),
-        isThreeLine: true,
-        trailing: const Icon(Symbols.chevron_right),
+    final color = switch (contract.status) {
+      'ACTIVE' => const Color(0xFF387960),
+      'DRAFT' => const Color(0xFFB77B25),
+      'CANCELLED' => const Color(0xFFAE5141),
+      _ => const Color(0xFF8A7464),
+    };
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: Color(0xFFEEDFD1)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: () => _openContract(contract),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0E1),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: const Icon(
+                      Symbols.description,
+                      size: 22,
+                      color: Color(0xFFD76B28),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'HỢP ĐỒNG #${contract.id}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF8A7464),
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Symbols.chevron_right,
+                    size: 20,
+                    color: Color(0xFFAD8A68),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                contract.listingName ?? 'Hợp đồng #${contract.id}',
+                style: const TextStyle(
+                  fontSize: 17,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF38291F),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: .09),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  contractStatus(contract.status),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '${contractMoney(contract.monthlyRent)}/tháng',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFD76B28),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Divider(height: 1, color: Color(0xFFF3ECE4)),
+              ),
+              _cardInfo(Symbols.person, otherParty),
+              const SizedBox(height: 10),
+              _cardInfo(
+                Symbols.calendar_month,
+                '${contractDate(contract.startDate)} – ${contractDate(contract.endDate)}',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+
+  Widget _cardInfo(IconData icon, String text) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 17, color: const Color(0xFFAD8A68)),
+      const SizedBox(width: 7),
+      Expanded(
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.5,
+            color: Color(0xFF8A7464),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Widget _emptyState() => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFFEEDFD1)),
+    ),
+    child: Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFF4E8),
+            shape: BoxShape.circle,
+          ),
+          child: const HomeFeatureIcon(icon: Symbols.receipt_long, size: 76),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Chưa có hợp đồng phù hợp.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF38291F),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          _selectedStatus.isNotEmpty
+              ? 'Thử chọn trạng thái khác để xem hợp đồng của bạn.'
+              : widget.isLandlord
+              ? 'Tạo hợp đồng để lưu thông tin thuê nhà và theo dõi thời hạn tại đây.'
+              : 'Hợp đồng do chủ nhà tạo sẽ xuất hiện tại đây để bạn xem và xác nhận.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.6,
+            color: Color(0xFF8A7464),
+          ),
+        ),
+        if (_selectedStatus.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          TextButton(
+            onPressed: () => setState(() => _selectedStatus = ''),
+            child: const Text('Xem tất cả hợp đồng'),
+          ),
+        ],
+      ],
+    ),
+  );
 
   Widget _buildContractList() {
     if (_loading) {
@@ -150,14 +318,6 @@ class _MyContractsPageState extends State<MyContractsPage> {
 
     final contracts = _filteredContracts();
     final cards = <Widget>[];
-    if (contracts.isEmpty) {
-      cards.add(
-        const Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Chưa có hợp đồng phù hợp.'),
-        ),
-      );
-    }
     for (final contract in contracts) {
       cards.add(_contractCard(contract));
     }
@@ -165,8 +325,11 @@ class _MyContractsPageState extends State<MyContractsPage> {
       onRefresh: _load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-        children: [ResponsiveCards(children: cards)],
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+        children: [
+          if (contracts.isEmpty) _emptyState(),
+          ResponsiveCards(children: cards),
+        ],
       ),
     );
   }
@@ -176,19 +339,38 @@ class _MyContractsPageState extends State<MyContractsPage> {
     Widget? createButton;
     if (widget.isLandlord) {
       createButton = FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFD76B28),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         onPressed: _create,
         icon: const Icon(Symbols.add),
         label: const Text('Tạo hợp đồng'),
       );
     }
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8F5),
       appBar: AppBar(
-        title: const Text('Hợp đồng thuê'),
+        backgroundColor: const Color(0xFFFAF8F5),
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Hợp đồng thuê',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF38291F),
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'Làm mới',
-            onPressed: _load,
-            icon: const Icon(Symbols.refresh),
+            onPressed: _loading ? null : _load,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8A7464),
+              side: const BorderSide(color: Color(0xFFEEDFD1)),
+            ),
+            icon: const Icon(Symbols.refresh, size: 21),
           ),
         ],
       ),
@@ -198,10 +380,60 @@ class _MyContractsPageState extends State<MyContractsPage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Theo dõi thỏa thuận thuê nhà · ${_contracts.length} hợp đồng',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: Color(0xFF8A7464),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: DropdownButtonFormField<String>(
+                key: ValueKey(_selectedStatus),
                 initialValue: _selectedStatus,
-                decoration: const InputDecoration(labelText: 'Trạng thái'),
+                isExpanded: true,
+                itemHeight: null,
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF38291F)),
+                icon: const Icon(Symbols.expand_more, color: Color(0xFF8A7464)),
+                decoration: InputDecoration(
+                  labelText: 'Trạng thái',
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF8A7464),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(
+                    Symbols.tune,
+                    size: 20,
+                    color: Color(0xFFC88B53),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: Color(0xFFD76B28)),
+                  ),
+                ),
                 items: _statusItems(),
                 onChanged: (status) =>
                     setState(() => _selectedStatus = status!),
