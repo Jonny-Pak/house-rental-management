@@ -8,6 +8,11 @@ public class UserProfileResponse {
     private String avatarUrl;
     private String role;
     private String status;
+    private String membershipPackageName;
+    private String subscriptionStatus;
+    private Short remainingStandardQuota;
+    private Short remainingVipQuota;
+    private Short remainingRefreshQuota;
 
     public UserProfileResponse() {}
     public UserProfileResponse(Long id, String fullName, String email, String phoneNumber, String avatarUrl, String role, String status) {
@@ -69,4 +74,14 @@ public class UserProfileResponse {
         this.status = status;
     }
 
+    public String getMembershipPackageName() { return membershipPackageName; }
+    public void setMembershipPackageName(String membershipPackageName) { this.membershipPackageName = membershipPackageName; }
+    public String getSubscriptionStatus() { return subscriptionStatus; }
+    public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+    public Short getRemainingStandardQuota() { return remainingStandardQuota; }
+    public void setRemainingStandardQuota(Short remainingStandardQuota) { this.remainingStandardQuota = remainingStandardQuota; }
+    public Short getRemainingVipQuota() { return remainingVipQuota; }
+    public void setRemainingVipQuota(Short remainingVipQuota) { this.remainingVipQuota = remainingVipQuota; }
+    public Short getRemainingRefreshQuota() { return remainingRefreshQuota; }
+    public void setRemainingRefreshQuota(Short remainingRefreshQuota) { this.remainingRefreshQuota = remainingRefreshQuota; }
 }

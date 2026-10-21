@@ -90,15 +90,29 @@ class _RentalMapTilesState extends State<RentalMapTiles> {
             if (attempt == _attempt) _reportFailure();
           },
         ),
-        SimpleAttributionWidget(
-          source: const Text(
-            'OpenStreetMap contributors',
-            style: TextStyle(fontSize: 10),
-          ),
+        Align(
           alignment: Alignment.bottomLeft,
-          onTap: () => launchUrl(
-            Uri.parse('https://www.openstreetmap.org/copyright'),
-            mode: LaunchMode.externalApplication,
+          child: SafeArea(
+            top: false,
+            child: Material(
+              color: const Color(0xE6FFFFFF),
+              child: InkWell(
+                onTap: () => launchUrl(
+                  Uri.parse('https://www.openstreetmap.org/copyright'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: const SizedBox(
+                  width: 190,
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Text(
+                      '© OpenStreetMap contributors',
+                      style: TextStyle(fontSize: 10, color: Color(0xFF573B28)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
         if (_failed)

@@ -72,20 +72,161 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
     );
   }
 
+  Widget _card(Listing listing) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: const BorderSide(color: Color(0xFFEEDFD1)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: () => _detail(listing),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 180, child: _photo(listing)),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  listing.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF38291F),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _price(listing),
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFD76B28),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Symbols.location_on,
+                      size: 17,
+                      color: Color(0xFFAA998A),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        listing.address ?? 'Chưa có địa chỉ',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          height: 1.5,
+                          color: Color(0xFF8A7464),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Divider(height: 1, color: Color(0xFFF3ECE4)),
+                ),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 10,
+                  children: [
+                    _info(
+                      Symbols.square_foot,
+                      '${NumberFormat.decimalPattern('vi_VN').format(listing.areaSqm)} m²',
+                    ),
+                    if (listing.listingType != null)
+                      _info(
+                        Symbols.home_work,
+                        listing.listingType == 'BOARDING_ROOM'
+                            ? 'Phòng trọ'
+                            : 'Nhà nguyên căn',
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _photo(Listing listing) {
+    const fallback = ColoredBox(
+      color: Color(0xFFFFF0E1),
+      child: Center(
+        child: Icon(Symbols.home_work, size: 52, color: Color(0xFFC99D74)),
+      ),
+    );
+    if (listing.imageUrl == null || listing.imageUrl!.isEmpty) {
+      return fallback;
+    }
+    return Image.network(
+      listing.imageUrl!,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
+
+  Widget _info(IconData icon, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 17, color: const Color(0xFFAD8A68)),
+      const SizedBox(width: 5),
+      Flexible(
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF8A7464)),
+        ),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final items = _filter.apply(_items);
+    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8F5),
       appBar: AppBar(
-        title: Text(widget.title),
+        backgroundColor: const Color(0xFFFAF8F5),
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          widget.title,
+          style: const TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF38291F),
+          ),
+        ),
         actions: [
-          IconButton(
-            tooltip: 'Xem trên bản đồ',
-            icon: const Icon(Symbols.map),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ListingMapPage(initialFilter: _filter),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: IconButton(
+              tooltip: 'Xem trên bản đồ',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF8A7464),
+                side: const BorderSide(color: Color(0xFFEEDFD1)),
+              ),
+              icon: const Icon(Symbols.map, size: 22),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ListingMapPage(initialFilter: _filter),
+                ),
               ),
             ),
           ),
@@ -95,126 +236,142 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
         maxWidth: AppLayout.contentWidth,
         child: Column(
           children: [
-            ListingFilterBar(
-              filter: _filter,
-              autofocus: widget.autofocus,
-              onChanged: (filter) => setState(() => _filter = filter),
+            Theme(
+              data: theme.copyWith(
+                scaffoldBackgroundColor: const Color(0xFFFAF8F5),
+                colorScheme: theme.colorScheme.copyWith(
+                  primary: const Color(0xFFD76B28),
+                  secondaryContainer: const Color(0xFFFFEBD9),
+                  onSecondaryContainer: const Color(0xFFAF541E),
+                ),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintStyle: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFAA998A),
+                  ),
+                  prefixIconColor: const Color(0xFF8A7464),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: Color(0xFFD76B28)),
+                  ),
+                ),
+                iconButtonTheme: IconButtonThemeData(
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              child: ListingFilterBar(
+                filter: _filter,
+                autofocus: widget.autofocus,
+                onChanged: (filter) => setState(() => _filter = filter),
+              ),
             ),
             if (!_loading && _error == null)
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('${items.length} tin phù hợp'),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Symbols.home_work,
+                      size: 18,
+                      color: Color(0xFFC88B53),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${items.length} tin phù hợp',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF573B28),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFD76B28),
+                      ),
+                    )
                   : _error != null
                   ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_error!),
-                          TextButton(
-                            onPressed: _load,
-                            child: const Text('Thử lại'),
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Symbols.cloud_off,
+                              size: 38,
+                              color: Color(0xFFAD8A68),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(_error!, textAlign: TextAlign.center),
+                            TextButton(
+                              onPressed: _load,
+                              child: const Text('Thử lại'),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
                           if (items.isEmpty)
                             const Padding(
-                              padding: EdgeInsets.all(24),
-                              child: Text(
-                                'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.',
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 40,
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Symbols.search_off,
+                                    size: 48,
+                                    color: Color(0xFFC99D74),
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.5,
+                                      color: Color(0xFF8A7464),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ResponsiveCards(
                             children: [
-                              for (final l in items)
-                                Card(
-                                  clipBehavior: Clip.antiAlias,
-                                  child: InkWell(
-                                    onTap: () => _detail(l),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Row(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                            child: l.imageUrl == null
-                                                ? const SizedBox(
-                                                    width: 80,
-                                                    height: 86,
-                                                    child: Icon(
-                                                      Symbols.home_work,
-                                                      size: 40,
-                                                    ),
-                                                  )
-                                                : Image.network(
-                                                    l.imageUrl!,
-                                                    width: 80,
-                                                    height: 86,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (_, _, _) =>
-                                                        const SizedBox(
-                                                          width: 80,
-                                                          height: 86,
-                                                          child: Icon(
-                                                            Symbols
-                                                                .broken_image,
-                                                          ),
-                                                        ),
-                                                  ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  l.title,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  _price(l),
-                                                  style: const TextStyle(
-                                                    color: Color(0xFFFF751B),
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                Text('${l.areaSqm} m²'),
-                                                Text(
-                                                  l.address ?? '',
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              for (final listing in items) _card(listing),
                             ],
                           ),
                         ],

@@ -480,7 +480,7 @@ class _ActivityCard extends StatelessWidget {
   static const _events = <(String, String, String, KiteTone)>[
     ('Nguyễn Văn Nam', 'vừa đăng tin phòng trọ mới', '4m', KiteTone.info),
     ('Trần Thị Hoa', 'hoàn tất ký hợp đồng thuê #102', '31m', KiteTone.success),
-    ('Lê Văn Tuấn', 'đã thanh toán gói VIP 30 ngày', '1h', KiteTone.success),
+    ('Lê Văn Tuấn', 'đã thanh toán gói PRO 30 ngày', '1h', KiteTone.success),
     ('Quản trị viên', 'đã duyệt bài đăng trọ #88', '3h', KiteTone.info),
     ('Đặng Minh Khôi', 'gửi yêu cầu xem phòng trọ #95', '5h', KiteTone.neutral),
   ];

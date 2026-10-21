@@ -9,15 +9,22 @@ import com.rental.modules.user.dto.response.UserProfileResponse;
 import com.rental.modules.user.repository.UserPreferenceRepository;
 import com.rental.modules.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.rental.modules.subscription.domain.entity.UserSubscription;
+import com.rental.modules.subscription.repository.UserSubscriptionRepository;
 import org.springframework.util.StringUtils;
 
 @Service
+@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
 
-    public UserService(UserRepository userRepository, UserPreferenceRepository userPreferenceRepository) {
+    private final UserSubscriptionRepository userSubscriptionRepository;
+
+    public UserService(UserRepository userRepository, UserPreferenceRepository userPreferenceRepository, UserSubscriptionRepository userSubscriptionRepository) {
+        this.userSubscriptionRepository = userSubscriptionRepository;
         this.userRepository = userRepository;
         this.userPreferenceRepository = userPreferenceRepository;
     }
@@ -80,6 +87,16 @@ public class UserService {
         }
         if (user.getStatus() != null) {
             response.setStatus(user.getStatus().name());
+        }
+        UserSubscription subscription = userSubscriptionRepository.findByUser(user).orElse(null);
+        if (subscription != null) {
+            response.setSubscriptionStatus(subscription.getStatus());
+            if (subscription.getMembershipPackage() != null) {
+                response.setMembershipPackageName(subscription.getMembershipPackage().getPackageName());
+            }
+            response.setRemainingStandardQuota(subscription.getRemainingStandardQuota());
+            response.setRemainingVipQuota(subscription.getRemainingVipQuota());
+            response.setRemainingRefreshQuota(subscription.getRemainingRefreshQuota());
         }
         return response;
     }
