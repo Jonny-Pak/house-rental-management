@@ -21,7 +21,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+        com.rental.modules.listing.controller.ListingExcelController.class,
+        com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
@@ -33,6 +35,58 @@ class ListingSecurityTest {
     @MockBean CustomUserDetailsService users;
     @MockBean com.rental.modules.favorite.service.ListingFavoriteService favorites;
     @MockBean com.rental.modules.contract.service.ContractService leases;
+    @MockBean com.rental.modules.listing.service.ListingExcelService listingExcel;
+    @MockBean com.rental.modules.contract.service.ContractExcelService contractExcel;
+
+    @MockBean com.rental.modules.notification.service.NotificationService notifications;
+
+    @Test void notificationsRequireLoginAreAccountScopedAndBroadcastIsAdminOnly() throws Exception {
+        mvc.perform(get("/api/v1/notifications")).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/notifications/7/read")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/notifications").header("Authorization", "Bearer owner").param("userId", "999"))
+            .andExpect(status().isOk());
+        verify(notifications).inbox(1L, 0, false);
+        mvc.perform(patch("/api/v1/notifications/7/read").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk());
+        verify(notifications).markRead(1L, 7L);
+        mvc.perform(patch("/api/v1/notifications/read-all").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk());
+        verify(notifications).markAllRead(1L);
+        mvc.perform(patch("/api/v1/notifications/7/unread")).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/notifications/7")).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/notifications/7/unread").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/notifications/7").header("Authorization", "Bearer owner").param("userId", "999")).andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/notifications/read").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        verify(notifications).markUnread(1L, 7L); verify(notifications).delete(1L, 7L); verify(notifications).deleteRead(1L);
+        mvc.perform(post("/api/v1/admin/notifications/broadcast").header("Authorization", "Bearer owner")
+            .contentType("application/json").content("{\"title\":\"Thông báo\",\"content\":\"Nội dung\"}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/notifications/broadcast").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{\"title\":\"\",\"content\":\"Nội dung\"}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/notifications/broadcast").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{\"title\":\"Thông báo\",\"content\":\"Nội dung\"}"))
+            .andExpect(status().isOk());
+        verify(notifications).broadcast("Thông báo", "Nội dung");
+    }
+
+    @Test void excelRequiresLoginAndAlwaysUsesCurrentAccount() throws Exception {
+        mvc.perform(get("/api/v1/listings/excel/export")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/contracts/excel/template")).andExpect(status().isForbidden());
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "test.xlsx", null, new byte[]{1});
+        mvc.perform(multipart("/api/v1/listings/excel/import").file(file)).andExpect(status().isForbidden());
+        mvc.perform(multipart("/api/v1/contracts/excel/import").file(file)).andExpect(status().isForbidden());
+        mvc.perform(multipart("/api/v1/listings/excel/preview").file(file).param("ownerId", "999")
+            .header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        verify(listingExcel).preview(eq(1L), any());
+        mvc.perform(multipart("/api/v1/contracts/excel/import").file(file).param("ownerId", "999")
+            .header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        verify(contractExcel).importContracts(eq("owner"), eq(1L), any());
+        when(listingExcel.exportListings(1L)).thenReturn(new byte[]{1,2});
+        mvc.perform(get("/api/v1/listings/excel/export").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk()).andExpect(header().string("Content-Disposition", "attachment; filename=\"tin-dang.xlsx\""));
+    }
+
     @Test void contractsRequireAuthenticationAndValidateRequests() throws Exception {
         mvc.perform(get("/api/v1/contracts/me")).andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/contracts/preview").contentType("application/json").content("{}"))
@@ -101,5 +155,20 @@ class ListingSecurityTest {
                 .contentType("application/json").content("{}")) .andExpect(status().isBadRequest());
         mvc.perform(patch("/api/v1/listings/10/rental-status").header("Authorization", "Bearer owner")
                 .contentType("application/json").content("{\"rentalStatus\":\"DELETED\"}")) .andExpect(status().isBadRequest());
+    }
+    @Test void sharedRoomRejectsMissingOrFullOccupancyAndAcceptsValidDetails() throws Exception {
+        String body = """
+            {"title":"Ở ghép", "listingType":"SHARED_ROOM", "rentPrice":1500000,
+             "areaSqm":25,"areaId":6,"address":"TP.HCM","latitude":10.78,"longitude":106.7,
+             "imageUrls":["https://example.com/shared.jpg"],"genderPreference":"ANY",
+             "currentOccupants":1,"maxOccupants":2}
+            """;
+        mvc.perform(post("/api/v1/listings").header("Authorization", "Bearer owner")
+                .contentType("application/json").content(body.replace("\"maxOccupants\":2", "\"maxOccupants\":1")))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(listings);
+        mvc.perform(post("/api/v1/listings").header("Authorization", "Bearer owner")
+                .contentType("application/json").content(body)).andExpect(status().isCreated());
+        verify(listings).createListing(eq(1L), any());
     }
 }

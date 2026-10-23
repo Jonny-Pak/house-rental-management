@@ -1,4 +1,7 @@
+import '../../../listing/data/models/roommate_info.dart';
+
 class AdminListingModel {
+  final RoommateInfo? roommateInfo;
   final List<String> imageUrls;
   final int id;
   final String title;
@@ -16,6 +19,7 @@ class AdminListingModel {
 
   AdminListingModel({
     this.imageUrls = const [],
+    this.roommateInfo,
     required this.id,
     required this.title,
     required this.description,
@@ -33,6 +37,9 @@ class AdminListingModel {
 
   factory AdminListingModel.fromJson(Map<String, dynamic> json) {
     return AdminListingModel(
+      roommateInfo: json['listingType'] == 'SHARED_ROOM'
+          ? RoommateInfo.fromJson(json)
+          : null,
       imageUrls: (json['imageUrls'] as List?)?.cast<String>() ?? [],
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title']?.toString() ?? '',

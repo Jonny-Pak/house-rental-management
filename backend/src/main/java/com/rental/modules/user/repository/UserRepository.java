@@ -8,6 +8,10 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    java.util.List<User> findByRoleAndStatus(com.rental.modules.user.domain.enums.Role role, com.rental.modules.user.domain.enums.UserStatus status);
+
+    @org.springframework.data.jpa.repository.Query("select u.userId from User u where u.status = :status and u.isVerified = true")
+    java.util.List<Long> findVerifiedIds(@org.springframework.data.repository.query.Param("status") com.rental.modules.user.domain.enums.UserStatus status);
 
     Optional<User> findByEmail(String email);
 

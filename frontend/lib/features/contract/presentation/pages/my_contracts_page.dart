@@ -1,3 +1,4 @@
+import '../../../../core/excel/excel_page.dart';
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -63,6 +64,27 @@ class _MyContractsPageState extends State<MyContractsPage> {
       if (mounted) setState(() => _error = ListingRepository.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _excel() async {
+    final count = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExcelPage(
+          module: 'contracts',
+          title: 'Hợp đồng',
+          allowImport: widget.isLandlord,
+        ),
+      ),
+    );
+    if (count != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã nhập $count hợp đồng chờ người thuê xác nhận.'),
+        ),
+      );
+      await _load();
     }
   }
 
@@ -362,6 +384,11 @@ class _MyContractsPageState extends State<MyContractsPage> {
           ),
         ),
         actions: [
+          IconButton(
+            onPressed: _loading ? null : _excel,
+            tooltip: 'Import / Export Excel',
+            icon: const Icon(Symbols.table_chart),
+          ),
           IconButton(
             tooltip: 'Làm mới',
             onPressed: _loading ? null : _load,

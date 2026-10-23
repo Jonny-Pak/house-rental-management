@@ -1,3 +1,5 @@
+import '../../../preferences/data/models/personal_interests.dart';
+import '../../../preferences/data/repositories/preference_repository.dart';
 import '../../../../core/layout/app_layout.dart';
 
 import 'dart:io';
@@ -28,13 +30,16 @@ const kBorderColor = Color(0xFFEEDFD1);
 const kSubText = Color(0xFF8A7464);
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({super.key, this.preferenceRepository});
+  final PreferenceRepository? preferenceRepository;
   @override
-  Widget build(BuildContext context) => const ProfileView();
+  Widget build(BuildContext context) =>
+      ProfileView(preferenceRepository: preferenceRepository);
 }
 
 class ProfileView extends StatelessWidget {
-  const ProfileView({super.key});
+  const ProfileView({super.key, this.preferenceRepository});
+  final PreferenceRepository? preferenceRepository;
 
   Future<void> _packages(BuildContext context) async {
     await Navigator.push(
@@ -42,6 +47,23 @@ class ProfileView extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const MembershipPage()),
     );
     if (context.mounted) context.read<ProfileBloc>().add(FetchProfileEvent());
+  }
+
+  Future<void> _editInterests(BuildContext context) async {
+    final profileBloc = context.read<ProfileBloc>();
+    await Navigator.push<List<String>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PreferencesPage(
+          repository: preferenceRepository,
+          onSaved: (interests) {
+            if (!profileBloc.isClosed) {
+              profileBloc.add(ProfileInterestsSaved(interests));
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _pickAvatar(BuildContext context, ProfileLoaded state) async {
@@ -153,114 +175,7 @@ class ProfileView extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFFEDDA), Color(0xFFFFFBF5)],
-                  ),
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: kBorderColor),
-                ),
-                child: Column(
-                  children: [
-                    Semantics(
-                      button: true,
-                      label: 'Đổi ảnh đại diện',
-                      child: GestureDetector(
-                        onTap: state is ProfileAvatarUploading
-                            ? null
-                            : () => _pickAvatar(context, state),
-                        child: Stack(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFE6C8A9),
-                                ),
-                              ),
-                              child: ClipOval(
-                                child: SizedBox(
-                                  width: 86,
-                                  height: 86,
-                                  child: profile.avatarUrl?.isNotEmpty == true
-                                      ? Image.network(
-                                          profile.avatarUrl!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, _, _) =>
-                                              _avatarFallback(),
-                                        )
-                                      : _avatarFallback(),
-                                ),
-                              ),
-                            ),
-                            if (state is ProfileAvatarUploading)
-                              const Positioned.fill(
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: kPrimaryAccent,
-                                  ),
-                                ),
-                              ),
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(
-                                  color: kPrimaryAccent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Symbols.photo_camera,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      profile.fullName,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 23,
-                        height: 1.3,
-                        fontWeight: FontWeight.w700,
-                        color: kPrimaryDark,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      profile.email,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13, color: kSubText),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      profile.phoneNumber ?? 'Chưa cập nhật SĐT',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: kPrimaryDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _profileHeader(context, state),
               const SizedBox(height: 20),
               _membership(context, profile),
               const SizedBox(height: 28),
@@ -303,14 +218,9 @@ class ProfileView extends StatelessWidget {
                       ),
                     ),
                     _menu(
-                      Symbols.tune,
-                      'Sở thích tìm kiếm',
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PreferencesPage(),
-                        ),
-                      ),
+                      Symbols.interests,
+                      'Sở thích của tôi',
+                      () => _editInterests(context),
                     ),
                     _menu(Symbols.shield, 'Đổi mật khẩu', null),
                   ],
@@ -340,6 +250,179 @@ class ProfileView extends StatelessWidget {
       ),
     ),
   );
+
+  Widget _profileHeader(BuildContext context, ProfileLoaded state) {
+    final profile = state.profile;
+    final active = profile.subscriptionStatus == 'ACTIVE';
+    final package = profile.membershipPackageName?.toUpperCase() ?? '';
+    String rank = 'FREE';
+    if (active && package.contains('PRO')) rank = 'PRO';
+    if (active && package.contains('PLUS')) rank = 'PLUS';
+    final rankColor = rank == 'PRO' ? const Color(0xFF7350AA) : kPrimaryAccent;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFEDDA), Color(0xFFFFFBF5)],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: kBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.fullName,
+                      key: const ValueKey('profile-name'),
+                      style: const TextStyle(
+                        fontSize: 23,
+                        height: 1.3,
+                        fontWeight: FontWeight.w700,
+                        color: kPrimaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      profile.email,
+                      style: const TextStyle(fontSize: 12, color: kSubText),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      profile.phoneNumber ?? 'Chưa cập nhật SĐT',
+                      style: const TextStyle(fontSize: 12, color: kSubText),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              KeyedSubtree(
+                key: const ValueKey('profile-avatar'),
+                child: _avatar(context, state),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: rankColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              'Hạng $rank',
+              key: const ValueKey('profile-rank'),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: rankColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextButton.icon(
+            onPressed: () => _editInterests(context),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: kSubText,
+            ),
+            icon: const Icon(Symbols.interests, size: 17),
+            label: const Text(
+              'Sở thích của tôi',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+          if (profile.interests.isEmpty)
+            const Text(
+              'Chọn tối đa 5 sở thích để giới thiệu bản thân.',
+              style: TextStyle(fontSize: 12, color: kSubText),
+            ),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              for (final code in profile.interests.take(5))
+                Chip(
+                  label: Text(
+                    personalInterestLabels[code] ?? code,
+                    style: const TextStyle(fontSize: 12, color: kPrimaryDark),
+                  ),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: kBorderColor),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _avatar(BuildContext context, ProfileLoaded state) {
+    final profile = state.profile;
+    return Semantics(
+      button: true,
+      label: 'Đổi ảnh đại diện',
+      child: GestureDetector(
+        onTap: state is ProfileAvatarUploading
+            ? null
+            : () => _pickAvatar(context, state),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE6C8A9)),
+              ),
+              child: ClipOval(
+                child: SizedBox(
+                  width: 70,
+                  height: 70,
+                  child: profile.avatarUrl?.isNotEmpty == true
+                      ? Image.network(
+                          profile.avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => _avatarFallback(),
+                        )
+                      : _avatarFallback(),
+                ),
+              ),
+            ),
+            if (state is ProfileAvatarUploading)
+              const Positioned.fill(
+                child: Center(
+                  child: CircularProgressIndicator(color: kPrimaryAccent),
+                ),
+              ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: kPrimaryAccent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                ),
+                child: const Icon(
+                  Symbols.photo_camera,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _avatarFallback() => const ColoredBox(
     color: Color(0xFFFFE3C2),

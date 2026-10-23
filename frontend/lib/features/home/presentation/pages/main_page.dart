@@ -1,3 +1,7 @@
+import '../../../notification/data/notification_repository.dart';
+import '../../../notification/presentation/notification_store.dart';
+import '../../../notification/presentation/notifications_page.dart';
+
 import 'package:flutter/material.dart';
 
 import 'dart:math' as math;
@@ -22,8 +26,9 @@ import '../theme/home_icon_colors.dart';
 const _orange = Color(0xFFFF751B);
 
 class MainPage extends StatefulWidget {
-  const MainPage({super.key, this.userRepository});
+  const MainPage({super.key, this.userRepository, this.notificationRepository});
   final UserRepository? userRepository;
+  final NotificationRepository? notificationRepository;
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -35,10 +40,14 @@ class _MainPageState extends State<MainPage> {
   final _atTabRoot = List<bool>.filled(5, true);
   late final List<_TabRouteObserver> _routeObservers;
   int _index = 0;
+  late final NotificationStore _notifications;
 
   @override
   void initState() {
     super.initState();
+    _notifications = NotificationStore(
+      widget.notificationRepository ?? NotificationRepository(ApiClient()),
+    )..start();
     _routeObservers = List.generate(
       5,
       (index) => _TabRouteObserver((atRoot) {
@@ -51,10 +60,19 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _select(int index) => setState(() {
-    _visited.add(index);
-    _index = index;
-  });
+  @override
+  void dispose() {
+    _notifications.dispose();
+    super.dispose();
+  }
+
+  void _select(int index) {
+    if (index == 3) _notifications.refresh();
+    setState(() {
+      _visited.add(index);
+      _index = index;
+    });
+  }
 
   Widget _page(int index) => switch (index) {
     0 => HomePage(
@@ -63,12 +81,15 @@ class _MainPageState extends State<MainPage> {
     ),
     1 => const SavedListingsPage(),
     2 => const MyListingsPage(),
-    3 => const HomeNotificationsPage(),
+    3 => NotificationsPage(store: _notifications),
     _ => const ProfilePage(),
   };
 
   @override
-  Widget build(BuildContext context) => BlocProvider(
+  Widget build(BuildContext context) =>
+      NotificationScope(store: _notifications, child: _shell(context));
+
+  Widget _shell(BuildContext context) => BlocProvider(
     create: (_) => ProfileBloc(
       widget.userRepository ??
           UserRepositoryImpl(UserRemoteDataSourceImpl(ApiClient())),
@@ -167,7 +188,7 @@ class _MainPageState extends State<MainPage> {
                   label: Text('Quản lý tin đăng'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Symbols.notifications),
+                  icon: NotificationBadge(child: Icon(Symbols.notifications)),
                   label: Text('Thông báo'),
                 ),
                 NavigationRailDestination(
@@ -273,12 +294,15 @@ class _MainPageState extends State<MainPage> {
                   height: 29,
                   child: avatar
                       ? _avatar(radius: 14, iconColor: const Color(0xFF0B1535))
-                      : Icon(
-                          icon,
-                          size: 28,
-                          weight: 450,
-                          fill: selected ? 1 : 0,
-                          color: selected ? _orange : const Color(0xFF0B1535),
+                      : _navIcon(
+                          index,
+                          Icon(
+                            icon,
+                            size: 28,
+                            weight: 450,
+                            fill: selected ? 1 : 0,
+                            color: selected ? _orange : const Color(0xFF0B1535),
+                          ),
                         ),
                 ),
                 const SizedBox(height: 4),
@@ -307,6 +331,9 @@ class _MainPageState extends State<MainPage> {
       ),
     );
   }
+
+  Widget _navIcon(int index, Widget icon) =>
+      index == 3 ? NotificationBadge(child: icon) : icon;
 
   Widget _drawer(BuildContext context) => Drawer(
     width: math.min(352, MediaQuery.sizeOf(context).width * .88),
@@ -541,33 +568,4 @@ class _TabRouteObserver extends NavigatorObserver {
     }
     _notify();
   }
-}
-
-class HomeNotificationsPage extends StatelessWidget {
-  const HomeNotificationsPage({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Thông báo')),
-    body: const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Symbols.notifications, size: 48, color: _orange),
-            SizedBox(height: 16),
-            Text(
-              'Thông báo hệ thống',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Tính năng đang được phát triển. Bạn có thể xem trạng thái duyệt tin trong Quản lý tin đăng.',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }

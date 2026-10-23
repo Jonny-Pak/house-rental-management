@@ -50,6 +50,7 @@ dependencies:
   geocoding: ^5.0.0
   material_symbols_icons: ^4.2960.0
   flutter_svg: ^2.3.0
+  file_picker: ^13.1.0
 
   flutter_localizations:
     sdk: flutter

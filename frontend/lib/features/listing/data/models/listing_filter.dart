@@ -22,6 +22,7 @@ String rentalSearchKey(String text) {
 class ListingFilter {
   const ListingFilter({
     this.query = '',
+    this.genderPreference,
     this.areaId,
     this.areaName,
     this.listingType,
@@ -32,12 +33,14 @@ class ListingFilter {
     this.sort = 'newest',
   });
   final String query;
+  final String? genderPreference;
   final int? areaId;
   final String? areaName, listingType;
   final double? minPrice, maxPrice, minArea, maxArea;
   final String sort;
   ListingFilter withQuery(String value) => ListingFilter(
     query: value,
+    genderPreference: genderPreference,
     areaId: areaId,
     areaName: areaName,
     listingType: listingType,
@@ -50,6 +53,7 @@ class ListingFilter {
   int get count => [
     areaId != null,
     listingType != null,
+    genderPreference != null,
     minPrice != null || maxPrice != null,
     minArea != null || maxArea != null,
     sort != 'newest',
@@ -76,13 +80,17 @@ class ListingFilter {
     final words = rentalSearchKey(query).split(' ').where((w) => w.isNotEmpty);
     final items = source.where((l) {
       final text = rentalSearchKey(
-        '${l.title} ${l.address ?? ''} ${l.description ?? ''}',
+        '${l.title} ${l.address ?? ''} ${l.description ?? ''} ${l.details['roommateRequirements'] ?? ''}',
       );
       return l.approvalStatus == 'APPROVED' &&
           l.rentalStatus == 'AVAILABLE' &&
           words.every(text.contains) &&
           (areaId == null || areaId == l.areaId) &&
           (listingType == null || listingType == l.listingType) &&
+          (genderPreference == null ||
+              l.listingType == 'SHARED_ROOM' &&
+                  (l.roommateInfo.genderPreference == 'ANY' ||
+                      l.roommateInfo.genderPreference == genderPreference)) &&
           (minPrice == null || l.rentPrice >= minPrice!) &&
           (maxPrice == null || l.rentPrice <= maxPrice!) &&
           (minArea == null || l.areaSqm >= minArea!) &&

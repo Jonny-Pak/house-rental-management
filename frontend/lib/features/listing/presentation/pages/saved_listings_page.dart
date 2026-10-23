@@ -137,7 +137,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${NumberFormat.decimalPattern('vi_VN').format(listing.rentPrice)} đ/tháng',
+                  '${NumberFormat.decimalPattern('vi_VN').format(listing.rentPrice)} đ/${listingRentUnit(listing.listingType)}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,

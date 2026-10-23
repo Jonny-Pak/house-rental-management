@@ -33,7 +33,10 @@ public class ListingService {
     private final AdministrativeAreaRepository areaRepository;
     private final com.rental.modules.contract.repository.ContractRepository contracts;
 
-    public ListingService(ListingRepository listingRepository, UserRepository userRepository, AdministrativeAreaRepository areaRepository, com.rental.modules.contract.repository.ContractRepository contracts) {
+    private final com.rental.modules.notification.service.NotificationService notifications;
+
+    public ListingService(ListingRepository listingRepository, UserRepository userRepository, AdministrativeAreaRepository areaRepository, com.rental.modules.contract.repository.ContractRepository contracts, com.rental.modules.notification.service.NotificationService notifications) {
+        this.notifications = notifications;
         this.listingRepository = listingRepository;
         this.userRepository = userRepository;
         this.areaRepository = areaRepository;
@@ -118,7 +121,10 @@ public class ListingService {
         listing.setApprovalStatus("PENDING");
         listing.setRentalStatus("AVAILABLE");
         listing.setCreatedAt(LocalDateTime.now());
-        return toListingResponse(listingRepository.save(listing));
+        Listing saved = listingRepository.save(listing);
+        notifications.send(ownerId, "LISTING_SUBMITTED", "Đã gửi tin chờ duyệt", saved.getTitle(), saved.getId(), null);
+        notifications.notifyAdmins("Có tin mới cần duyệt", saved.getTitle(), saved.getId());
+        return toListingResponse(saved);
     }
 
     public List<ListingResponse> getMyListings(Long ownerId) {
@@ -134,7 +140,10 @@ public class ListingService {
         listing.setApprovedBy(null);
         listing.setRejectionReason(null);
         listing.setUpdatedAt(LocalDateTime.now());
-        return toListingResponse(listingRepository.save(listing));
+        Listing saved = listingRepository.save(listing);
+        notifications.send(ownerId, "LISTING_SUBMITTED", "Tin đã gửi duyệt lại", saved.getTitle(), saved.getId(), null);
+        notifications.notifyAdmins("Có tin chỉnh sửa cần duyệt", saved.getTitle(), saved.getId());
+        return toListingResponse(saved);
     }
 
     @Transactional
@@ -175,6 +184,9 @@ public class ListingService {
     }
 
     private void applyRequest(Listing listing, CreateListingRequest request) {
+        if (!request.isSharedRoomValid()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thông tin ở ghép không hợp lệ hoặc không còn chỗ trống.");
+        }
         java.util.Optional<AdministrativeArea> areaResult = areaRepository.findById(request.getAreaId());
         if (areaResult.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực không hợp lệ.");
@@ -201,6 +213,12 @@ public class ListingService {
         listing.setFurnitureStatus(request.getFurnitureStatus());
         listing.setDepositAmount(request.getDepositAmount());
         listing.setPosterType(request.getPosterType());
+        listing.setCurrentOccupants("SHARED_ROOM".equals(request.getListingType()) ? request.getCurrentOccupants() : null);
+        listing.setMaxOccupants("SHARED_ROOM".equals(request.getListingType()) ? request.getMaxOccupants() : null);
+        listing.setGenderPreference("SHARED_ROOM".equals(request.getListingType()) ? request.getGenderPreference() : null);
+        listing.setAllowPets("SHARED_ROOM".equals(request.getListingType()) ? request.getAllowPets() : null);
+        listing.setAllowSmoking("SHARED_ROOM".equals(request.getListingType()) ? request.getAllowSmoking() : null);
+        listing.setRoommateRequirements("SHARED_ROOM".equals(request.getListingType()) ? request.getRoommateRequirements() : null);
         listing.replaceImages(request.getImageUrls());
     }
 
@@ -250,6 +268,13 @@ public class ListingService {
         response.setFurnitureStatus(listing.getFurnitureStatus());
         response.setDepositAmount(listing.getDepositAmount());
         response.setPosterType(listing.getPosterType());
+        response.setCurrentOccupants(listing.getCurrentOccupants());
+        response.setMaxOccupants(listing.getMaxOccupants());
+        response.setGenderPreference(listing.getGenderPreference());
+        response.setAllowPets(listing.getAllowPets());
+        response.setAllowSmoking(listing.getAllowSmoking());
+        response.setRoommateRequirements(listing.getRoommateRequirements());
+
         return response;
     }
 }

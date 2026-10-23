@@ -61,7 +61,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
   }
 
   String _price(Listing l) =>
-      '${NumberFormat.decimalPattern('vi_VN').format(l.rentPrice)} đ/tháng';
+      '${NumberFormat.decimalPattern('vi_VN').format(l.rentPrice)} đ/${listingRentUnit(l.listingType)}';
   void _detail(Listing listing) {
     Navigator.push(
       context,
@@ -149,9 +149,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                     if (listing.listingType != null)
                       _info(
                         Symbols.home_work,
-                        listing.listingType == 'BOARDING_ROOM'
-                            ? 'Phòng trọ'
-                            : 'Nhà nguyên căn',
+                        listingTypeLabel(listing.listingType),
                       ),
                   ],
                 ),

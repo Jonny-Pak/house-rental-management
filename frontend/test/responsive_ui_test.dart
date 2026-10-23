@@ -1,3 +1,5 @@
+import 'notification_test.dart' show MemoryNotifications;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -41,7 +43,12 @@ void main() {
         return tester.binding.setSurfaceSize(null);
       });
       await tester.pumpWidget(
-        MaterialApp(home: MainPage(userRepository: repository)),
+        MaterialApp(
+          home: MainPage(
+            userRepository: repository,
+            notificationRepository: MemoryNotifications(),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Tài khoản'));
@@ -80,7 +87,12 @@ void main() {
       return tester.binding.setSurfaceSize(null);
     });
     await tester.pumpWidget(
-      MaterialApp(home: MainPage(userRepository: TestProfileRepository())),
+      MaterialApp(
+        home: MainPage(
+          userRepository: TestProfileRepository(),
+          notificationRepository: MemoryNotifications(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Đăng Tin'));

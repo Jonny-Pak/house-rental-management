@@ -1,4 +1,4 @@
-﻿import '../datasources/preference_remote_data_source.dart';
+import '../datasources/preference_remote_data_source.dart';
 import '../models/user_preference.dart';
 
 abstract class PreferenceRepository {
@@ -15,5 +15,6 @@ class PreferenceRepositoryImpl implements PreferenceRepository {
   Future<UserPreference> getPreferences() => _remoteDataSource.getPreferences();
 
   @override
-  Future<UserPreference> updatePreferences(UserPreference preference) => _remoteDataSource.updatePreferences(preference);
+  Future<UserPreference> updatePreferences(UserPreference preference) =>
+      _remoteDataSource.updatePreferences(preference);
 }

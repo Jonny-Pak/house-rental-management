@@ -18,7 +18,10 @@ public class AdminListingService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
 
-    public AdminListingService(ListingRepository listingRepository, UserRepository userRepository) {
+    private final com.rental.modules.notification.service.NotificationService notifications;
+
+    public AdminListingService(ListingRepository listingRepository, UserRepository userRepository, com.rental.modules.notification.service.NotificationService notifications) {
+        this.notifications = notifications;
         this.listingRepository = listingRepository;
         this.userRepository = userRepository;
     }
@@ -70,6 +73,10 @@ public class AdminListingService {
         listing.setUpdatedAt(LocalDateTime.now());
 
         Listing saved = listingRepository.save(listing);
+        String title = "APPROVED".equals(status) ? "Tin đăng đã được duyệt" : "Tin đăng bị từ chối";
+        String content = saved.getTitle();
+        if (reason != null && !reason.isBlank()) content += " · Lý do: " + reason;
+        notifications.send(saved.getOwner().getUserId(), "LISTING_" + status, title, content, saved.getId(), null);
         return toAdminListingResponse(saved);
     }
 
@@ -113,6 +120,13 @@ public class AdminListingService {
         response.setFurnitureStatus(listing.getFurnitureStatus());
         response.setDepositAmount(listing.getDepositAmount());
         response.setPosterType(listing.getPosterType());
+        response.setCurrentOccupants(listing.getCurrentOccupants());
+        response.setMaxOccupants(listing.getMaxOccupants());
+        response.setGenderPreference(listing.getGenderPreference());
+        response.setAllowPets(listing.getAllowPets());
+        response.setAllowSmoking(listing.getAllowSmoking());
+        response.setRoommateRequirements(listing.getRoommateRequirements());
+
         response.setCreatedAt(listing.getCreatedAt());
         response.setUpdatedAt(listing.getUpdatedAt());
         return response;

@@ -213,7 +213,11 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                         title: 'Giá thuê & tiền cọc',
                         icon: Symbols.payments,
                         children: [
-                          _buildSectionTitle('Giá cho thuê (VND/tháng) *'),
+                          _buildSectionTitle(
+                            state.propertyType == 'SHARED_ROOM'
+                                ? 'Chi phí mỗi người (VND/tháng) *'
+                                : 'Giá cho thuê (VND/tháng) *',
+                          ),
                           const SizedBox(height: 12),
                           _buildTextField(
                             controller: _priceController,
@@ -226,7 +230,11 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                           ),
                           const SizedBox(height: 24),
 
-                          _buildSectionTitle('Tiền cọc (VND)'),
+                          _buildSectionTitle(
+                            state.propertyType == 'SHARED_ROOM'
+                                ? 'Tiền cọc mỗi người (VND)'
+                                : 'Tiền cọc (VND)',
+                          ),
                           const SizedBox(height: 12),
                           _buildTextField(
                             controller: _depositController,
@@ -578,6 +586,9 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
   }
 
   bool _canProceed(CreateListingState state) {
+    if (state.propertyType == 'SHARED_ROOM' && !state.roommateInfo.isValid) {
+      return false;
+    }
     return state.status != CreateListingStatus.submitting &&
         state.areaId != null &&
         state.calculatedArea > 0 &&

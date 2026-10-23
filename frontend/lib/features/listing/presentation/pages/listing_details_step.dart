@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../../core/layout/app_layout.dart';
 import '../cubit/create_listing_cubit.dart';
 import '../cubit/create_listing_state.dart';
+import '../widgets/roommate_form.dart';
 
 const _accent = Color(0xFFD76B28);
 const _ink = Color(0xFF38291F);
@@ -139,6 +140,19 @@ class ListingDetailsStep extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                     ],
+                    if (state.propertyType == 'SHARED_ROOM') ...[
+                      _DetailSection(
+                        title: 'Thông tin tìm người ở ghép',
+                        icon: Symbols.group,
+                        children: [
+                          RoommateForm(
+                            value: state.roommateInfo,
+                            onChanged: cubit.updateRoommateInfo,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     _DetailSection(
                       title: isHouse
                           ? 'Pháp lý & nội thất'
@@ -235,6 +249,9 @@ class ListingDetailsStep extends StatelessWidget {
           state.bathrooms != null &&
           state.bathrooms! > 0 &&
           state.furnitureStatus != null;
+    }
+    if (state.propertyType == 'SHARED_ROOM' && !state.roommateInfo.isValid) {
+      return false;
     }
     return state.furnitureStatus != null;
   }

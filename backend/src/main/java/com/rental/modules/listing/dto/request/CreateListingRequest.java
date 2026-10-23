@@ -7,6 +7,16 @@ import java.util.List;
 import java.math.BigDecimal;
 
 public class CreateListingRequest {
+    @Min(0) @Max(20)
+    private Integer currentOccupants;
+    @Min(1) @Max(20)
+    private Integer maxOccupants;
+    @Pattern(regexp = "ANY|MALE|FEMALE")
+    private String genderPreference;
+    private Boolean allowPets;
+    private Boolean allowSmoking;
+    @Size(max = 500)
+    private String roommateRequirements;
 
     @NotBlank(message = "Title is required")
     @Size(max = 200)
@@ -217,5 +227,25 @@ public class CreateListingRequest {
         this.posterType = posterType;
     }
 
+    public Integer getCurrentOccupants() { return currentOccupants; }
+    public void setCurrentOccupants(Integer currentOccupants) { this.currentOccupants = currentOccupants; }
+    public Integer getMaxOccupants() { return maxOccupants; }
+    public void setMaxOccupants(Integer maxOccupants) { this.maxOccupants = maxOccupants; }
+    public String getGenderPreference() { return genderPreference; }
+    public void setGenderPreference(String genderPreference) { this.genderPreference = genderPreference; }
+    public Boolean getAllowPets() { return allowPets; }
+    public void setAllowPets(Boolean allowPets) { this.allowPets = allowPets; }
+    public Boolean getAllowSmoking() { return allowSmoking; }
+    public void setAllowSmoking(Boolean allowSmoking) { this.allowSmoking = allowSmoking; }
+    public String getRoommateRequirements() { return roommateRequirements; }
+    public void setRoommateRequirements(String roommateRequirements) { this.roommateRequirements = roommateRequirements; }
+    @AssertTrue(message = "Tin ở ghép cần số người hợp lệ, còn chỗ trống và giới tính ưu tiên.")
+    public boolean isSharedRoomValid() {
+        if (!"SHARED_ROOM".equals(listingType)) return true;
+        return currentOccupants != null && maxOccupants != null
+                && currentOccupants >= 0 && maxOccupants <= 20
+                && maxOccupants > currentOccupants
+                && java.util.List.of("ANY", "MALE", "FEMALE").contains(genderPreference == null ? "" : genderPreference);
+    }
 }
 

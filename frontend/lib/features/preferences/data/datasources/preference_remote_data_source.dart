@@ -1,4 +1,4 @@
-﻿import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_client.dart';
 import '../models/user_preference.dart';
 
 abstract class PreferenceRemoteDataSource {
@@ -19,7 +19,10 @@ class PreferenceRemoteDataSourceImpl implements PreferenceRemoteDataSource {
 
   @override
   Future<UserPreference> updatePreferences(UserPreference preference) async {
-    final response = await _apiClient.put('/users/me/preferences', preference.toJson());
+    final response = await _apiClient.put(
+      '/users/me/preferences',
+      preference.toJson(),
+    );
     return UserPreference.fromJson(response.data['data']);
   }
 }

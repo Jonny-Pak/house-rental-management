@@ -38,7 +38,10 @@ public class ContractService {
     private final ListingRepository listings;
     private final ContractDocumentService documents;
 
-    public ContractService(ContractRepository contracts, UserRepository users, ListingRepository listings, ContractDocumentService documents) {
+    private final com.rental.modules.notification.service.NotificationService notifications;
+
+    public ContractService(ContractRepository contracts, UserRepository users, ListingRepository listings, ContractDocumentService documents, com.rental.modules.notification.service.NotificationService notifications) {
+        this.notifications = notifications;
         this.contracts = contracts;
         this.users = users;
         this.listings = listings;
@@ -61,6 +64,7 @@ public class ContractService {
         documents.validate(request.getDetails(), contract.getStartDate(), contract.getEndDate());
         contracts.save(contract);
         documents.prepare(contract, request.getDetails());
+        notifications.send(tenant.getUserId(), "CONTRACT_CREATED", "Hợp đồng cần bạn xác nhận", contract.getListingTitle(), null, contract.getId());
         return toResponse(contract, landlord);
     }
 
@@ -213,6 +217,7 @@ public class ContractService {
 
         checkListingAvailable(contract.getListing(), contractId);
         User tenant = getValidTenant(request.getTenantId(), landlord);
+        Long previousTenant = contract.getTenant().getUserId();
         contract.setTenant(tenant);
         contract.setStartDate(request.getStartDate());
         contract.setEndDate(request.getEndDate());
@@ -220,6 +225,10 @@ public class ContractService {
         contract.setDepositAmount(request.getDepositAmount());
         contract.setNote(request.getNote());
         documents.prepare(contract, request.getDetails());
+        notifications.send(tenant.getUserId(), "CONTRACT_UPDATED", "Hợp đồng đã được cập nhật", "Hãy kiểm tra lại nội dung trước khi xác nhận: " + contract.getListingTitle(), null, contract.getId());
+        if (!previousTenant.equals(tenant.getUserId())) {
+            notifications.send(previousTenant, "CONTRACT_UPDATED", "Hợp đồng đã thay đổi người thuê", "Bạn không còn tham gia hợp đồng cho " + contract.getListingTitle(), null, null);
+        }
         return toResponse(contract, landlord);
     }
 
@@ -239,6 +248,13 @@ public class ContractService {
         } else {
             throw error(HttpStatus.BAD_REQUEST, "Trạng thái không hợp lệ.");
         }
+        Long recipient = isLandlord(contract, user) ? contract.getTenant().getUserId() : contract.getLandlord().getUserId();
+        String title = switch (status) {
+            case "ACTIVE" -> "Người thuê đã xác nhận hợp đồng";
+            case "CANCELLED" -> "Hợp đồng đã bị hủy";
+            default -> "Hợp đồng đã kết thúc";
+        };
+        notifications.send(recipient, "CONTRACT_" + status, title, contract.getListingTitle(), null, contract.getId());
         return toResponse(contract, user);
     }
 
@@ -380,6 +396,8 @@ public class ContractService {
         if (contract.getEndDate().isBefore(today())) {
             contract.setStatus("EXPIRED");
             hideListingAfterContract(contract);
+            notifications.send(contract.getLandlord().getUserId(), "CONTRACT_EXPIRED", "Hợp đồng đã hết hạn", contract.getListingTitle(), null, contract.getId());
+            notifications.send(contract.getTenant().getUserId(), "CONTRACT_EXPIRED", "Hợp đồng đã hết hạn", contract.getListingTitle(), null, contract.getId());
         }
     }
 

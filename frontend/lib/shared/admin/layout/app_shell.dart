@@ -1,3 +1,8 @@
+import '../../../features/notification/presentation/notification_store.dart';
+import '../../../features/notification/presentation/notifications_page.dart';
+import '../../../features/notification/data/notification_repository.dart';
+import '../../../core/network/api_client.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -387,103 +392,41 @@ class _SearchTrigger extends StatelessWidget {
   }
 }
 
-class _NotificationsButton extends StatelessWidget {
+class _NotificationsButton extends StatefulWidget {
   const _NotificationsButton();
+  @override
+  State<_NotificationsButton> createState() => _NotificationsButtonState();
+}
 
-  static const _items = <(String, String, KiteTone)>[
-    ('Payment gateway unreachable', '2m', KiteTone.danger),
-    ('3 products below reorder point', '18m', KiteTone.warning),
-    ('Ada Lovelace refunded #10265', '1h', KiteTone.info),
-    ('Sprint 14 burndown on track', '4h', KiteTone.success),
-  ];
+class _NotificationsButtonState extends State<_NotificationsButton> {
+  late final store = NotificationStore(NotificationRepository(ApiClient()));
+  @override
+  void initState() {
+    super.initState();
+    store.start();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-
-    return KiteMenu(
-      width: 320,
-      header: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          KiteSpace.sm,
-          KiteSpace.xs,
-          KiteSpace.sm,
-          0,
-        ),
-        child: Row(
-          children: [
-            Text(
-              'Notifications',
-              style: t.small.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            KiteBadge('${_items.length} new', tone: KiteTone.info),
-          ],
-        ),
-      ),
-      items: [
-        for (final (text, ago, tone) in _items)
-          KiteMenuItem(
-            label: text,
-            trailing: ago,
-            icon: switch (tone) {
-              KiteTone.danger => Icons.error_outline,
-              KiteTone.warning => Icons.warning_amber_outlined,
-              KiteTone.success => Icons.check_circle_outline,
-              _ => Icons.info_outline,
-            },
-            onPressed: () {},
-          ),
-        const KiteMenuItem.separator(),
-        KiteMenuItem(
-          label: 'Mark all as read',
-          icon: Icons.done_all,
-          onPressed: () => KiteToast.show(context, title: 'All caught up'),
-        ),
-      ],
-      trigger: (context, open) => KiteTooltip(
-        message: 'Notifications',
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              iconSize: 18,
-              color: c.mutedForeground,
-              icon: const Icon(Icons.notifications_none),
-              onPressed: open,
-            ),
-            // Count in a badge, not just a dot — "how many" is the question.
-            PositionedDirectional(
-              top: 6,
-              end: 6,
-              child: IgnorePointer(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  constraints: const BoxConstraints(minWidth: 15),
-                  decoration: BoxDecoration(
-                    color: c.destructive,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: c.card, width: 1.5),
-                  ),
-                  child: Text(
-                    '${_items.length}',
-                    textAlign: TextAlign.center,
-                    style: t.small.copyWith(
-                      fontSize: 9,
-                      height: 1.5,
-                      color: c.background,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void dispose() {
+    store.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => NotificationScope(
+    store: store,
+    child: Builder(
+      builder: (context) => IconButton(
+        tooltip: 'Thông báo hệ thống',
+        icon: const NotificationBadge(child: Icon(Icons.notifications_none)),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => NotificationsPage(store: store, admin: true),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _AccountMenu extends ConsumerWidget {
