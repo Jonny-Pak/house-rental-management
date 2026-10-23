@@ -1,21 +1,21 @@
 # Giao diện Flutter
 
-Admin và người dùng đều có thể chạy trên app, web và Windows. Entry point mặc định có màn hình chọn giao diện; backend vẫn kiểm tra quyền của tài khoản Admin.
+Website chỉ chạy giao diện Admin. App Android/iOS và Windows chạy giao diện người dùng, không có màn hình chọn hoặc chuyển sang Admin.
 
-Chạy từ thư mục `frontend`:
+Chạy từ thư mục `frontend`, mỗi giao diện dùng một terminal:
 
 ```powershell
+# App người dùng (chọn điện thoại hoặc thiết bị Android/iOS)
 flutter run
-flutter run -d chrome
+
+# Website Admin
+flutter run -d chrome --web-port 8081
+
+# Ứng dụng người dùng trên Windows
 flutter run -d windows
 ```
 
-Để mở thẳng một giao diện, dùng `-t lib/main_user.dart` hoặc `-t lib/main_admin.dart`. Ví dụ:
-
-```powershell
-flutter run -d chrome -t lib/main_user.dart
-flutter run -d windows -t lib/main_admin.dart
-```
+Các entry point cũ `main_user.dart` và `main_admin.dart` cùng dùng cách phân chia theo nền tảng này. Backend vẫn kiểm tra quyền Admin khi đăng nhập website.
 
 ## Bố cục thích ứng
 

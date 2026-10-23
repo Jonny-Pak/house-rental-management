@@ -30,7 +30,7 @@ flutter run -t lib/main_user.dart
 flutter run -d chrome -t lib/main_admin.dart
 ```
 
-`lib/main.dart` giữ cách khởi chạy mặc định trước đây: web mở Admin, các nền tảng khác mở ứng dụng người dùng.
+`lib/main.dart` tự phân chia theo nền tảng: website chỉ mở Admin, Android/iOS và Windows chỉ mở ứng dụng người dùng. Không còn màn hình chọn giao diện hoặc chuyển sang Admin trên app. Các entry point `main_user.dart` và `main_admin.dart` cũng tuân theo quy tắc này.
 
 Endpoint `/api/v1/auth/test-payment` chỉ được đăng ký khi backend chạy với profile `dev`.
 

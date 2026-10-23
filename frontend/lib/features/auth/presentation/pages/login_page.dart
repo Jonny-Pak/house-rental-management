@@ -1,10 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/storage/token_storage.dart';
-import '../../../../app/admin/admin_app.dart';
-import '../../../../app/app_mode_scope.dart';
 import '../../../home/presentation/pages/main_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -169,14 +166,9 @@ class _LoginPageState extends State<LoginPage> {
               );
               await TokenStorage.saveToken(state.data.accessToken);
               if (context.mounted) {
-                final bool isAdmin = state.data.role == 'ADMIN';
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => isAdmin
-                        ? const ProviderScope(child: KiteApp())
-                        : const MainPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const MainPage()),
                 );
               }
             }
@@ -197,12 +189,6 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (AppModeScope.maybeOf(context) case final mode?)
-                          TextButton.icon(
-                            onPressed: mode.onSwitch,
-                            icon: const Icon(Icons.apps),
-                            label: const Text('Chọn giao diện'),
-                          ),
                         // App Logo or Icon
                         Center(
                           child: Container(

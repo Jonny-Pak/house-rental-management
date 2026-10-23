@@ -6,5 +6,6 @@ export 'app/user/user_app.dart' show MyApp;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  configureApp();
   runApp(const AppLauncher());
 }
