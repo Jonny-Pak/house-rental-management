@@ -27,6 +27,12 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.5.1</version>
+        </dependency>
+
         <!-- ==================== WEB ==================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,3 +1,4 @@
+import '../widgets/roommate_form.dart';
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -134,6 +135,7 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
         'WHOLE_HOUSE': 'Nhà nguyên căn',
         'BOARDING_ROOM': 'Phòng trọ',
         'APARTMENT': 'Căn hộ',
+        'SHARED_ROOM': 'Tìm người ở ghép',
         'MAT_PHO': 'Nhà mặt phố',
         'NGO_HEM': 'Nhà ngõ hẻm',
         'BIET_THU': 'Biệt thự',
@@ -383,7 +385,7 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
       ),
       const SizedBox(height: 10),
       Text(
-        '${_money(listing.rentPrice)}/tháng',
+        '${_money(listing.rentPrice)}/${listingRentUnit(listing.listingType)}',
         style: const TextStyle(
           fontSize: 21,
           color: _accent,
@@ -427,6 +429,11 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
           ],
         ),
       ),
+      if (listing.listingType == 'SHARED_ROOM')
+        _section(
+          'Thông tin ở ghép',
+          RoommateSummary(value: listing.roommateInfo),
+        ),
       _section(
         'Mô tả',
         SelectableText(

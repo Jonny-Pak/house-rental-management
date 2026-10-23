@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'create_listing_state.dart';
+import '../../data/models/roommate_info.dart';
 import '../../data/repositories/listing_repository.dart';
 import '../../../../core/network/api_client.dart';
 
@@ -73,6 +74,9 @@ class CreateListingCubit extends Cubit<CreateListingState> {
     : repository = repository ?? ListingRepository(ApiClient()),
       super(const CreateListingState());
 
+  void updateRoommateInfo(RoommateInfo value) =>
+      emit(state.copyWith(roommateInfo: value));
+
   void updateAreaId(int? id) =>
       emit(state.copyWith(areaId: id, clearAreaId: id == null));
   void updateArea(double area) => emit(state.copyWith(calculatedArea: area));
@@ -80,6 +84,15 @@ class CreateListingCubit extends Cubit<CreateListingState> {
   Future<bool> submit() async {
     if (state.status == CreateListingStatus.submitting) return false;
     final draft = state;
+    if (draft.propertyType == 'SHARED_ROOM' && !draft.roommateInfo.isValid) {
+      emit(
+        state.copyWith(
+          status: CreateListingStatus.error,
+          errorMessage: 'Sức chứa phải lớn hơn số người đang ở và không vượt quá 20 người.',
+        ),
+      );
+      return false;
+    }
     if (draft.areaId == null ||
         draft.latitude == null ||
         draft.longitude == null ||
@@ -111,6 +124,7 @@ class CreateListingCubit extends Cubit<CreateListingState> {
         urls.add(await repository.uploadImage(path));
       }
       await repository.createListing({
+        if (draft.propertyType == 'SHARED_ROOM') ...draft.roommateInfo.toJson(),
         'title': draft.title.trim(),
         'description': draft.description.trim(),
         'listingType': draft.propertyType,

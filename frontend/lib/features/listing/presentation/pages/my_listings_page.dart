@@ -1,3 +1,4 @@
+import '../../../../core/excel/excel_page.dart';
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -45,6 +46,21 @@ class _MyListingsPageState extends State<MyListingsPage> {
       if (mounted) setState(() => _error = ListingRepository.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _excel() async {
+    final count = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExcelPage(module: 'listings', title: 'Tin đăng'),
+      ),
+    );
+    if (count != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã nhập $count tin chờ Admin duyệt.')),
+      );
+      await _load();
     }
   }
 
@@ -243,7 +259,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      '${NumberFormat.decimalPattern('vi_VN').format(l.rentPrice)} đ/tháng',
+                      '${NumberFormat.decimalPattern('vi_VN').format(l.rentPrice)} đ/${listingRentUnit(l.listingType)}',
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -374,6 +390,11 @@ class _MyListingsPageState extends State<MyListingsPage> {
           ),
         ),
         actions: [
+          IconButton(
+            onPressed: _loading ? null : _excel,
+            tooltip: 'Import / Export Excel',
+            icon: const Icon(Symbols.table_chart),
+          ),
           IconButton(
             onPressed: _loading || _busy ? null : _load,
             tooltip: 'Làm mới tin đăng',

@@ -1,3 +1,5 @@
+import 'notification_test.dart' show MemoryNotifications;
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -121,7 +123,10 @@ void main() {
           ),
           home: RepaintBoundary(
             key: boundary,
-            child: MainPage(userRepository: _ProfileRepository()),
+            child: MainPage(
+              userRepository: _ProfileRepository(),
+              notificationRepository: MemoryNotifications(),
+            ),
           ),
         ),
       );
@@ -159,8 +164,12 @@ void main() {
       await tester.scrollUntilVisible(
         notifications,
         100,
-        scrollable: find.descendant(of: drawer, matching: find.byType(Scrollable)),
+        scrollable: find.descendant(
+          of: drawer,
+          matching: find.byType(Scrollable),
+        ),
       );
+      await tester.pumpAndSettle();
       await tester.tap(notifications);
       await tester.pumpAndSettle();
       expect(find.text('Thông báo hệ thống'), findsOneWidget);
@@ -176,7 +185,12 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 860));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(home: MainPage(userRepository: _ProfileRepository())),
+      MaterialApp(
+        home: MainPage(
+          userRepository: _ProfileRepository(),
+          notificationRepository: MemoryNotifications(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.byTooltip('Trang chủ'), findsOneWidget);
@@ -208,7 +222,10 @@ void main() {
               fontFamily: preview ? 'HomePreview' : null,
               colorSchemeSeed: const Color(0xFFFF751B),
             ),
-            home: MainPage(userRepository: _ProfileRepository()),
+            home: MainPage(
+              userRepository: _ProfileRepository(),
+              notificationRepository: MemoryNotifications(),
+            ),
           ),
         ),
       );

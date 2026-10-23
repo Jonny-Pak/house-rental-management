@@ -1,318 +1,355 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../../core/layout/app_layout.dart';
 import '../../../../core/network/api_client.dart';
-import '../../data/datasources/area_remote_data_source.dart';
 import '../../data/datasources/preference_remote_data_source.dart';
-import '../../data/models/area_models.dart';
-import '../../data/repositories/area_repository.dart';
+import '../../data/models/personal_interests.dart';
 import '../../data/repositories/preference_repository.dart';
 import '../cubit/preferences_cubit.dart';
 import '../cubit/preferences_state.dart';
 
 class PreferencesPage extends StatelessWidget {
-  const PreferencesPage({super.key});
+  const PreferencesPage({super.key, this.repository, this.onSaved});
+  final PreferenceRepository? repository;
+  final ValueChanged<List<String>>? onSaved;
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) {
-        final apiClient = ApiClient();
-        final areaRepo = AreaRepositoryImpl(
-          AreaRemoteDataSourceImpl(apiClient),
-        );
-        final prefRepo = PreferenceRepositoryImpl(
-          PreferenceRemoteDataSourceImpl(apiClient),
-        );
-        return PreferencesCubit(areaRepo, prefRepo)..loadInitialData();
-      },
-      child: const PreferencesView(),
-    );
-  }
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) => PreferencesCubit(
+      repository ??
+          PreferenceRepositoryImpl(PreferenceRemoteDataSourceImpl(ApiClient())),
+    )..loadInitialData(),
+    child: PreferencesView(onSaved: onSaved),
+  );
 }
 
-class PreferencesView extends StatefulWidget {
-  const PreferencesView({super.key});
+class PreferencesView extends StatelessWidget {
+  const PreferencesView({super.key, this.onSaved});
+  final ValueChanged<List<String>>? onSaved;
 
-  @override
-  State<PreferencesView> createState() => _PreferencesViewState();
-}
-
-class _PreferencesViewState extends State<PreferencesView> {
-  final _formKey = GlobalKey<FormState>();
-  final _minBudgetController = TextEditingController();
-  final _maxBudgetController = TextEditingController();
-  bool _hasPet = false;
-
-  @override
-  void dispose() {
-    _minBudgetController.dispose();
-    _maxBudgetController.dispose();
-    super.dispose();
-  }
-
-  void _populateInitialData(PreferencesState state) {
-    if (state.currentPreference != null) {
-      if (state.currentPreference!.minBudget != null &&
-          _minBudgetController.text.isEmpty) {
-        _minBudgetController.text = state.currentPreference!.minBudget!
-            .toStringAsFixed(0);
-      }
-      if (state.currentPreference!.maxBudget != null &&
-          _maxBudgetController.text.isEmpty) {
-        _maxBudgetController.text = state.currentPreference!.maxBudget!
-            .toStringAsFixed(0);
-      }
-      if (state.currentPreference!.hasPet != null) {
-        _hasPet = state.currentPreference!.hasPet!;
-      }
+  IconData _icon(String code) {
+    switch (code) {
+      case 'CAT_LOVER':
+        return Symbols.pets;
+      case 'DOG_LOVER':
+        return Symbols.cruelty_free;
+      case 'PLANTS':
+        return Symbols.potted_plant;
+      case 'QUIET':
+        return Symbols.volume_off;
+      case 'TIDY':
+        return Symbols.cleaning_services;
+      case 'STUDY':
+        return Symbols.school;
+      case 'EARLY_BIRD':
+        return Symbols.wb_sunny;
+      case 'NIGHT_OWL':
+        return Symbols.nights_stay;
+      case 'NON_SMOKER':
+        return Symbols.smoke_free;
+      case 'SOCIABLE':
+        return Symbols.groups;
+      case 'MUSIC':
+        return Symbols.headphones;
+      case 'MOVIES':
+        return Symbols.movie;
+      case 'READING':
+        return Symbols.menu_book;
+      case 'GAMING':
+        return Symbols.sports_esports;
+      case 'COOKING':
+        return Symbols.skillet;
+      case 'SPORTS':
+        return Symbols.fitness_center;
+      case 'TRAVEL':
+        return Symbols.flight;
+      default:
+        return Symbols.coffee;
     }
   }
 
-  Widget _buildDropdown<T>({
-    required String label,
-    required T? value,
-    required List<DropdownMenuItem<T>> items,
-    required void Function(T?)? onChanged,
-  }) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey),
+  Widget _group(
+    BuildContext context,
+    PreferencesState state,
+    String title,
+    List<String> codes,
+  ) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: const Color(0xFFEEDFD1)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF38291F),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+        const SizedBox(height: 16),
+        LayoutBuilder(
+          builder: (context, constraints) => Wrap(
+            spacing: 9,
+            runSpacing: 10,
+            children: [
+              for (final code in codes)
+                FilterChip(
+                  key: ValueKey('interest-$code'),
+                  selected: state.interests.contains(code),
+                  showCheckmark: false,
+                  avatar: Icon(
+                    _icon(code),
+                    size: 18,
+                    color: state.interests.contains(code)
+                        ? const Color(0xFFAF541E)
+                        : const Color(0xFFAD8A68),
+                  ),
+                  label: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth - 74,
+                    ),
+                    child: Text(
+                      personalInterestLabels[code]!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        fontWeight: state.interests.contains(code)
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                        color: const Color(0xFF573B28),
+                      ),
+                    ),
+                  ),
+                  selectedColor: const Color(0xFFFFE4C7),
+                  backgroundColor: const Color(0xFFFCFAF7),
+                  side: BorderSide(
+                    color: state.interests.contains(code)
+                        ? const Color(0xFFDCA778)
+                        : const Color(0xFFEEDFD1),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  onSelected:
+                      state.status == PreferencesStatus.updating ||
+                          (state.interests.length >= 5 &&
+                              !state.interests.contains(code))
+                      ? null
+                      : (_) => context.read<PreferencesCubit>().toggleInterest(
+                          code,
+                        ),
+                ),
+            ],
+          ),
         ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          isExpanded: true,
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          disabledHint: const Text('Vui lòng chọn mục ở trên trước'),
-        ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Sở thích tìm trọ'), centerTitle: true),
-      body: BlocConsumer<PreferencesCubit, PreferencesState>(
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFFFAF8F5),
+    appBar: AppBar(
+      backgroundColor: const Color(0xFFFAF8F5),
+      surfaceTintColor: Colors.transparent,
+      title: const Text(
+        'Sở thích của tôi',
+        style: TextStyle(
+          fontSize: 19,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF38291F),
+        ),
+      ),
+    ),
+    body: AppContent(
+      maxWidth: AppLayout.formWidth,
+      child: BlocConsumer<PreferencesCubit, PreferencesState>(
         listener: (context, state) {
           if (state.status == PreferencesStatus.updateSuccess) {
+            onSaved?.call(List<String>.of(state.interests));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Cập nhật thành công!')),
+              const SnackBar(content: Text('Đã lưu sở thích của bạn.')),
             );
-            Navigator.pop(context);
-          } else if (state.status == PreferencesStatus.error) {
+            Navigator.of(context).maybePop(List<String>.of(state.interests));
+          } else if (state.status == PreferencesStatus.error &&
+              state.currentPreference != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage ?? 'Lỗi'),
-                backgroundColor: Colors.red,
+                content: Text(state.errorMessage ?? 'Không lưu được sở thích.'),
+                backgroundColor: const Color(0xFFAE5141),
               ),
             );
           }
         },
         builder: (context, state) {
-          if (state.status == PreferencesStatus.loading ||
-              state.status == PreferencesStatus.initial) {
-            return const Center(child: CircularProgressIndicator());
+          if (state.status == PreferencesStatus.initial ||
+              state.status == PreferencesStatus.loading) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFD76B28)),
+            );
           }
-
-          _populateInitialData(state);
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (state.currentPreference?.preferredArea != null) ...[
+          if (state.currentPreference == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Symbols.cloud_off,
+                      color: Color(0xFFAD8A68),
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      state.errorMessage ?? 'Không tải được sở thích.',
+                      textAlign: TextAlign.center,
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          context.read<PreferencesCubit>().loadInitialData(),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  children: [
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.shade200),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFEBD6), Color(0xFFFFFAF4)],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.location_on, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Khu vực hiện tại: ${state.currentPreference!.preferredArea}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue,
-                              ),
+                          const Icon(
+                            Symbols.interests,
+                            size: 36,
+                            color: Color(0xFFD76B28),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Một chút về bạn',
+                            style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF38291F),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Chọn những sở thích và thói quen thể hiện con người bạn. Bạn có thể chọn tối đa 5 mục và thay đổi bất cứ lúc nào.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.6,
+                              color: Color(0xFF8A7464),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Đã chọn ${state.interests.length}/5 sở thích',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFAF541E),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                    _group(context, state, 'Thú cưng & thiên nhiên', const [
+                      'CAT_LOVER',
+                      'DOG_LOVER',
+                      'PLANTS',
+                    ]),
+                    const SizedBox(height: 16),
+                    _group(context, state, 'Giải trí & đam mê', const [
+                      'MUSIC',
+                      'MOVIES',
+                      'READING',
+                      'GAMING',
+                      'COOKING',
+                      'SPORTS',
+                      'TRAVEL',
+                      'COFFEE',
+                    ]),
+                    const SizedBox(height: 16),
+                    _group(context, state, 'Thói quen sống', const [
+                      'QUIET',
+                      'TIDY',
+                      'STUDY',
+                      'EARLY_BIRD',
+                      'NIGHT_OWL',
+                      'NON_SMOKER',
+                      'SOCIABLE',
+                    ]),
                   ],
-                  Text(
-                    'Khu vực mong muốn',
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdown<Province>(
-                    label: 'Tỉnh/Thành phố',
-                    value: state.selectedProvince,
-                    items: state.provinces.map((p) {
-                      return DropdownMenuItem(value: p, child: Text(p.name));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        context.read<PreferencesCubit>().onProvinceChanged(val);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDropdown<Ward>(
-                    label: 'Phường / xã / đặc khu',
-                    value: state.selectedWard,
-                    items: state.wards.map((w) {
-                      return DropdownMenuItem(value: w, child: Text(w.name));
-                    }).toList(),
-                    onChanged: state.wards.isEmpty
-                        ? null
-                        : (val) {
-                            if (val != null) {
-                              context.read<PreferencesCubit>().onWardChanged(
-                                val,
-                              );
-                            }
-                          },
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Ngân sách dự kiến',
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _minBudgetController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Ngân sách tối thiểu (VNĐ)',
-                      prefixIcon: const Icon(Icons.attach_money),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _maxBudgetController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Ngân sách tối đa (VNĐ)',
-                      prefixIcon: const Icon(Icons.money_off),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: SwitchListTile(
-                      title: const Text(
-                        'Có mang theo thú cưng',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      subtitle: const Text(
-                        'Tick chọn nếu bạn dự định nuôi chó mèo',
-                      ),
-                      secondary: const Icon(Icons.pets),
-                      value: _hasPet,
-                      onChanged: (val) {
-                        setState(() {
-                          _hasPet = val;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: const Color(0xFFD85D15),
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: state.status == PreferencesStatus.updating
-                          ? null
-                          : () {
-                              final min = double.tryParse(
-                                _minBudgetController.text,
-                              );
-                              final max = double.tryParse(
-                                _maxBudgetController.text,
-                              );
-                              context
-                                  .read<PreferencesCubit>()
-                                  .updatePreferences(min, max, _hasPet);
-                            },
-                      child: state.status == PreferencesStatus.updating
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text(
-                              'Lưu thông tin',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Color(0xFFEEDFD1))),
+                ),
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+                  child: FilledButton(
+                    onPressed: state.status == PreferencesStatus.updating
+                        ? null
+                        : () => context
+                              .read<PreferencesCubit>()
+                              .updatePreferences(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFD76B28),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      state.status == PreferencesStatus.updating
+                          ? 'Đang lưu…'
+                          : 'Lưu sở thích',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
-    );
-  }
+    ),
+  );
 }

@@ -1,4 +1,16 @@
+import 'roommate_info.dart';
+
+String listingTypeLabel(String? type) => switch (type) {
+  'WHOLE_HOUSE' => 'Nhà nguyên căn',
+  'BOARDING_ROOM' => 'Phòng trọ',
+  'SHARED_ROOM' => 'Tìm người ở ghép',
+  _ => type ?? 'Tin cho thuê',
+};
+String listingRentUnit(String? type) =>
+    type == 'SHARED_ROOM' ? 'người/tháng' : 'tháng';
+
 class Listing {
+  RoommateInfo get roommateInfo => RoommateInfo.fromJson(details);
   final int? areaId;
   final String approvalStatus;
   final String rentalStatus;

@@ -13,6 +13,18 @@ import java.util.List;
 @Entity
 @Table(name = "listings")
 public class Listing {
+    @Column(name = "current_occupants")
+    private Integer currentOccupants;
+    @Column(name = "max_occupants")
+    private Integer maxOccupants;
+    @Column(name = "gender_preference")
+    private String genderPreference;
+    @Column(name = "allow_pets")
+    private Boolean allowPets;
+    @Column(name = "allow_smoking")
+    private Boolean allowSmoking;
+    @Column(name = "roommate_requirements", length = 500)
+    private String roommateRequirements;
 
     @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
@@ -292,4 +304,16 @@ public class Listing {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+    public Integer getCurrentOccupants() { return currentOccupants; }
+    public void setCurrentOccupants(Integer currentOccupants) { this.currentOccupants = currentOccupants; }
+    public Integer getMaxOccupants() { return maxOccupants; }
+    public void setMaxOccupants(Integer maxOccupants) { this.maxOccupants = maxOccupants; }
+    public String getGenderPreference() { return genderPreference; }
+    public void setGenderPreference(String genderPreference) { this.genderPreference = genderPreference; }
+    public Boolean getAllowPets() { return allowPets; }
+    public void setAllowPets(Boolean allowPets) { this.allowPets = allowPets; }
+    public Boolean getAllowSmoking() { return allowSmoking; }
+    public void setAllowSmoking(Boolean allowSmoking) { this.allowSmoking = allowSmoking; }
+    public String getRoommateRequirements() { return roommateRequirements; }
+    public void setRoommateRequirements(String roommateRequirements) { this.roommateRequirements = roommateRequirements; }
 }

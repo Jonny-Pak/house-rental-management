@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../data/models/listing_model.dart';
 import '../../data/repositories/listing_repository.dart';
 import '../widgets/listing_area_selector.dart';
+import '../widgets/roommate_form.dart';
+import '../../data/models/roommate_info.dart';
 
 class EditListingPage extends StatefulWidget {
   const EditListingPage({
@@ -25,6 +27,7 @@ class _EditListingPageState extends State<EditListingPage> {
   late final Map<String, TextEditingController> _fields;
   int? _areaId;
   bool _busy = false;
+  late RoommateInfo _roommateInfo;
   bool _changeArea = false;
   late final List<String> _images;
   final List<XFile> _newImages = [];
@@ -33,6 +36,7 @@ class _EditListingPageState extends State<EditListingPage> {
   void initState() {
     super.initState();
     final l = widget.listing;
+    _roommateInfo = l.roommateInfo;
     _areaId = l.areaId;
     _images = [...l.imageUrls];
     _fields = {
@@ -56,6 +60,16 @@ class _EditListingPageState extends State<EditListingPage> {
 
   Future<void> _save() async {
     if (_busy || !_form.currentState!.validate()) return;
+    if (widget.listing.listingType == 'SHARED_ROOM' && !_roommateInfo.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sức chứa phải lớn hơn số người đang ở và không vượt quá 20 người.',
+          ),
+        ),
+      );
+      return;
+    }
     if (_areaId == null) {
       ScaffoldMessenger.of(
         context,
@@ -83,6 +97,7 @@ class _EditListingPageState extends State<EditListingPage> {
         'posterType',
       ])
         key: l.details[key],
+      if (l.listingType == 'SHARED_ROOM') ..._roommateInfo.toJson(),
       'listingType': l.listingType,
       'areaId': _areaId,
       'imageUrls': [..._images],
@@ -166,7 +181,13 @@ class _EditListingPageState extends State<EditListingPage> {
               const SizedBox(height: 20),
               _field('title', 'Tiêu đề'),
               _field('description', 'Mô tả', maxLines: 4),
-              _field('rentPrice', 'Giá thuê (VND/tháng)', number: true),
+              _field(
+                'rentPrice',
+                widget.listing.listingType == 'SHARED_ROOM'
+                    ? 'Chi phí mỗi người (VND/tháng)'
+                    : 'Giá thuê (VND/tháng)',
+                number: true,
+              ),
               _field('areaSqm', 'Diện tích (m²)', number: true),
               _field('address', 'Địa chỉ'),
               _field('latitude', 'Vĩ độ', number: true),
@@ -214,6 +235,11 @@ class _EditListingPageState extends State<EditListingPage> {
                 icon: const Icon(Icons.add_photo_alternate),
                 label: const Text('Thêm ảnh'),
               ),
+              if (widget.listing.listingType == 'SHARED_ROOM')
+                RoommateForm(
+                  value: _roommateInfo,
+                  onChanged: (value) => setState(() => _roommateInfo = value),
+                ),
               SwitchListTile(
                 title: const Text('Thay đổi khu vực hành chính'),
                 value: _changeArea,

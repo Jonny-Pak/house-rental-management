@@ -98,6 +98,8 @@ public class UserService {
             response.setRemainingVipQuota(subscription.getRemainingVipQuota());
             response.setRemainingRefreshQuota(subscription.getRemainingRefreshQuota());
         }
+        UserPreference preference = userPreferenceRepository.findByUser_Email(user.getEmail()).orElse(null);
+        if (preference != null) response.setInterests(new java.util.ArrayList<>(preference.getInterests()));
         return response;
     }
 
@@ -109,10 +111,13 @@ public class UserService {
         UserPreference preference = userPreferenceRepository.findByUser_Email(email).orElse(null);
 
         if (preference == null) {
-            return new UserPreferenceDto();
+            UserPreferenceDto empty = new UserPreferenceDto();
+            empty.setInterests(java.util.List.of());
+            return empty;
         }
 
         UserPreferenceDto response = new UserPreferenceDto();
+        response.setInterests(new java.util.ArrayList<>(preference.getInterests()));
         response.setMinBudget(preference.getMinBudget());
         response.setMaxBudget(preference.getMaxBudget());
         response.setHasPet(preference.getHasPet());
@@ -134,6 +139,9 @@ public class UserService {
             preference.setUser(user);
         }
 
+        if (request.getInterests() != null) {
+            preference.setInterests(new java.util.ArrayList<>(new java.util.LinkedHashSet<>(request.getInterests())));
+        }
         preference.setMinBudget(request.getMinBudget());
         preference.setMaxBudget(request.getMaxBudget());
         preference.setHasPet(request.getHasPet());
@@ -142,6 +150,7 @@ public class UserService {
         UserPreference updatedPreference = userPreferenceRepository.save(preference);
 
         UserPreferenceDto response = new UserPreferenceDto();
+        response.setInterests(new java.util.ArrayList<>(updatedPreference.getInterests()));
         response.setMinBudget(updatedPreference.getMinBudget());
         response.setMaxBudget(updatedPreference.getMaxBudget());
         response.setHasPet(updatedPreference.getHasPet());

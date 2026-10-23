@@ -11,7 +11,7 @@ class HomeFeatureIcon extends StatelessWidget {
   String? get assetName => switch (icon) {
     Symbols.post_add => 'post_listing',
     Symbols.home_work => 'rent_house',
-    Symbols.apartment => 'rent_room',
+    Symbols.apartment || Symbols.group => 'rent_room',
     Symbols.assignment => 'manage_listings',
     Symbols.receipt_long => 'contracts',
     Symbols.payments => 'subscription',

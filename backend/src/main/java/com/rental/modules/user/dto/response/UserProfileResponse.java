@@ -1,6 +1,10 @@
 package com.rental.modules.user.dto.response;
 
 public class UserProfileResponse {
+    private java.util.List<String> interests = java.util.List.of();
+    public java.util.List<String> getInterests() { return interests; }
+    public void setInterests(java.util.List<String> interests) { this.interests = interests; }
+
     private Long id;
     private String fullName;
     private String email;

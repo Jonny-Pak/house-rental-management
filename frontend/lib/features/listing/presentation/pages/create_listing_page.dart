@@ -242,6 +242,18 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
                           },
                         ),
                       ),
+                      SizedBox(
+                        width: width,
+                        child: _TypeOptionCard(
+                          title: 'Tìm người ở ghép',
+                          subtitle: 'Chia sẻ không gian và chi phí, tìm bạn cùng phòng phù hợp.',
+                          icon: Symbols.group,
+                          onTap: () {
+                            cubit.updatePropertyType('SHARED_ROOM');
+                            _nextStep();
+                          },
+                        ),
+                      ),
                     ],
                   );
                 },

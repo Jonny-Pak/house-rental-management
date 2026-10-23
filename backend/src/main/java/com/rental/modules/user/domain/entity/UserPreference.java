@@ -5,6 +5,14 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "user_preferences")
 public class UserPreference {
+    @ElementCollection
+    @CollectionTable(name = "user_preference_interests", joinColumns = @JoinColumn(name = "preference_id"))
+    @Column(name = "interest_code", nullable = false, length = 32)
+    private java.util.List<String> interests = new java.util.ArrayList<>();
+
+    public java.util.List<String> getInterests() { return interests; }
+    public void setInterests(java.util.List<String> interests) { this.interests = new java.util.ArrayList<>(interests); }
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

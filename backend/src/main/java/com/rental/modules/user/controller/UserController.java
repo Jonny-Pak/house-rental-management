@@ -48,10 +48,10 @@ public class UserController {
     @PutMapping("/me/preferences")
     public ResponseEntity<ApiResponse<UserPreferenceDto>> updateMyPreferences(
             Principal principal,
-            @RequestBody UserPreferenceDto request) {
+            @Valid @RequestBody UserPreferenceDto request) {
         String email = principal.getName();
         UserPreferenceDto preferencesResponse = userService.updateMyPreferences(email, request);
-        return ResponseEntity.ok(ApiResponse.success("ÄÃ£ cáº­p nháº­t sá»Ÿ thÃ­ch ngÆ°á»i dÃ¹ng thÃ nh cÃ´ng.", preferencesResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật sở thích cá nhân.", preferencesResponse));
     }
 
     @PatchMapping("/me/avatar")

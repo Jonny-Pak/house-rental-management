@@ -25,6 +25,7 @@ UserProfile member({String? status = 'ACTIVE', String? package = 'Gói PRO'}) =>
       fullName: 'Ngọc Thuận',
       email: 'thuan@example.com',
       phoneNumber: '0901234567',
+      interests: const ['CAT_LOVER', 'TIDY', 'STUDY'],
       membershipPackageName: package,
       subscriptionStatus: status,
       remainingStandardQuota: 18,
@@ -69,6 +70,19 @@ void main() {
     await tester.pumpWidget(page(member()));
     await tester.pumpAndSettle();
     expect(find.text('Gói PRO'), findsOneWidget);
+    expect(find.text('Người yêu mèo'), findsOneWidget);
+    expect(find.text('Sạch sẽ, gọn gàng'), findsOneWidget);
+    expect(find.text('Học bá'), findsOneWidget);
+    expect(find.text('Hạng PRO'), findsOneWidget);
+    final name = tester.getRect(find.byKey(const ValueKey('profile-name')));
+    final avatar = tester.getRect(find.byKey(const ValueKey('profile-avatar')));
+    final rank = tester.getRect(find.byKey(const ValueKey('profile-rank')));
+    final interests = tester.getRect(
+      find.widgetWithText(Chip, 'Người yêu mèo'),
+    );
+    expect(name.right, lessThan(avatar.left));
+    expect(rank.top, greaterThan(avatar.bottom));
+    expect(interests.top, greaterThan(rank.bottom));
     expect(find.text('Đang sử dụng'), findsOneWidget);
     expect(find.text('18 Tin thường'), findsOneWidget);
     expect(find.text('3 Tin VIP'), findsOneWidget);
@@ -83,11 +97,13 @@ void main() {
     await tester.pumpWidget(page(member(package: null, status: null)));
     await tester.pumpAndSettle();
     expect(find.text('Chưa đăng ký gói'), findsOneWidget);
+    expect(find.text('Hạng FREE'), findsOneWidget);
     expect(find.text('Đang sử dụng'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(page(member(status: 'EXPIRED')));
     await tester.pumpAndSettle();
     expect(find.text('Gói hiện không hoạt động'), findsOneWidget);
+    expect(find.text('Hạng FREE'), findsOneWidget);
     expect(find.text('Đang sử dụng'), findsNothing);
     expect(find.text('18 Tin thường'), findsNothing);
     expect(tester.takeException(), isNull);

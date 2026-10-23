@@ -1,3 +1,5 @@
+import '../../data/models/listing_model.dart';
+import '../widgets/roommate_form.dart';
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -59,7 +61,7 @@ class ListingPreviewPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '${state.rentPrice ?? 0} VND/tháng',
+                    '${state.rentPrice ?? 0} VND/${listingRentUnit(state.propertyType)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -125,10 +127,10 @@ class ListingPreviewPage extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildInfoRow(
                     'Loại hình',
-                    state.propertyType == 'WHOLE_HOUSE'
-                        ? 'Nhà nguyên căn'
-                        : 'Phòng trọ',
+                    listingTypeLabel(state.propertyType),
                   ),
+                  if (state.propertyType == 'SHARED_ROOM')
+                    RoommateSummary(value: state.roommateInfo),
                   if (state.propertyType == 'WHOLE_HOUSE') ...[
                     _buildInfoRow('Phòng ngủ', '${state.bedrooms ?? 0} phòng'),
                     _buildInfoRow('Phòng tắm', '${state.bathrooms ?? 0} phòng'),

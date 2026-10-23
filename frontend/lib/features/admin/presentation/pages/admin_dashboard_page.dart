@@ -1,3 +1,6 @@
+import '../../../listing/presentation/widgets/roommate_form.dart';
+import '../../../listing/data/models/listing_model.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -63,8 +66,7 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
 
       final type = item.listingType ?? item.houseType ?? '';
       final matchType =
-          _selectedType == 'Tất cả' ||
-          type.toLowerCase().contains(_selectedType.toLowerCase());
+          _selectedType == 'Tất cả' || listingTypeLabel(type) == _selectedType;
 
       return matchQuery && matchType;
     }).toList();
@@ -207,7 +209,7 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           _buildModalRow(
                             context,
                             'Giá thuê:',
-                            currency.format(listing.rentPrice),
+                            '${currency.format(listing.rentPrice)}/${listingRentUnit(listing.listingType)}',
                             highlight: true,
                           ),
                           _buildModalRow(
@@ -218,9 +220,7 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           _buildModalRow(
                             context,
                             'Loại hình:',
-                            listing.listingType ??
-                                listing.houseType ??
-                                'Phòng trọ',
+                            listingTypeLabel(listing.listingType),
                           ),
                           _buildModalRow(
                             context,
@@ -238,6 +238,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     ),
                     const SizedBox(height: KiteSpace.lg),
 
+                    if (listing.roommateInfo != null) ...[
+                      RoommateSummary(value: listing.roommateInfo!),
+                      const SizedBox(height: KiteSpace.lg),
+                    ],
                     // Description
                     Text(
                       'Mô tả chi tiết:',
@@ -760,7 +764,7 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                           'Tất cả',
                           'Phòng trọ',
                           'Nhà nguyên căn',
-                          'Căn hộ',
+                          'Tìm người ở ghép',
                         ])
                           Padding(
                             padding: const EdgeInsets.only(right: 6),

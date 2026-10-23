@@ -1,3 +1,6 @@
+import '../../../notification/presentation/notification_store.dart';
+import '../../../notification/presentation/notifications_page.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout.dart';
@@ -83,6 +86,17 @@ class HomePage extends StatelessWidget {
         const ListingBrowsePage(
           title: 'Thuê phòng trọ',
           listingType: 'BOARDING_ROOM',
+        ),
+      ),
+    ),
+    _Action(
+      'Tìm Ở Ghép',
+      Symbols.group,
+      () => _open(
+        context,
+        const ListingBrowsePage(
+          title: 'Tìm người ở ghép',
+          listingType: 'SHARED_ROOM',
         ),
       ),
     ),
@@ -195,12 +209,7 @@ class HomePage extends StatelessWidget {
                 if (onTabSelected != null) {
                   onTabSelected!(3);
                 } else {
-                  _information(
-                    context,
-                    'Thông báo',
-                    'Chức năng thông báo hệ thống đang được phát triển.',
-                    Symbols.notifications,
-                  );
+                  _open(context, const NotificationsPage());
                 }
               },
             ),
@@ -491,10 +500,12 @@ class _HomeHeroState extends State<_HomeHero> {
                               fixedSize: const Size(48, 48),
                               shape: const CircleBorder(),
                             ),
-                            icon: const Icon(
-                              Symbols.notifications,
-                              size: 25,
-                              weight: 300,
+                            icon: const NotificationBadge(
+                              child: Icon(
+                                Symbols.notifications,
+                                size: 25,
+                                weight: 300,
+                              ),
                             ),
                           ),
                         ),

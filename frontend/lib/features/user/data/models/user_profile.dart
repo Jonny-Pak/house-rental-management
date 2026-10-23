@@ -1,5 +1,6 @@
 ﻿class UserProfile {
   final int id;
+  final List<String> interests;
   final String fullName;
   final String email;
   final String? phoneNumber;
@@ -11,6 +12,7 @@
 
   const UserProfile({
     required this.id,
+    this.interests = const [],
     required this.fullName,
     required this.email,
     this.phoneNumber,
@@ -27,6 +29,7 @@
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as int,
+      interests: (json['interests'] as List?)?.cast<String>() ?? [],
       fullName: json['fullName'] as String,
       email: json['email'] as String,
       phoneNumber: json['phoneNumber'] as String?,
@@ -40,4 +43,20 @@
       remainingRefreshQuota: (json['remainingRefreshQuota'] as num?)?.toInt(),
     );
   }
+
+  UserProfile withInterests(List<String> selected) => UserProfile(
+    id: id,
+    interests: List.of(selected),
+    fullName: fullName,
+    email: email,
+    phoneNumber: phoneNumber,
+    avatarUrl: avatarUrl,
+    role: role,
+    status: status,
+    membershipPackageName: membershipPackageName,
+    subscriptionStatus: subscriptionStatus,
+    remainingStandardQuota: remainingStandardQuota,
+    remainingVipQuota: remainingVipQuota,
+    remainingRefreshQuota: remainingRefreshQuota,
+  );
 }

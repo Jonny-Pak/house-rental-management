@@ -146,6 +146,7 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
     text: _number(widget.initial.maxArea),
   );
   late String? _type = widget.initial.listingType;
+  late String? _gender = widget.initial.genderPreference;
   late String _sort = widget.initial.sort;
   late int? _areaId = widget.initial.areaId;
   late String? _areaName = widget.initial.areaName;
@@ -237,6 +238,7 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
       areaId: _areaId,
       areaName: _areaName,
       listingType: _type,
+      genderPreference: _type == 'SHARED_ROOM' ? _gender : null,
       minPrice: _parse(_minPrice),
       maxPrice: _parse(_maxPrice),
       minArea: _parse(_minArea),
@@ -328,15 +330,37 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
                           child: Text('Phòng trọ'),
                         ),
                         DropdownMenuItem(
-                          value: 'APARTMENT',
-                          child: Text('Căn hộ'),
+                          value: 'SHARED_ROOM',
+                          child: Text('Tìm người ở ghép'),
                         ),
                       ],
                       onChanged: (v) =>
                           setState(() => _type = v == '' ? null : v),
                     ),
                     const SizedBox(height: 20),
-                    const Text('Giá thuê (VNĐ/tháng)'),
+                    if (_type == 'SHARED_ROOM') ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: _gender ?? '',
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Giới tính người ở ghép',
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: '', child: Text('Tất cả')),
+                          DropdownMenuItem(value: 'MALE', child: Text('Nam')),
+                          DropdownMenuItem(value: 'FEMALE', child: Text('Nữ')),
+                        ],
+                        onChanged: (value) => setState(
+                          () => _gender = value == '' ? null : value,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Text(
+                      _type == 'SHARED_ROOM'
+                          ? 'Chi phí mỗi người (VNĐ/tháng)'
+                          : 'Giá thuê (VNĐ/tháng)',
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [

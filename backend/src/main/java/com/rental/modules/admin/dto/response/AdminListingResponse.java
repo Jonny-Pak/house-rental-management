@@ -4,6 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class AdminListingResponse {
+    private Integer currentOccupants;
+    private Integer maxOccupants;
+    private String genderPreference;
+    private Boolean allowPets;
+    private Boolean allowSmoking;
+    private String roommateRequirements;
     private java.util.List<String> imageUrls;
     public java.util.List<String> getImageUrls() {
         return imageUrls;
@@ -252,5 +258,17 @@ public class AdminListingResponse {
     }
 
     public AdminListingResponse() {}
+    public Integer getCurrentOccupants() { return currentOccupants; }
+    public void setCurrentOccupants(Integer currentOccupants) { this.currentOccupants = currentOccupants; }
+    public Integer getMaxOccupants() { return maxOccupants; }
+    public void setMaxOccupants(Integer maxOccupants) { this.maxOccupants = maxOccupants; }
+    public String getGenderPreference() { return genderPreference; }
+    public void setGenderPreference(String genderPreference) { this.genderPreference = genderPreference; }
+    public Boolean getAllowPets() { return allowPets; }
+    public void setAllowPets(Boolean allowPets) { this.allowPets = allowPets; }
+    public Boolean getAllowSmoking() { return allowSmoking; }
+    public void setAllowSmoking(Boolean allowSmoking) { this.allowSmoking = allowSmoking; }
+    public String getRoommateRequirements() { return roommateRequirements; }
+    public void setRoommateRequirements(String roommateRequirements) { this.roommateRequirements = roommateRequirements; }
 }
 

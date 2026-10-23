@@ -1,6 +1,12 @@
 package com.rental.modules.user.dto.request;
 
 public class UserPreferenceDto {
+    @jakarta.validation.constraints.Size(max = 5, message = "Bạn chỉ được chọn tối đa 5 sở thích.")
+    private java.util.List<@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp = "CAT_LOVER|DOG_LOVER|PLANTS|QUIET|TIDY|STUDY|EARLY_BIRD|NIGHT_OWL|NON_SMOKER|SOCIABLE|MUSIC|MOVIES|READING|GAMING|COOKING|SPORTS|TRAVEL|COFFEE") String> interests;
+
+    public java.util.List<String> getInterests() { return interests; }
+    public void setInterests(java.util.List<String> interests) { this.interests = interests; }
+
     private Double minBudget;
     private Double maxBudget;
     private Boolean hasPet;

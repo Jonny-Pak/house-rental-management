@@ -203,7 +203,7 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    '${_formatPrice(listing.rentPrice)}/tháng',
+                    '${_formatPrice(listing.rentPrice)}/${listingRentUnit(listing.listingType)}',
                     style: const TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w700,

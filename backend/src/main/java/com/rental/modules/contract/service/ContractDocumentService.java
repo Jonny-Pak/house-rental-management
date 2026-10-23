@@ -30,7 +30,7 @@ public class ContractDocumentService {
         details.setTenantName(contract.getTenant().getFullName());
         details.setTenantPhone(contract.getTenant().getPhoneNumber());
         String listingType = contract.getListing().getListingType();
-        boolean room = "BOARDING_ROOM".equals(listingType) || "ROOMMATE".equals(listingType);
+        boolean room = "BOARDING_ROOM".equals(listingType) || "SHARED_ROOM".equals(listingType);
         contract.setContractType(room ? "ROOM" : "HOUSE");
         try {
             contract.setDetailsJson(mapper.writeValueAsString(details));
