@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/app/admin/admin_app.dart';
+import 'package:frontend/app/app_launcher_web.dart' as web;
 import 'package:frontend/app/admin/auth/session.dart';
 import 'package:frontend/app/admin/router/app_router.dart';
 import 'package:frontend/core/network/api_client.dart';
@@ -37,6 +38,19 @@ class TestAdminListings extends AdminListingRepository {
 }
 
 void main() {
+  testWidgets('Website opens Admin login without a user selector', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const web.AppLauncher());
+    await tester.pumpAndSettle();
+    expect(find.byType(KiteApp), findsOneWidget);
+    expect(find.text('Rental Admin'), findsOneWidget);
+    expect(find.text('Chọn giao diện'), findsNothing);
+    expect(find.text('Người dùng'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Admin uses cards on compact windows and a table on desktop', (
     tester,
   ) async {

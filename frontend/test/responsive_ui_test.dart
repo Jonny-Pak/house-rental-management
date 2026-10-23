@@ -175,27 +175,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'All platforms can choose the user interface and return to the launcher',
-    (tester) async {
-      await resize(tester, const Size(390, 860));
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-        return tester.binding.setSurfaceSize(null);
-      });
-      await tester.pumpWidget(const AppLauncher());
-      await tester.pumpAndSettle();
-      expect(find.text('Quản trị viên'), findsOneWidget);
-      await tester.tap(find.text('Người dùng'));
-      await tester.pumpAndSettle();
-      expect(find.byType(LoginPage), findsOneWidget);
-      await tester.tap(find.text('Chọn giao diện'));
-      await tester.pumpAndSettle();
-      expect(find.text('Quản trị viên'), findsOneWidget);
-      expect(find.byType(LoginPage), findsNothing);
-    },
-  );
+  testWidgets('Native app opens user login without an admin selector', (
+    tester,
+  ) async {
+    await resize(tester, const Size(390, 860));
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      return tester.binding.setSurfaceSize(null);
+    });
+    await tester.pumpWidget(const AppLauncher());
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.text('Quản trị viên'), findsNothing);
+    expect(find.text('Chọn giao diện'), findsNothing);
+  });
 }
 
 Future<void> resize(WidgetTester tester, Size size) async {

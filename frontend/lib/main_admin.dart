@@ -1,20 +1,3 @@
-import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_web_plugins/url_strategy.dart';
+import 'main.dart' as app;
 
-import 'app/admin/admin_app.dart';
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Clean paths instead of Flutter's default hash URLs: /orders/10004 rather
-  // than /#/orders/10004. Detail pages are only addressable — linkable to a
-  // colleague, bookmarkable — if the URL looks like a URL.
-  //
-  // Requires the host to serve index.html for unknown paths. tools/serve.mjs
-  // does; so do Cloudflare Pages, Netlify and Vercel by default.
-  if (kIsWeb) usePathUrlStrategy();
-
-  runApp(const ProviderScope(child: KiteApp()));
-}
+Future<void> main() => app.main();
