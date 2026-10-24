@@ -20,7 +20,7 @@ class FakeAuthRepository implements AuthRepository {
     accessToken: 'test-token',
     refreshToken: '',
     userId: 1,
-    role: 'USER',
+    role: 'MEMBER',
   );
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -76,7 +76,11 @@ void main() {
         if (fromProfile) {
           await tester.tap(find.byTooltip('Tài khoản'));
           await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text('Đăng xuất'));
+          await tester.scrollUntilVisible(
+            find.text('Đăng xuất'),
+            300,
+            scrollable: find.byType(Scrollable).last,
+          );
         } else {
           await tester.tap(find.byTooltip('Mở menu'));
           await tester.pumpAndSettle();

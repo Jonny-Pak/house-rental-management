@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -76,11 +76,85 @@ class ListingPostgisTest {
         }
     }
 
+    @Autowired com.rental.modules.admin.service.AdminCreateUserService adminCreation;
+    @Autowired com.rental.modules.user.service.OtpService adminOtp;
+    @org.springframework.boot.test.mock.mockito.MockBean com.rental.modules.user.service.EmailService adminEmail;
+    @org.springframework.boot.test.mock.mockito.MockBean org.springframework.security.crypto.password.PasswordEncoder adminPasswords;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void adminCreationCommitsOnlyWhenOtpMailSucceeds() {
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        org.mockito.Mockito.when(adminPasswords.encode(org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call -> encoder.encode(call.getArgument(0)));
+        String successEmail = "admincreated@example.com", failedEmail = "failedcreation@example.com";
+        try {
+            var request = new com.rental.modules.admin.dto.request.AdminCreateUserRequest(
+                "Người dùng mới", successEmail, null, "Password123!", Role.MEMBER);
+            var created = adminCreation.create(request);
+            User stored = users.findById(created.id()).orElseThrow();
+            assertFalse(stored.getIsVerified()); assertEquals(Role.MEMBER, stored.getRole());
+            assertTrue(encoder.matches("Password123!", stored.getPasswordHash()));
+            var successCode = org.mockito.ArgumentCaptor.forClass(String.class);
+            org.mockito.Mockito.verify(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(successEmail), successCode.capture());
+            var provider = new org.springframework.security.authentication.dao.DaoAuthenticationProvider();
+            provider.setUserDetailsService(new com.rental.core.security.CustomUserDetailsService(users));
+            provider.setPasswordEncoder(encoder);
+            var manager = new org.springframework.security.authentication.ProviderManager(provider);
+            var jwt = org.mockito.Mockito.mock(com.rental.core.security.JwtService.class);
+            org.mockito.Mockito.when(jwt.generateAccessToken(org.mockito.ArgumentMatchers.any())).thenReturn("verified-access");
+            var auth = new com.rental.modules.user.service.AuthService(users, encoder, adminOtp, adminEmail, manager, jwt);
+            var login = new com.rental.modules.user.dto.request.LoginRequest(successEmail, "Password123!");
+            assertThrows(IllegalStateException.class, () -> auth.login(login));
+            auth.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest(successEmail, successCode.getValue()));
+            assertEquals(created.id(), auth.login(login).getUserId());
+            assertEquals("verified-access", auth.login(login).getAccessToken());
+            assertFalse(adminOtp.validateOtp(successEmail, successCode.getValue()));
+            org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
+                .when(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(failedEmail), org.mockito.ArgumentMatchers.anyString());
+            var failedRequest = new com.rental.modules.admin.dto.request.AdminCreateUserRequest(
+                "Mail failed", failedEmail, "0909999888", "Password123!", Role.MEMBER);
+            assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminCreation.create(failedRequest));
+            assertFalse(users.existsByEmailIgnoreCase(failedEmail));
+            assertTrue(users.findByPhoneNumber("0909999888").isEmpty());
+            var failedCode = org.mockito.ArgumentCaptor.forClass(String.class);
+            org.mockito.Mockito.verify(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(failedEmail), failedCode.capture());
+            assertFalse(adminOtp.validateOtp(failedEmail, failedCode.getValue()));
+        } finally {
+            users.findByEmail(successEmail).ifPresent(users::delete);
+            users.findByEmail(failedEmail).ifPresent(users::delete);
+        }
+    }
+
+    @Autowired com.rental.modules.admin.service.AdminUserService adminUsers;
+
+    @Test void adminUserSearchPaginationEditsAndLocksWorkWithRealDatabase() {
+        User admin = user("managementadmin", Role.ADMIN);
+        for (int index = 0; index < 23; index++) user("managementtenant" + index, Role.MEMBER);
+        var first = adminUsers.search("MANAGEMENTTENANT", null, null, null, 0);
+        assertEquals(23, first.total()); assertEquals(20, first.items().size()); assertEquals(2, first.totalPages());
+        assertEquals(3, adminUsers.search("managementtenant", Role.MEMBER, UserStatus.ACTIVE, true, 1).items().size());
+        User target = users.findByEmail("managementtenant0@example.com").orElseThrow();
+        adminUsers.update(target.getUserId(), admin.getUserId(),
+            new com.rental.modules.admin.dto.request.AdminUpdateUserRequest("Người dùng mới", "0901234567", Role.MEMBER));
+        adminUsers.changeStatus(target.getUserId(), admin.getUserId(), UserStatus.LOCKED);
+        entityManager.flush(); entityManager.clear();
+        var match = adminUsers.search("090123", Role.MEMBER, UserStatus.LOCKED, true, 0);
+        assertEquals(1, match.total()); assertEquals("Người dùng mới", match.items().get(0).fullName());
+        assertEquals(0, adminUsers.search("090123", Role.ADMIN, null, null, 0).total());
+        assertEquals(24, adminUsers.search("", null, null, null, 0).total());
+        assertEquals(0, adminUsers.search("%", null, null, null, 0).total());
+        target = users.findById(target.getUserId()).orElseThrow(); target.setIsVerified(false); users.saveAndFlush(target);
+        adminUsers.changeStatus(target.getUserId(), admin.getUserId(), UserStatus.ACTIVE);
+        assertEquals(0, adminUsers.search("090123", null, null, true, 0).total());
+        assertEquals(1, adminUsers.search("090123", null, UserStatus.ACTIVE, false, 0).total());
+    }
+
     @Autowired com.rental.modules.listing.service.ListingExcelService listingExcel;
     @Autowired com.rental.modules.contract.service.ContractExcelService contractExcel;
 
     @Test void excelImportsCreatePendingListingsAndDraftContractsWithRealDatabase() throws Exception {
-        User owner = user("excelowner", Role.OWNER), tenant = user("exceltenant", Role.USER), reviewer = user("exceladmin", Role.ADMIN);
+        User owner = user("excelowner", Role.MEMBER), tenant = user("exceltenant", Role.MEMBER), reviewer = user("exceladmin", Role.ADMIN);
         tenant.setPhoneNumber("0901234567"); users.saveAndFlush(tenant);
         var row = ListingExcelTest.listingRow("Tin từ Excel");
         var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(row));
@@ -126,7 +200,7 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.notification.service.NotificationService notifications;
 
     @Test void noticesPersistFollowWorkflowAndArePrivateToEachAccount() {
-        User owner = user("noticeowner", Role.OWNER), adminUser = user("noticeadmin", Role.ADMIN), other = user("noticeother", Role.USER);
+        User owner = user("noticeowner", Role.MEMBER), adminUser = user("noticeadmin", Role.ADMIN), other = user("noticeother", Role.MEMBER);
         CreateListingRequest request = new CreateListingRequest();
         request.setTitle("Phòng có thông báo"); request.setListingType("BOARDING_ROOM"); request.setRentPrice(new BigDecimal("2000000")); request.setAreaSqm(new BigDecimal("20"));
         request.setAddress("TP.HCM"); request.setAreaId(6L); request.setLatitude(10.78); request.setLongitude(106.7); request.setImageUrls(List.of("https://example.com/a.jpg"));
@@ -166,7 +240,7 @@ class ListingPostgisTest {
     }
 
     @Test void sharedRoomSurvivesModerationEditingAndMapVisibility() {
-        User owner = user("sharedowner", Role.USER), reviewer = user("sharedadmin", Role.ADMIN);
+        User owner = user("sharedowner", Role.MEMBER), reviewer = user("sharedadmin", Role.ADMIN);
         CreateListingRequest request = new CreateListingRequest();
         request.setTitle("Tìm người ở ghép"); request.setDescription("Giữ vệ sinh, chia sẻ điện nước");
         request.setListingType("SHARED_ROOM"); request.setRentPrice(new BigDecimal("1500000"));
@@ -201,7 +275,7 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.user.service.UserService userService;
 
     @Test void personalInterestsPersistClearAndRemainPrivateToEachAccount() {
-        User member = user("interestmember", Role.USER), other = user("interestother", Role.USER);
+        User member = user("interestmember", Role.MEMBER), other = user("interestother", Role.MEMBER);
         var request = new com.rental.modules.user.dto.request.UserPreferenceDto(1000000.0, 3000000.0, true, "TP.HCM");
         request.setInterests(List.of("CAT_LOVER", "QUIET", "MUSIC", "CAT_LOVER"));
         userService.updateMyPreferences(member.getEmail(), request);
@@ -238,7 +312,7 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.contract.service.ContractService leases;
 
     @Test void roomContractRequiresCompleteSnapshotAndRejectsOutdatedConsent() {
-        User owner = user("roomleaseowner", Role.OWNER), renter = user("roomleaserenter", Role.USER), reviewer = user("roomleaseadmin", Role.ADMIN);
+        User owner = user("roomleaseowner", Role.MEMBER), renter = user("roomleaserenter", Role.MEMBER), reviewer = user("roomleaseadmin", Role.ADMIN);
         CreateListingRequest listing = new CreateListingRequest();
         listing.setTitle("Phòng trọ theo mẫu"); listing.setListingType("BOARDING_ROOM"); listing.setAreaId(6L);
         listing.setAddress("TP.HCM"); listing.setAreaSqm(new BigDecimal("25")); listing.setRentPrice(new BigDecimal("3000000"));
@@ -283,7 +357,7 @@ class ListingPostgisTest {
     }
 
     @Test void contractLifecycleChecksOwnershipConsentVersionAndListingAvailability() {
-        User owner=user("leaseowner",Role.OWNER), renter=user("renter",Role.USER), outsider=user("outsider",Role.USER), reviewer=user("leaseadmin",Role.ADMIN);
+        User owner=user("leaseowner",Role.MEMBER), renter=user("renter",Role.MEMBER), outsider=user("outsider",Role.MEMBER), reviewer=user("leaseadmin",Role.ADMIN);
         CreateListingRequest listing=new CreateListingRequest();
         listing.setTitle("Nhà cho thuê"); listing.setListingType("WHOLE_HOUSE"); listing.setAreaId(6L);
         listing.setAddress("TP.HCM"); listing.setAreaSqm(new BigDecimal("50")); listing.setRentPrice(new BigDecimal("5000000"));
@@ -391,7 +465,7 @@ class ListingPostgisTest {
                 "db/migration/V10__hcm_post_merger_commune_level_areas.sql")).execute(dataSource);
         assertEquals(168, areas.getWardsByProvince(1L).size());
 
-        User owner = user("newareas", Role.OWNER);
+        User owner = user("newareas", Role.MEMBER);
         for (String type : List.of("WARD", "COMMUNE", "SPECIAL")) {
             var unit = units.stream().filter(w -> type.equals(w.getType())).findFirst().orElseThrow();
             CreateListingRequest request = new CreateListingRequest();
@@ -422,7 +496,7 @@ class ListingPostgisTest {
     }
 
     @Test void migrationsImagesModerationAndSpatialVisibilityWorkOnRealPostgis() {
-        User owner = user("owner", Role.USER);
+        User owner = user("owner", Role.MEMBER);
         User reviewer = user("reviewer", Role.ADMIN);
         CreateListingRequest request = new CreateListingRequest();
         request.setTitle("Phòng trọ kiểm thử"); request.setListingType("BOARDING_ROOM");

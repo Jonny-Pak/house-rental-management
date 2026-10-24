@@ -14,6 +14,19 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
+    public ResponseEntity<ApiResponse<Void>> handleInvalidInput(Exception ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error("Dữ liệu hoặc bộ lọc không hợp lệ."));
+    }
+
+    @ExceptionHandler({org.springframework.security.authentication.LockedException.class,
+            org.springframework.security.authentication.DisabledException.class})
+    public ResponseEntity<ApiResponse<Void>> handleInactiveAccount(Exception ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ApiResponse.error("Tài khoản đã bị khóa hoặc chưa xác thực. Vui lòng liên hệ hỗ trợ."));
+    }
+
 
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(Exception ex) {

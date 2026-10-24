@@ -26,16 +26,25 @@ class AuthServiceTest {
 
     @Test void verifiedUserStillReceivesTokensAndRole() {
         User user = new User();
-        user.setUserId(7L); user.setRole(Role.USER); user.setIsVerified(true);
+        user.setUserId(7L); user.setRole(Role.MEMBER); user.setIsVerified(true);
+        user.setStatus(com.rental.modules.user.domain.enums.UserStatus.ACTIVE);
         when(users.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(jwt.generateAccessToken(user)).thenReturn("access");
         when(jwt.generateRefreshToken(user)).thenReturn("refresh");
         var response = service.login(new LoginRequest("user@example.com", "password"));
         assertEquals("access", response.getAccessToken());
         assertEquals("refresh", response.getRefreshToken());
-        assertEquals("USER", response.getRole());
+        assertEquals("MEMBER", response.getRole());
         assertEquals(7L, response.getUserId());
         verify(authentication).authenticate(any());
+    }
+
+    @Test void lockedUserCannotReceiveTokens() {
+        User user = new User(); user.setIsVerified(true);
+        user.setStatus(com.rental.modules.user.domain.enums.UserStatus.LOCKED);
+        when(users.findByEmail("locked@example.com")).thenReturn(Optional.of(user));
+        assertThrows(IllegalStateException.class, () -> service.login(new LoginRequest("locked@example.com", "password")));
+        verifyNoInteractions(jwt);
     }
 
     @Test void missingUserCannotAuthenticate() {
@@ -52,7 +61,7 @@ class AuthServiceTest {
     }
     @Test void smtpFailurePreventsSuccessfulRegistrationResponseAndClearsCode() {
         var request = new com.rental.modules.user.dto.request.RegisterRequest(
-                "Tenant", "tenant@example.com", "password", null, Role.USER);
+                "Tenant", "tenant@example.com", "password", null, Role.MEMBER);
         when(users.findByEmail(request.getEmail())).thenReturn(Optional.empty());
         when(otp.generateAndStoreOtp(request.getEmail())).thenReturn("123456");
         doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
@@ -65,7 +74,7 @@ class AuthServiceTest {
         when(users.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
         when(encoder.matches("password","hash")).thenReturn(true);
         when(otp.generateAndStoreOtp(user.getEmail())).thenReturn("123456");
-        var request=new com.rental.modules.user.dto.request.RegisterRequest("Tenant",user.getEmail(),"password",null,Role.USER);
+        var request=new com.rental.modules.user.dto.request.RegisterRequest("Tenant",user.getEmail(),"password",null,Role.MEMBER);
         service.register(request);
         verify(mail).sendOtpEmail(user.getEmail(),"123456");
         verify(users,never()).save(any());
