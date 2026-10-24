@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -74,6 +74,49 @@ class ListingPostgisTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP SCHEMA " + SCHEMA + " CASCADE");
         }
+    }
+
+    @Autowired com.rental.modules.content.service.SystemContentService contentService;
+
+    @Test void systemContentDraftPublishAndUnpublishKeepPublicContentSeparate() {
+        assertEquals(5, contentService.list().size());
+        var original = contentService.published("about");
+        var editor = contentService.detail("about");
+        assertTrue(editor.published()); assertFalse(editor.hasDraft());
+        var request = new com.rental.modules.content.dto.ContentRequest("  Giới thiệu mới  ", "Nội dung tiếng Việt mới.\nDòng thứ hai.", editor.version());
+        var draft = contentService.saveDraft("about", request);
+        assertTrue(draft.hasDraft()); assertTrue(draft.published());
+        assertTrue(draft.version() > editor.version());
+        assertEquals(original, contentService.published("about"));
+        assertEquals("Giới thiệu mới", draft.title());
+        var conflict = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.publish("about", request));
+        assertEquals(409, conflict.getStatusCode().value());
+        assertEquals(original, contentService.published("about"));
+        var published = contentService.publish("about", new com.rental.modules.content.dto.ContentRequest(draft.title(), draft.body(), draft.version()));
+        assertFalse(published.hasDraft()); assertTrue(published.published()); assertNotNull(published.publishedAt());
+        assertEquals(draft.body(), contentService.published("about").body());
+        assertEquals(draft.title(), contentService.published("about").title());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> contentService.unpublish("about", draft.version()));
+        var hidden = contentService.unpublish("about", published.version());
+        assertFalse(hidden.published()); assertEquals(draft.body(), contentService.detail("about").body());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.published("about")).getStatusCode().value());
+        contentService.publish("about", new com.rental.modules.content.dto.ContentRequest(hidden.title(), hidden.body(), hidden.version()));
+        assertEquals(draft.body(), contentService.published("about").body());
+    }
+
+    @Test void hiddenContentStaysHiddenWhenSavingNewDraftAndUnknownPagesReturn404() {
+        var editor = contentService.detail("contact");
+        var hidden = contentService.unpublish("contact", editor.version());
+        var draft = contentService.saveDraft("contact", new com.rental.modules.content.dto.ContentRequest("Liên hệ mới", "Nội dung chưa công bố", hidden.version()));
+        assertFalse(draft.published()); assertTrue(draft.hasDraft());
+        assertEquals("Nội dung chưa công bố", contentService.detail("contact").body());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> contentService.published("contact"));
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.detail("unknown")).getStatusCode().value());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.saveDraft("unknown", new com.rental.modules.content.dto.ContentRequest("Title", "Body", 0L))).getStatusCode().value());
     }
 
     @Autowired com.rental.modules.admin.service.AdminAreaService adminAreas;

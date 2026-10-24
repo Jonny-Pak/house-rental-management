@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../features/admin/presentation/pages/admin_users_page.dart';
 import '../../../features/admin/presentation/pages/admin_areas_page.dart';
+import '../../../features/admin/presentation/pages/admin_content_page.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ class _SessionRefresh extends ChangeNotifier {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final contentKey = GlobalKey<AdminContentPageState>();
   final refresh = _SessionRefresh(ref);
   ref.onDispose(refresh.dispose);
 
@@ -65,6 +67,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: R.users, builder: (_, _) => const AdminUsersPage()),
           GoRoute(path: R.areas, builder: (_, _) => const AdminAreasPage()),
+          GoRoute(
+            path: R.content,
+            builder: (_, _) => AdminContentPage(key: contentKey),
+            onExit: (context, state) async {
+              if (ref.read(sessionProvider) == null) return true;
+              return await contentKey.currentState?.confirmLeave() ?? true;
+            },
+          ),
           GoRoute(
             path: R.contracts,
             builder: (_, _) => const MyContractsPage(isLandlord: true),

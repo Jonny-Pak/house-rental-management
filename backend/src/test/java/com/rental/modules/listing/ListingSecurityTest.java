@@ -21,13 +21,45 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.content.service.SystemContentService contentService;
+
+    @Test void contentReadersOnlyReceivePublishedFieldsAndOnlyAdminsCanEdit() throws Exception {
+        var published = new com.rental.modules.content.dto.PublishedContentResponse("about", "Public title", "Public body", java.time.LocalDateTime.now());
+        when(contentService.published("about")).thenReturn(published);
+        mvc.perform(get("/api/v1/content/about")).andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.data.body").value("Public body"))
+            .andExpect(jsonPath("$.data.version").doesNotExist()).andExpect(jsonPath("$.data.hasDraft").doesNotExist());
+        verify(contentService, never()).detail(anyString());
+        String body = """
+            {"title":"Draft title","body":"Draft body","version":6}
+            """;
+        mvc.perform(get("/api/v1/admin/content")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/content/about").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/content/about/publish").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/content/about/unpublish").header("Authorization", "Bearer owner").contentType("application/json").content("{\"version\":6}")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(contentService).saveDraft(eq("about"), argThat(r -> r.version() == 6 && r.body().equals("Draft body")));
+        mvc.perform(post("/api/v1/admin/content/about/publish").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(contentService).publish(eq("about"), any());
+        mvc.perform(post("/api/v1/admin/content/about/unpublish").header("Authorization", "Bearer admin").contentType("application/json").content("{\"version\":6}")).andExpect(status().isOk());
+        verify(contentService).unpublish("about", 6L);
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content("{}" )).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("Draft body", " "))).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("Draft body", "a".repeat(20001)))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/content/about/unpublish").header("Authorization", "Bearer admin").contentType("application/json").content("{\"version\":-1}")).andExpect(status().isBadRequest());
+        when(contentService.published("contact")).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Nội dung chưa công bố."));
+        mvc.perform(get("/api/v1/content/contact")).andExpect(status().isNotFound());
+    }
+
     @MockBean com.rental.modules.admin.service.AdminAreaService adminAreas;
 
     @Test void administrativeAreaManagementRequiresAdminAndValidInputs() throws Exception {

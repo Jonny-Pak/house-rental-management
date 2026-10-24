@@ -1,3 +1,5 @@
+import '../../../content/presentation/system_content_page.dart';
+import '../../../content/data/repositories/system_content_repository.dart';
 import '../../../notification/presentation/notification_store.dart';
 import '../../../notification/presentation/notifications_page.dart';
 
@@ -21,7 +23,13 @@ const _ink = Color(0xFF0B1535);
 const _background = Color(0xFFF8F9FB);
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, this.onMenu, this.onTabSelected});
+  const HomePage({
+    super.key,
+    this.onMenu,
+    this.onTabSelected,
+    this.contentRepository,
+  });
+  final SystemContentRepository? contentRepository;
   final VoidCallback? onMenu;
   final ValueChanged<int>? onTabSelected;
 
@@ -138,51 +146,41 @@ class HomePage extends StatelessWidget {
     _Action(
       'Giới Thiệu',
       Symbols.menu_book,
-      () => _information(
+      () => _open(
         context,
-        'Giới thiệu',
-        'Ứng dụng kết nối người thuê và người cho thuê tại TP.HCM, hỗ trợ đăng tin, xem nhà trên bản đồ và quản lý hợp đồng.',
-        Symbols.tune,
+        SystemContentPage(slug: 'about', repository: contentRepository),
       ),
     ),
     _Action(
       'Quy Định',
       Symbols.gavel,
-      () => _information(
+      () => _open(
         context,
-        'Quy định đăng tin',
-        'Cung cấp đúng địa chỉ, giá thuê và ảnh thực tế. Tin mới và tin chỉnh sửa phải được Admin duyệt trước khi xuất hiện công khai.',
-        Symbols.gavel,
+        SystemContentPage(slug: 'rules', repository: contentRepository),
       ),
     ),
     _Action(
       'Hướng Dẫn\nSử Dụng',
       Symbols.help,
-      () => _information(
+      () => _open(
         context,
-        'Hướng dẫn sử dụng',
-        '1. Chọn Đăng Tin và điền thông tin nhà/phòng.\n2. Gửi tin để Admin duyệt.\n3. Xem trạng thái trong Quản Lý Tin Đăng.\n4. Tìm nhà đã duyệt ở mục Thuê Nhà, Thuê Phòng Trọ hoặc Bản Đồ.',
-        Symbols.help,
+        SystemContentPage(slug: 'guide', repository: contentRepository),
       ),
     ),
     _Action(
       'Báo Cáo\nSự Cố',
       Symbols.report,
-      () => _information(
+      () => _open(
         context,
-        'Báo cáo sự cố',
-        'Bạn có thể ghi lại thao tác gặp lỗi và ảnh màn hình để gửi cho người quản trị. Chức năng gửi báo cáo trong ứng dụng chưa được kết nối.',
-        Symbols.report,
+        SystemContentPage(slug: 'support', repository: contentRepository),
       ),
     ),
     _Action(
       'Liên Hệ',
       Symbols.support_agent,
-      () => _information(
+      () => _open(
         context,
-        'Liên hệ',
-        'Thông tin liên hệ hỗ trợ sẽ được cập nhật khi hệ thống chính thức triển khai.',
-        Symbols.support_agent,
+        SystemContentPage(slug: 'contact', repository: contentRepository),
       ),
     ),
   ];
