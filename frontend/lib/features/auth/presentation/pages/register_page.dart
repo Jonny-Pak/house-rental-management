@@ -48,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
             email: _emailCtrl.text.trim(),
             password: _passwordCtrl.text,
             phoneNumber: _phoneCtrl.text.trim(),
-            role: 'USER',
+            role: 'MEMBER',
           ),
         ),
       );

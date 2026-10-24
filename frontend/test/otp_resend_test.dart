@@ -7,10 +7,13 @@ import 'package:frontend/features/auth/data/repositories/auth_repository.dart';
 import 'package:frontend/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:frontend/features/auth/presentation/bloc/auth_state.dart';
 import 'package:frontend/features/auth/presentation/pages/otp_page.dart';
+import 'package:frontend/features/auth/presentation/pages/login_page.dart'
+    show LoginPage;
 
 class OtpRepository implements AuthRepository {
   int sent = 0;
   bool fail = false;
+  String? verifiedEmail;
   @override
   Future<void> resendOtp(String email) async {
     if (fail) {
@@ -29,13 +32,57 @@ class OtpRepository implements AuthRepository {
   @override
   Future<void> register(RegisterRequest request) async {}
   @override
-  Future<void> verifyOtp(VerifyOtpRequest request) async {}
+  Future<void> verifyOtp(VerifyOtpRequest request) async {
+    verifiedEmail = request.email;
+  }
+
   @override
   Future<AuthResponse> login(LoginRequest request) =>
       throw UnimplementedError();
 }
 
 void main() {
+  testWidgets(
+    'Admin-created user can open verification from login and verify OTP',
+    (tester) async {
+      final repository = OtpRepository();
+      final bloc = AuthBloc(repository);
+      await tester.pumpWidget(
+        BlocProvider.value(
+          value: bloc,
+          child: const MaterialApp(home: LoginPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'new@example.com',
+      );
+      await tester.ensureVisible(find.text('Xác thực email'));
+      await tester.tap(find.text('Xác thực email'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<OtpPage>(find.byType(OtpPage)).email,
+        'new@example.com',
+      );
+      expect(
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Gửi lại mã'))
+            .onPressed,
+        isNotNull,
+      );
+      await tester.enterText(find.byType(TextFormField).first, '123456');
+      await tester.ensureVisible(find.text('Xác thực ngay'));
+      await tester.tap(find.text('Xác thực ngay'));
+      await tester.pumpAndSettle();
+      expect(repository.verifiedEmail, 'new@example.com');
+      expect(find.byType(OtpPage), findsNothing);
+      expect(find.byType(LoginPage), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(() => bloc.close());
+    },
+  );
+
   testWidgets(
     'Resend waits 60 seconds and reports success without leaving OTP page',
     (tester) async {

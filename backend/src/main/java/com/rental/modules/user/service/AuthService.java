@@ -127,7 +127,7 @@ public class AuthService {
         User user = userResult.get();
 
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
-            throw new IllegalStateException("TÃ i khoáº£n chÆ°a Ä‘Æ°á»£c xÃ¡c minh. Vui lÃ²ng xÃ¡c minh email cá»§a báº¡n báº±ng mÃ£ OTP.");
+            throw new IllegalStateException("Tài khoản chưa xác thực email. Vui lòng chọn Xác thực email trên app.");
         }
 
         authenticationManager.authenticate(
@@ -192,7 +192,7 @@ public class AuthService {
             user.setGoogleId(googleId);
             user.setAvatarUrl(avatarUrl);
             user.setPasswordHash(null);
-            user.setRole(Role.USER);
+            user.setRole(Role.MEMBER);
             user.setStatus(UserStatus.ACTIVE);
             user.setIsVerified(true);
             userRepository.save(user);
@@ -202,6 +202,9 @@ public class AuthService {
     }
 
     private AuthResponse createAuthResponse(User user) {
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new IllegalStateException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+        }
         String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 

@@ -33,7 +33,7 @@ class ListingWorkflowTest {
         listings = mock(ListingRepository.class);
         UserRepository users = mock(UserRepository.class);
         AdministrativeAreaRepository areas = mock(AdministrativeAreaRepository.class);
-        User owner = new User(); owner.setUserId(1L); owner.setRole(Role.USER);
+        User owner = new User(); owner.setUserId(1L); owner.setRole(Role.MEMBER);
         User reviewer = new User(); reviewer.setUserId(2L); reviewer.setRole(Role.ADMIN);
         AdministrativeArea ward = new AdministrativeArea(); ward.setAreaId(6L); ward.setAreaType("WARD");
         when(users.findById(1L)).thenReturn(Optional.of(owner));

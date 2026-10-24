@@ -23,8 +23,9 @@ const kSubText = Color(0xFF64748B);
 
 class OtpPage extends StatefulWidget {
   final String email;
+  final int initialCooldown;
 
-  const OtpPage({super.key, required this.email});
+  const OtpPage({super.key, required this.email, this.initialCooldown = 60});
 
   @override
   State<OtpPage> createState() => _OtpPageState();
@@ -38,6 +39,7 @@ class _OtpPageState extends State<OtpPage> {
   @override
   void initState() {
     super.initState();
+    _resendSeconds = widget.initialCooldown;
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && _resendSeconds > 0) {
         setState(() => _resendSeconds--);

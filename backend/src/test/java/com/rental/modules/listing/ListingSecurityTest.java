@@ -21,7 +21,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
@@ -29,6 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
     @Autowired MockMvc mvc;
+    @MockBean com.rental.modules.admin.service.AdminUserService adminUsers;
+    @MockBean com.rental.modules.admin.service.AdminCreateUserService adminCreation;
     @MockBean ListingService listings;
     @MockBean AdminListingService admin;
     @MockBean JwtService jwt;
@@ -39,6 +41,68 @@ class ListingSecurityTest {
     @MockBean com.rental.modules.contract.service.ContractExcelService contractExcel;
 
     @MockBean com.rental.modules.notification.service.NotificationService notifications;
+
+    @Test void creatingUsersRequiresAdminAndValidInput() throws Exception {
+        String body = "{\"fullName\":\"New user\",\"email\":\"new@example.com\",\"password\":\"Password123!\",\"role\":\"MEMBER\"}";
+        mvc.perform(post("/api/v1/admin/users").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/users").header("Authorization", "Bearer owner")
+            .contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/users").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{}" )).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/users").header("Authorization", "Bearer admin")
+            .contentType("application/json").content(body.replace("Password123!", "short"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/users").header("Authorization", "Bearer admin")
+            .contentType("application/json").content(body.replace("new@example.com", "invalid"))).andExpect(status().isBadRequest());
+        User user = new User(); user.setUserId(7L); user.setEmail("new@example.com"); user.setFullName("New user");
+        user.setRole(Role.MEMBER); user.setStatus(UserStatus.ACTIVE); user.setIsVerified(false);
+        when(adminCreation.create(any())).thenReturn(com.rental.modules.admin.dto.response.AdminUserResponse.from(user));
+        mvc.perform(post("/api/v1/admin/users").header("Authorization", "Bearer admin")
+            .contentType("application/json").content(body)).andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.verified").value(false)).andExpect(jsonPath("$.data.role").value("MEMBER"))
+            .andExpect(jsonPath("$.data.passwordHash").doesNotExist()).andExpect(jsonPath("$.data.password").doesNotExist());
+        verify(adminCreation).create(argThat(request -> request.role() == Role.MEMBER && request.email().equals("new@example.com")));
+    }
+
+    @Test void onlyAdminsCanManageUsersAndResponsesDoNotExposeSecrets() throws Exception {
+        mvc.perform(get("/api/v1/admin/users")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/users").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/users/1").header("Authorization", "Bearer owner")
+            .contentType("application/json").content("{}" )).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/admin/users/1/status").header("Authorization", "Bearer owner")
+            .contentType("application/json").content("{\"status\":\"LOCKED\"}")).andExpect(status().isForbidden());
+        User user = new User(); user.setUserId(1L); user.setRole(Role.MEMBER); user.setFullName("Tenant");
+        user.setEmail("tenant@example.com"); user.setStatus(UserStatus.ACTIVE); user.setPasswordHash("private");
+        var response = com.rental.modules.admin.dto.response.AdminUserResponse.from(user);
+        when(adminUsers.search("", null, null, null, 0)).thenReturn(
+            new com.rental.modules.admin.service.AdminUserService.UserPage(java.util.List.of(response), 1, 0, 1));
+        mvc.perform(get("/api/v1/admin/users").header("Authorization", "Bearer admin"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].email").value("tenant@example.com"))
+            .andExpect(jsonPath("$.data.items[0].passwordHash").doesNotExist())
+            .andExpect(jsonPath("$.data.items[0].googleId").doesNotExist());
+        mvc.perform(get("/api/v1/admin/users").param("role", "INVALID").header("Authorization", "Bearer admin"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/admin/users/1").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{\"fullName\":\"\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/admin/users/1").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{\"fullName\":\"Name\",\"phoneNumber\":\"abc\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/users/1/status").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{}" )).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/users/1/status").header("Authorization", "Bearer admin")
+            .contentType("application/json").content("{\"status\":\"LOCKED\"}")).andExpect(status().isOk());
+        verify(adminUsers).changeStatus(1L, 2L, UserStatus.LOCKED);
+    }
+
+    @Test void existingTokensAreRejectedWhenAccountIsLockedOrUnverified() throws Exception {
+        var user = ((CustomUserDetails) users.loadUserByUsername("owner")).getUser();
+        user.setStatus(UserStatus.LOCKED);
+        mvc.perform(get("/api/v1/listings/me").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        user.setStatus(UserStatus.ACTIVE); user.setIsVerified(false);
+        mvc.perform(get("/api/v1/listings/me").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        user.setIsVerified(true);
+        mvc.perform(get("/api/v1/listings/me").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+    }
 
     @Test void notificationsRequireLoginAreAccountScopedAndBroadcastIsAdminOnly() throws Exception {
         mvc.perform(get("/api/v1/notifications")).andExpect(status().isForbidden());
@@ -105,7 +169,7 @@ class ListingSecurityTest {
     @BeforeEach void tokens() {
         for (String token : new String[]{"owner", "admin"}) {
             User user = new User(); user.setUserId(token.equals("owner") ? 1L : 2L);
-            user.setEmail(token); user.setRole(token.equals("admin") ? Role.ADMIN : Role.USER);
+            user.setEmail(token); user.setRole(token.equals("admin") ? Role.ADMIN : Role.MEMBER);
             user.setStatus(UserStatus.ACTIVE); user.setIsVerified(true);
             var details = new CustomUserDetails(user);
             when(jwt.extractEmail(token)).thenReturn(token);

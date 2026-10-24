@@ -1,7 +1,6 @@
 package com.rental.modules.user.domain.enums;
 
 public enum Role {
-    USER,
-    OWNER,
+    MEMBER,
     ADMIN
 }

@@ -8,6 +8,7 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'register_page.dart';
+import 'otp_page.dart';
 
 // ─── Design System Colors ─────────────────────────────────────────────
 const kPrimaryDark = Color(0xFF2C1D11);
@@ -35,6 +36,22 @@ class _LoginPageState extends State<LoginPage> {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  void _verifyEmail() {
+    final email = _emailCtrl.text.trim();
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nhập email của bạn trước khi xác thực.')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpPage(email: email, initialCooldown: 0),
+      ),
+    );
   }
 
   void _onLogin(BuildContext context) {
@@ -142,6 +159,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) async {
+            if (ModalRoute.of(context)?.isCurrent == false) return;
             if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -357,6 +375,15 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 32),
 
+                        TextButton.icon(
+                          onPressed: isLoading ? null : _verifyEmail,
+                          icon: const Icon(
+                            Icons.mark_email_read_outlined,
+                            size: 20,
+                          ),
+                          label: const Text('Xác thực email'),
+                        ),
+                        const SizedBox(height: 12),
                         // Register Link
                         Wrap(
                           alignment: WrapAlignment.center,

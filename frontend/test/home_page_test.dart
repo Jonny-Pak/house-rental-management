@@ -21,7 +21,7 @@ class _ProfileRepository implements UserRepository {
     id: 1,
     fullName: 'Ngọc Thuận',
     email: 'thuan@example.com',
-    role: 'USER',
+    role: 'MEMBER',
   );
   @override
   Future<UserProfile> updateAvatar(String url) => getProfile();
