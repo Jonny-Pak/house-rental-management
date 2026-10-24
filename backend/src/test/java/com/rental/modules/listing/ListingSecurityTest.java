@@ -21,13 +21,39 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.admin.service.AdminAreaService adminAreas;
+
+    @Test void administrativeAreaManagementRequiresAdminAndValidInputs() throws Exception {
+        String body = """
+            {"name":"Phường kiểm thử","code":"TEST-AREA","type":"WARD","parentId":1}
+            """;
+        mvc.perform(get("/api/v1/admin/areas")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/areas").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/areas/6").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/admin/areas/6/status").header("Authorization", "Bearer owner").contentType("application/json").content("{\"active\":false}")).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/admin/areas/6").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        verifyNoInteractions(adminAreas);
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isCreated());
+        verify(adminAreas).create(argThat(r -> r.parentId() == 1 && r.type().equals("WARD")));
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("WARD", "INVALID"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("TEST-AREA", "bad code"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/areas/6/status").header("Authorization", "Bearer admin").contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/admin/areas").header("Authorization", "Bearer admin").param("parentId", "abc")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/admin/areas/parents").header("Authorization", "Bearer admin")).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/admin/areas/6/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false}")).andExpect(status().isOk());
+        verify(adminAreas).changeStatus(6L, false);
+        mvc.perform(delete("/api/v1/admin/areas/6").header("Authorization", "Bearer admin")).andExpect(status().isOk());
+        verify(adminAreas).delete(6L);
+    }
+
     @Autowired MockMvc mvc;
     @MockBean com.rental.modules.admin.service.AdminUserService adminUsers;
     @MockBean com.rental.modules.admin.service.AdminCreateUserService adminCreation;

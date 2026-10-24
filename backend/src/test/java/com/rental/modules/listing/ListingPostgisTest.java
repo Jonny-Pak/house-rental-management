@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -74,6 +74,94 @@ class ListingPostgisTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP SCHEMA " + SCHEMA + " CASCADE");
         }
+    }
+
+    @Autowired com.rental.modules.admin.service.AdminAreaService adminAreas;
+
+    @Test void adminAreaCrudSearchAndPaginationUseRealDatabase() {
+        var province = adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Tỉnh kiểm thử", "PROVINCE", "TEST-P", null));
+        for (int i = 0; i < 22; i++) {
+            adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Xã kiểm thử " + i, "COMMUNE", "TEST-C-" + i, province.id()));
+        }
+        var page = adminAreas.search("KIỂM THỬ", "COMMUNE", province.id(), true, 0);
+        assertEquals(22, page.total()); assertEquals(20, page.items().size()); assertEquals(2, page.totalPages());
+        assertEquals(2, adminAreas.search("", "COMMUNE", province.id(), true, 1).items().size());
+        assertEquals(0, adminAreas.search("%", null, null, null, 0).total());
+        assertEquals(22, adminAreas.detail(province.id()).children());
+        assertTrue(adminAreas.parents().stream().anyMatch(p -> p.id().equals(province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Tên khác", "PROVINCE", "test-p", null)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("  Tỉnh kiểm thử  ", "PROVINCE", "TEST-DUP", null)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Sai cấp", "COMMUNE", "TEST-BAD", page.items().get(0).id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Quận mới", "DISTRICT", "TEST-D", province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.update(province.id(),
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Tỉnh kiểm thử", "WARD", "TEST-P", province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.search("", "INVALID", null, null, 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.search("", null, null, null, -1));
+    }
+
+    @Test void adminAreaActivationRespectsHierarchyAndDeletionKeepsReferences() {
+        var province = adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Tỉnh trạng thái", "PROVINCE", "STATUS-P", null));
+        var ward = adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường trạng thái", "WARD", "STATUS-W", province.id()));
+        assertTrue(areas.getAllProvinces().stream().anyMatch(p -> p.getId().equals(province.id())));
+        assertEquals(1, areas.getWardsByProvince(province.id()).size());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.changeStatus(province.id(), false));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.delete(province.id()));
+        adminAreas.changeStatus(ward.id(), false);
+        assertTrue(areas.getWardsByProvince(province.id()).isEmpty());
+        adminAreas.changeStatus(province.id(), false);
+        assertTrue(areas.getAllProvinces().stream().noneMatch(p -> p.getId().equals(province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.changeStatus(ward.id(), true));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Xã không hợp lệ", "COMMUNE", "STATUS-NEW", province.id())));
+        adminAreas.changeStatus(province.id(), true); adminAreas.changeStatus(ward.id(), true);
+        assertEquals(1, areas.getWardsByProvince(province.id()).size());
+        adminAreas.delete(ward.id()); adminAreas.delete(province.id());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.detail(ward.id()));
+    }
+
+    @Test void disabledAreasBlockNewListingsAndExcelButKeepExistingListings() throws Exception {
+        User owner = user("areaowner", Role.MEMBER), reviewer = user("areaadmin", Role.ADMIN);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Tin giữ dữ liệu khu vực"); request.setListingType("WHOLE_HOUSE"); request.setAreaId(6L);
+        request.setAddress("TP.HCM"); request.setAreaSqm(new BigDecimal("40")); request.setRentPrice(new BigDecimal("4000000"));
+        request.setLatitude(10.78); request.setLongitude(106.7); request.setImageUrls(List.of("https://example.com/area.jpg"));
+        Long listingId = listings.createListing(owner.getUserId(), request).getId();
+        admin.approveListing(listingId, reviewer.getUserId());
+        var propertyRequest = new com.rental.modules.property.dto.request.PropertyRequest(
+            "Khu trọ giữ dữ liệu", "", "Địa chỉ", 1L, 2L, 6L, "BOARDING_HOUSE",
+            BigDecimal.ZERO, BigDecimal.ZERO, List.of());
+        var property = properties.createProperty(owner.getEmail(), propertyRequest);
+        entityManager.flush();
+        assertEquals(1, adminAreas.detail(6L).listingCount());
+        assertEquals(1, adminAreas.detail(6L).propertyCount());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.delete(6L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.update(6L,
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường Bến Nghé", "WARD", "BN", 1L)));
+        jdbc.update("UPDATE administrative_areas SET boundary=ST_GeomFromText('POLYGON((106 10,107 10,107 11,106 10))',4326) WHERE area_id=6");
+        var renamed = adminAreas.update(6L, new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường đã đổi tên", "WARD", "BN", 2L));
+        assertEquals("Phường đã đổi tên", renamed.name());
+        assertNotNull(jdbc.queryForObject("SELECT ST_AsText(boundary) FROM administrative_areas WHERE area_id=6", String.class));
+        adminAreas.changeStatus(6L, false);
+        assertTrue(areas.getWardsByDistrict(2L).stream().noneMatch(w -> w.getId().equals(6L)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> properties.createProperty(owner.getEmail(), propertyRequest));
+        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM properties WHERE id=?", Long.class, property.getId()));
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin không hợp lệ")));
+        assertFalse(listingExcel.preview(owner.getUserId(), file).errors().isEmpty());
+        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM listings WHERE listing_id=?", Long.class, listingId));
+        assertEquals(listingId, listings.getPublicListing(listingId).getId());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(listingExcel.template()))) {
+            var sheet = book.getSheet("KhuVuc");
+            for (int row = 1; row <= sheet.getLastRowNum(); row++) {
+                assertNotEquals(6.0, sheet.getRow(row).getCell(0).getNumericCellValue());
+            }
+        }
+        adminAreas.changeStatus(6L, true);
+        assertTrue(areas.getWardsByDistrict(2L).stream().anyMatch(w -> w.getId().equals(6L)));
     }
 
     @Autowired com.rental.modules.admin.service.AdminCreateUserService adminCreation;

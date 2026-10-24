@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../features/admin/presentation/pages/admin_users_page.dart';
+import '../../../features/admin/presentation/pages/admin_areas_page.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,6 +64,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const AdminDashboardPage(),
           ),
           GoRoute(path: R.users, builder: (_, _) => const AdminUsersPage()),
+          GoRoute(path: R.areas, builder: (_, _) => const AdminAreasPage()),
           GoRoute(
             path: R.contracts,
             builder: (_, _) => const MyContractsPage(isLandlord: true),

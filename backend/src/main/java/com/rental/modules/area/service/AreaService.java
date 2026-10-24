@@ -23,6 +23,7 @@ public class AreaService {
         List<ProvinceDto> result = new ArrayList<>();
         List<AdministrativeArea> provinces = areaRepository.findByAreaTypeOrderByAreaNameAsc("PROVINCE");
         for (AdministrativeArea province : provinces) {
+            if (!province.isAvailable()) continue;
             result.add(new ProvinceDto(province.getAreaId(), province.getAreaName(), province.getCode()));
         }
         return result;
@@ -32,6 +33,7 @@ public class AreaService {
         List<DistrictDto> result = new ArrayList<>();
         List<AdministrativeArea> districts = areaRepository.findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(provinceId, "DISTRICT");
         for (AdministrativeArea district : districts) {
+            if (!district.isAvailable()) continue;
             Long parentId = getParentId(district);
             result.add(new DistrictDto(district.getAreaId(), district.getAreaName(), district.getCode(), parentId));
         }
@@ -42,6 +44,7 @@ public class AreaService {
         List<WardDto> result = new ArrayList<>();
         List<AdministrativeArea> wards = areaRepository.findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(districtId, "WARD");
         for (AdministrativeArea ward : wards) {
+            if (!ward.isAvailable()) continue;
             result.add(new WardDto(ward.getAreaId(), ward.getAreaName(), ward.getCode(), getParentId(ward)));
         }
         return result;
@@ -52,6 +55,7 @@ public class AreaService {
         List<AdministrativeArea> wards = areaRepository.findByParent_AreaIdAndAreaTypeInOrderByAreaNameAsc(
                 provinceId, List.of("WARD", "COMMUNE", "SPECIAL"));
         for (AdministrativeArea ward : wards) {
+            if (!ward.isAvailable()) continue;
             WardDto response = new WardDto(ward.getAreaId(), ward.getAreaName(), ward.getCode(), null);
             response.setProvinceId(provinceId);
             response.setType(ward.getAreaType());

@@ -192,6 +192,9 @@ public class ListingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực không hợp lệ.");
         }
         AdministrativeArea area = areaResult.get();
+        if (!area.isAvailable()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực đã ngừng sử dụng. Vui lòng chọn khu vực khác.");
+        }
         if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn phường/xã/đặc khu.");
         }

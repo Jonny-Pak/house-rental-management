@@ -114,7 +114,7 @@ public class ListingExcelService {
         Map<Long, String> names = new HashMap<>();
         for (var area : all) names.put(area.getAreaId(), area.getAreaName());
         for (var area : all) {
-            if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) continue;
+            if (!area.isAvailable() || !List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) continue;
             String parent = area.getParent() == null ? "" : names.getOrDefault(area.getParent().getAreaId(), "");
             writeRow(sheet.createRow(sheet.getLastRowNum() + 1), List.of(area.getAreaId(), area.getAreaName(), parent));
         }
@@ -131,7 +131,7 @@ public class ListingExcelService {
         for (var existing : listings.getMyListings(ownerId)) known.add(key(existing.getTitle(), existing.getAddress()));
         Set<Long> validAreas = new HashSet<>();
         for (var area : areas.findAll()) {
-            if (List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) validAreas.add(area.getAreaId());
+            if (area.isAvailable() && List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) validAreas.add(area.getAreaId());
         }
         try (var input = file.getInputStream(); var book = new XSSFWorkbook(input)) {
             Sheet sheet = book.getSheet("TinDang");

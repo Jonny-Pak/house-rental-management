@@ -14,6 +14,7 @@ abstract final class R {
   static const dashboard = '/';
   static const listings = '/listings';
   static const users = '/users';
+  static const areas = '/areas';
   static const contracts = '/contracts';
   static const memberships = '/memberships';
   static const settings = '/settings';
@@ -41,6 +42,7 @@ class NavItem {
     R.dashboard => 'Dashboard',
     R.listings => 'Duyệt bài đăng',
     R.users => 'Quản lý người dùng',
+    R.areas => 'Khu vực hành chính',
     R.contracts => 'Hợp đồng thuê',
     R.memberships => 'Gói thành viên',
     R.settings => 'Cài đặt',
@@ -70,6 +72,7 @@ const kNavGroups = <NavGroup>[
   NavGroup('Manage', [
     NavItem('Duyệt bài đăng', R.listings, Icons.approval_outlined),
     NavItem('Quản lý người dùng', R.users, Icons.people_outline),
+    NavItem('Khu vực hành chính', R.areas, Icons.location_city_outlined),
     NavItem('Hợp đồng thuê', R.contracts, Icons.description_outlined),
     NavItem('Gói thành viên', R.memberships, Icons.card_membership_outlined),
   ]),
