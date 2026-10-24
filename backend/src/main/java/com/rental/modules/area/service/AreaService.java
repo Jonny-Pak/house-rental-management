@@ -1,54 +1,69 @@
-﻿package com.rental.modules.area.service;
+package com.rental.modules.area.service;
 
 import com.rental.modules.area.domain.entity.AdministrativeArea;
 import com.rental.modules.area.dto.DistrictDto;
 import com.rental.modules.area.dto.ProvinceDto;
 import com.rental.modules.area.dto.WardDto;
 import com.rental.modules.area.repository.AdministrativeAreaRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AreaService {
-
     private final AdministrativeAreaRepository areaRepository;
 
+    public AreaService(AdministrativeAreaRepository areaRepository) {
+        this.areaRepository = areaRepository;
+    }
+
     public List<ProvinceDto> getAllProvinces() {
-        return areaRepository.findByAreaTypeOrderByAreaNameAsc("PROVINCE")
-                .stream()
-                .map(area -> ProvinceDto.builder()
-                        .id(area.getAreaId())
-                        .name(area.getAreaName())
-                        .code(area.getCode())
-                        .build())
-                .collect(Collectors.toList());
+        List<ProvinceDto> result = new ArrayList<>();
+        List<AdministrativeArea> provinces = areaRepository.findByAreaTypeOrderByAreaNameAsc("PROVINCE");
+        for (AdministrativeArea province : provinces) {
+            result.add(new ProvinceDto(province.getAreaId(), province.getAreaName(), province.getCode()));
+        }
+        return result;
     }
 
     public List<DistrictDto> getDistrictsByProvince(Long provinceId) {
-        return areaRepository.findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(provinceId, "DISTRICT")
-                .stream()
-                .map(area -> DistrictDto.builder()
-                        .id(area.getAreaId())
-                        .name(area.getAreaName())
-                        .code(area.getCode())
-                        .provinceId(area.getParent() != null ? area.getParent().getAreaId() : null)
-                        .build())
-                .collect(Collectors.toList());
+        List<DistrictDto> result = new ArrayList<>();
+        List<AdministrativeArea> districts = areaRepository.findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(provinceId, "DISTRICT");
+        for (AdministrativeArea district : districts) {
+            Long parentId = getParentId(district);
+            result.add(new DistrictDto(district.getAreaId(), district.getAreaName(), district.getCode(), parentId));
+        }
+        return result;
     }
 
     public List<WardDto> getWardsByDistrict(Long districtId) {
-        return areaRepository.findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(districtId, "WARD")
-                .stream()
-                .map(area -> WardDto.builder()
-                        .id(area.getAreaId())
-                        .name(area.getAreaName())
-                        .code(area.getCode())
-                        .districtId(area.getParent() != null ? area.getParent().getAreaId() : null)
-                        .build())
-                .collect(Collectors.toList());
+        List<WardDto> result = new ArrayList<>();
+        List<AdministrativeArea> wards = areaRepository.findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(districtId, "WARD");
+        for (AdministrativeArea ward : wards) {
+            result.add(new WardDto(ward.getAreaId(), ward.getAreaName(), ward.getCode(), getParentId(ward)));
+        }
+        return result;
+    }
+
+    public List<WardDto> getWardsByProvince(Long provinceId) {
+        List<WardDto> result = new ArrayList<>();
+        List<AdministrativeArea> wards = areaRepository.findByParent_AreaIdAndAreaTypeInOrderByAreaNameAsc(
+                provinceId, List.of("WARD", "COMMUNE", "SPECIAL"));
+        for (AdministrativeArea ward : wards) {
+            WardDto response = new WardDto(ward.getAreaId(), ward.getAreaName(), ward.getCode(), null);
+            response.setProvinceId(provinceId);
+            response.setType(ward.getAreaType());
+            result.add(response);
+        }
+        return result;
+    }
+
+    private Long getParentId(AdministrativeArea area) {
+        if (area.getParent() == null) {
+            return null;
+        }
+        return area.getParent().getAreaId();
     }
 }

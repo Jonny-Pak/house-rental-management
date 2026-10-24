@@ -1,4 +1,4 @@
-﻿package com.rental.modules.user.service;
+package com.rental.modules.user.service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
@@ -15,7 +15,6 @@ import com.rental.modules.user.dto.request.RegisterRequest;
 import com.rental.modules.user.dto.request.VerifyOtpRequest;
 import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,7 +25,6 @@ import java.util.Collections;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -36,80 +34,117 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, OtpService otpService, EmailService emailService, AuthenticationManager authenticationManager, JwtService jwtService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.otpService = otpService;
+        this.emailService = emailService;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+    }
+
     @Value("${app.google.client-id}")
     private String googleClientId;
 
-    // ── Register ─────────────────────────────────────────────────────────────
-
     public String register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email " + request.getEmail() + "đã được sử dụng. Vui lòng sử dụng email khác.");
+        if (request.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Không thể tự đăng ký tài khoản Admin.");
+        }
+        Optional<User> existing = userRepository.findByEmail(request.getEmail());
+        if (existing.isPresent()) {
+            User user = existing.get();
+            if (Boolean.TRUE.equals(user.getIsVerified())) {
+                throw new IllegalArgumentException("Email đã được sử dụng.");
+            }
+            if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+                throw new IllegalArgumentException("Email đã được đăng ký. Hãy dùng mật khẩu ban đầu để nhận lại mã.");
+            }
+            return resendOtp(request.getEmail());
         }
 
-        User user = User.builder()
-                .fullName(request.getFullName())
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .phoneNumber(request.getPhoneNumber())
-                .role(request.getRole())
-                .status(UserStatus.ACTIVE)
-                .isVerified(false)
-                .build();
-
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setRole(request.getRole());
+        user.setStatus(UserStatus.ACTIVE);
+        user.setIsVerified(false);
         userRepository.save(user);
-
-        String otp = otpService.generateAndStoreOtp(request.getEmail());
-        emailService.sendOtpEmail(request.getEmail(), otp);
-
-        return "Đăng ký thành công. Vui lòng kiểm tra email của bạn để nhận mã xác minh.";
+        sendVerificationCode(request.getEmail());
+        return "Đã gửi mã xác thực. Vui lòng kiểm tra email và thư mục Spam.";
     }
 
-    // ── Verify OTP ───────────────────────────────────────────────────────────
+    public String resendOtp(String email) {
+        User user = findUnverifiedUser(email);
+        sendVerificationCode(user.getEmail());
+        return "Đã gửi lại mã xác thực. Vui lòng kiểm tra email và thư mục Spam.";
+    }
+
+    private User findUnverifiedUser(String email) {
+        Optional<User> result = userRepository.findByEmail(email);
+        if (result.isEmpty()) throw new IllegalArgumentException("Không tìm thấy tài khoản.");
+        User user = result.get();
+        if (Boolean.TRUE.equals(user.getIsVerified())) {
+            throw new IllegalArgumentException("Tài khoản đã xác thực. Vui lòng đăng nhập.");
+        }
+        return user;
+    }
+
+    private void sendVerificationCode(String email) {
+        String otp = otpService.generateAndStoreOtp(email);
+        try {
+            emailService.sendOtpEmail(email, otp);
+        } catch (RuntimeException exception) {
+            otpService.discardOtp(email);
+            throw exception;
+        }
+    }
 
     public String verifyOtp(VerifyOtpRequest request) {
         boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (!valid) {
-            throw new IllegalArgumentException("Mã xác minh không hợp lệ hoặc đã hết hạn.");
+            throw new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn.");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + request.getEmail()));
+        java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + request.getEmail());
+        }
+        User user = userResult.get();
 
         user.setIsVerified(true);
         userRepository.save(user);
 
-        return "Tài khoản đã được xác minh thành công. Bạn có thể đăng nhập ngay bây giờ.";
+        return "Tài khoản đã xác thực thành công. Vui lòng đăng nhập.";
     }
 
-    // ── Login ────────────────────────────────────────────────────────────────
-
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại với email: " + request.getEmail()));
+        java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i vá»›i email: " + request.getEmail());
+        }
+        User user = userResult.get();
 
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
-            throw new IllegalStateException("Tài khoản chưa được xác minh. Vui lòng xác minh email của bạn bằng mã OTP.");
+            throw new IllegalStateException("Tài khoản chưa xác thực email. Vui lòng chọn Xác thực email trên app.");
         }
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        String accessToken  = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .userId(user.getUserId())
-                .role(user.getRole().name())
-                .build();
+        return createAuthResponse(user);
     }
 
-    // ── Google Login ─────────────────────────────────────────────────────────
-
     public AuthResponse googleLogin(GoogleLoginRequest request) {
-        // 1. Verify the Google ID Token
+
+        GoogleIdToken idToken = verifyGoogleToken(request.getIdToken());
+        User user = findOrCreateGoogleUser(idToken.getPayload());
+        return createAuthResponse(user);
+    }
+
+    private GoogleIdToken verifyGoogleToken(String token) {
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(), GsonFactory.getDefaultInstance())
                 .setAudience(Collections.singletonList(googleClientId))
@@ -117,28 +152,29 @@ public class AuthService {
 
         GoogleIdToken idToken;
         try {
-            idToken = verifier.verify(request.getIdToken());
+            idToken = verifier.verify(token);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Thất bại khi xác minh Google ID Token: " + e.getMessage());
+            throw new IllegalArgumentException("Tháº¥t báº¡i khi xÃ¡c minh Google ID Token: " + e.getMessage());
         }
 
         if (idToken == null) {
-            throw new IllegalArgumentException("Token Google ID không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.");
+            throw new IllegalArgumentException("Token Google ID khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng thá»­ láº¡i.");
         }
 
-        // 2. Extract user info from payload
-        Payload payload   = idToken.getPayload();
+        return idToken;
+    }
+
+    private User findOrCreateGoogleUser(Payload payload) {
         String email      = payload.getEmail();
         String name       = (String) payload.get("name");
         String googleId   = payload.getSubject();
         String avatarUrl  = (String) payload.get("picture");
 
-        // 3. Find or create user
         Optional<User> existingUser = userRepository.findByEmail(email);
         User user;
 
         if (existingUser.isPresent()) {
-            // Update googleId and avatarUrl if they are currently null
+
             user = existingUser.get();
             if (user.getGoogleId() == null) {
                 user.setGoogleId(googleId);
@@ -149,29 +185,35 @@ public class AuthService {
             user.setIsVerified(true);
             userRepository.save(user);
         } else {
-            // Create a brand-new OAuth user
-            user = User.builder()
-                    .email(email)
-                    .fullName(name)
-                    .googleId(googleId)
-                    .avatarUrl(avatarUrl)
-                    .passwordHash(null)
-                    .role(Role.USER)
-                    .status(UserStatus.ACTIVE)
-                    .isVerified(true)
-                    .build();
+
+            user = new User();
+            user.setEmail(email);
+            user.setFullName(name);
+            user.setGoogleId(googleId);
+            user.setAvatarUrl(avatarUrl);
+            user.setPasswordHash(null);
+            user.setRole(Role.MEMBER);
+            user.setStatus(UserStatus.ACTIVE);
+            user.setIsVerified(true);
             userRepository.save(user);
         }
 
-        // 4. Generate tokens and return
+        return user;
+    }
+
+    private AuthResponse createAuthResponse(User user) {
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new IllegalStateException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+        }
         String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .userId(user.getUserId())
-                .role(user.getRole().name())
-                .build();
+        AuthResponse response = new AuthResponse();
+        response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshToken);
+        response.setUserId(user.getUserId());
+        response.setRole(user.getRole().name());
+        return response;
     }
+
 }

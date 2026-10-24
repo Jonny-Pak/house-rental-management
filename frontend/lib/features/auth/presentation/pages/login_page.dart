@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/storage/token_storage.dart';
 import '../../../home/presentation/pages/main_page.dart';
 import '../bloc/auth_bloc.dart';
@@ -7,13 +8,14 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'register_page.dart';
+import 'otp_page.dart';
 
 // ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryDark = Color(0xFF2C1D11);
 const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground    = Color(0xFFFAF8F5);
-const kBorderColor   = Color(0xFFE8DED1);
-const kSubText       = Color(0xFF64748B);
+const kBackground = Color(0xFFFAF8F5);
+const kBorderColor = Color(0xFFE8DED1);
+const kSubText = Color(0xFF64748B);
 // ──────────────────────────────────────────────────────────────────────
 
 class LoginPage extends StatefulWidget {
@@ -36,16 +38,32 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  void _verifyEmail() {
+    final email = _emailCtrl.text.trim();
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nhập email của bạn trước khi xác thực.')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpPage(email: email, initialCooldown: 0),
+      ),
+    );
+  }
+
   void _onLogin(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            LoginRequested(
-              LoginRequest(
-                email: _emailCtrl.text.trim(),
-                password: _passwordCtrl.text,
-              ),
-            ),
-          );
+        LoginRequested(
+          LoginRequest(
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text,
+          ),
+        ),
+      );
     }
   }
 
@@ -72,6 +90,18 @@ class _LoginPageState extends State<LoginPage> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          textInputAction: isPassword
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onFieldSubmitted: (_) {
+            if (isPassword) {
+              if (context.read<AuthBloc>().state is! AuthLoading) {
+                _onLogin(context);
+              }
+            } else {
+              FocusScope.of(context).nextFocus();
+            }
+          },
           obscureText: isPassword ? _obscurePassword : false,
           style: const TextStyle(fontSize: 15, color: kPrimaryDark),
           decoration: InputDecoration(
@@ -83,7 +113,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: kBorderColor),
@@ -104,7 +137,9 @@ class _LoginPageState extends State<LoginPage> {
                       });
                     },
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: kSubText,
                       size: 20,
                     ),
@@ -124,13 +159,16 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) async {
+            if (ModalRoute.of(context)?.isCurrent == false) return;
             if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
                   backgroundColor: Colors.redAccent,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               );
             } else if (state is AuthAuthenticated) {
@@ -139,7 +177,9 @@ class _LoginPageState extends State<LoginPage> {
                   content: const Text('Đăng nhập thành công!'),
                   backgroundColor: Colors.green,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               );
               await TokenStorage.saveToken(state.data.accessToken);
@@ -155,7 +195,10 @@ class _LoginPageState extends State<LoginPage> {
             final isLoading = state is AuthLoading;
             return Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Form(
@@ -201,13 +244,16 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         const SizedBox(height: 40),
-                        
+
                         _buildTextField(
                           label: 'Email',
                           hintText: 'Nhập địa chỉ email...',
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
-                          validator: (v) => v == null || v.isEmpty || !v.contains('@') ? 'Email không hợp lệ' : null,
+                          validator: (v) =>
+                              v == null || v.isEmpty || !v.contains('@')
+                              ? 'Email không hợp lệ'
+                              : null,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
@@ -215,9 +261,11 @@ class _LoginPageState extends State<LoginPage> {
                           hintText: 'Nhập mật khẩu...',
                           controller: _passwordCtrl,
                           isPassword: true,
-                          validator: (v) => v == null || v.length < 8 ? 'Mật khẩu ít nhất 8 ký tự' : null,
+                          validator: (v) => v == null || v.length < 8
+                              ? 'Mật khẩu ít nhất 8 ký tự'
+                              : null,
                         ),
-                        
+
                         // Forgot Password Link
                         Align(
                           alignment: Alignment.centerRight,
@@ -226,7 +274,10 @@ class _LoginPageState extends State<LoginPage> {
                               // TODO: Quên mật khẩu
                             },
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -258,7 +309,10 @@ class _LoginPageState extends State<LoginPage> {
                               ? const SizedBox(
                                   height: 24,
                                   width: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
                                 )
                               : const Text(
                                   'Đăng nhập',
@@ -273,18 +327,19 @@ class _LoginPageState extends State<LoginPage> {
                         // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: kBorderColor, thickness: 1)),
+                            Expanded(
+                              child: Divider(color: kBorderColor, thickness: 1),
+                            ),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 'Hoặc',
-                                style: TextStyle(
-                                  color: kSubText,
-                                  fontSize: 13,
-                                ),
+                                style: TextStyle(color: kSubText, fontSize: 13),
                               ),
                             ),
-                            Expanded(child: Divider(color: kBorderColor, thickness: 1)),
+                            Expanded(
+                              child: Divider(color: kBorderColor, thickness: 1),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 32),
@@ -297,6 +352,8 @@ class _LoginPageState extends State<LoginPage> {
                           icon: Image.network(
                             'https://img.icons8.com/color/48/000000/google-logo.png',
                             height: 24,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.error_outline, size: 24),
                           ),
                           label: const Text(
                             'Tiếp tục với Google',
@@ -318,21 +375,29 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 32),
 
+                        TextButton.icon(
+                          onPressed: isLoading ? null : _verifyEmail,
+                          icon: const Icon(
+                            Icons.mark_email_read_outlined,
+                            size: 20,
+                          ),
+                          label: const Text('Xác thực email'),
+                        ),
+                        const SizedBox(height: 12),
                         // Register Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
                           children: [
                             const Text(
                               'Chưa có tài khoản? ',
-                              style: TextStyle(
-                                color: kSubText,
-                                fontSize: 15,
-                              ),
+                              style: TextStyle(color: kSubText, fontSize: 15),
                             ),
                             InkWell(
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const RegisterPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
                               ),
                               child: const Text(
                                 'Đăng ký',

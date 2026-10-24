@@ -10,14 +10,12 @@ import com.rental.modules.property.repository.PropertyRepository;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
-@RequiredArgsConstructor
 public class FavoriteService {
 
     private final UserRepository userRepository;
@@ -25,18 +23,26 @@ public class FavoriteService {
     private final FavoritePropertyRepository favoritePropertyRepository;
     private final PropertyImageRepository propertyImageRepository;
 
-    /**
-     * Toggle favorite for a property.
-     * @return true  if the property is now favorited,
-     *         false if the property was removed from favorites.
-     */
+    public FavoriteService(UserRepository userRepository, PropertyRepository propertyRepository, FavoritePropertyRepository favoritePropertyRepository, PropertyImageRepository propertyImageRepository) {
+        this.userRepository = userRepository;
+        this.propertyRepository = propertyRepository;
+        this.favoritePropertyRepository = favoritePropertyRepository;
+        this.propertyImageRepository = propertyImageRepository;
+    }
+
     @Transactional
     public boolean toggleFavorite(String email, Long propertyId) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User user = userResult.get();
 
-        Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khu trọ với ID: " + propertyId));
+        java.util.Optional<Property> propertyResult = propertyRepository.findById(propertyId);
+        if (propertyResult.isEmpty()) {
+            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
+        }
+        Property property = propertyResult.get();
 
         boolean alreadyFavorited = favoritePropertyRepository
                 .existsByUser_UserIdAndProperty_Id(user.getUserId(), propertyId);
@@ -45,48 +51,50 @@ public class FavoriteService {
             favoritePropertyRepository.deleteByUser_UserIdAndProperty_Id(user.getUserId(), propertyId);
             return false;
         } else {
-            FavoriteProperty favorite = FavoriteProperty.builder()
-                    .user(user)
-                    .property(property)
-                    .build();
+            FavoriteProperty favorite = new FavoriteProperty(user, property);
             favoritePropertyRepository.save(favorite);
             return true;
         }
     }
 
-    /**
-     * Get all favorited properties for the authenticated user.
-     */
     public List<PropertyResponse> getMyFavoriteProperties(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+        }
+        User user = userResult.get();
 
-        return favoritePropertyRepository.findByUser_UserId(user.getUserId()).stream()
-                .map(fav -> mapToResponse(fav.getProperty()))
-                .collect(Collectors.toList());
+        List<PropertyResponse> result = new ArrayList<>();
+        List<FavoriteProperty> favorites = favoritePropertyRepository.findByUser_UserId(user.getUserId());
+        for (FavoriteProperty favorite : favorites) {
+            result.add(mapToResponse(favorite.getProperty()));
+        }
+        return result;
     }
 
     private PropertyResponse mapToResponse(Property property) {
-        List<String> imageUrls = propertyImageRepository.findByPropertyId(property.getId()).stream()
-                .map(PropertyImage::getImageUrl)
-                .collect(Collectors.toList());
+        List<String> imageUrls = new ArrayList<>();
+        List<PropertyImage> images = propertyImageRepository.findByPropertyId(property.getId());
+        for (PropertyImage image : images) {
+            imageUrls.add(image.getImageUrl());
+        }
 
-        return PropertyResponse.builder()
-                .id(property.getId())
-                .landlordId(property.getLandlord().getUserId())
-                .name(property.getName())
-                .description(property.getDescription())
-                .address(property.getAddress())
-                .provinceId(property.getProvinceId())
-                .districtId(property.getDistrictId())
-                .wardId(property.getWardId())
-                .electricityPrice(property.getElectricityPrice())
-                .waterPrice(property.getWaterPrice())
-                .propertyType(property.getPropertyType())
-                .status(property.getStatus())
-                .landlordName(property.getLandlord().getFullName())
-                .landlordPhone(property.getLandlord().getPhoneNumber())
-                .imageUrls(imageUrls)
-                .build();
+        return new PropertyResponse(
+                property.getId(),
+                property.getLandlord().getUserId(),
+                property.getName(),
+                property.getDescription(),
+                property.getAddress(),
+                property.getProvinceId(),
+                property.getDistrictId(),
+                property.getWardId(),
+                property.getElectricityPrice(),
+                property.getWaterPrice(),
+                property.getPropertyType(),
+                property.getStatus(),
+                property.getLandlord().getFullName(),
+                property.getLandlord().getPhoneNumber(),
+                imageUrls
+        );
     }
 }

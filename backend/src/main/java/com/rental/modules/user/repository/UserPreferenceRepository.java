@@ -1,4 +1,4 @@
-﻿package com.rental.modules.user.repository;
+package com.rental.modules.user.repository;
 
 import com.rental.modules.user.domain.entity.UserPreference;
 import org.springframework.data.jpa.repository.JpaRepository;

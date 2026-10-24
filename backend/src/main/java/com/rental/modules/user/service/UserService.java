@@ -8,27 +8,43 @@ import com.rental.modules.user.dto.request.UserPreferenceDto;
 import com.rental.modules.user.dto.response.UserProfileResponse;
 import com.rental.modules.user.repository.UserPreferenceRepository;
 import com.rental.modules.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.rental.modules.subscription.domain.entity.UserSubscription;
+import com.rental.modules.subscription.repository.UserSubscriptionRepository;
 import org.springframework.util.StringUtils;
 
 @Service
-@RequiredArgsConstructor
+@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
     private final UserPreferenceRepository userPreferenceRepository;
 
+    private final UserSubscriptionRepository userSubscriptionRepository;
+
+    public UserService(UserRepository userRepository, UserPreferenceRepository userPreferenceRepository, UserSubscriptionRepository userSubscriptionRepository) {
+        this.userSubscriptionRepository = userSubscriptionRepository;
+        this.userRepository = userRepository;
+        this.userPreferenceRepository = userPreferenceRepository;
+    }
+
     public UserProfileResponse getMyProfile(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         return mapToUserProfileResponse(user);
     }
 
     public UserProfileResponse updateMyProfile(String email, UpdateProfileRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         if (StringUtils.hasText(request.getFullName())) {
             user.setFullName(request.getFullName());
@@ -46,8 +62,11 @@ public class UserService {
     }
 
     public UserProfileResponse updateAvatar(String email, UpdateAvatarRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         user.setAvatarUrl(request.getAvatarUrl());
 
@@ -57,47 +76,72 @@ public class UserService {
     }
 
     private UserProfileResponse mapToUserProfileResponse(User user) {
-        return UserProfileResponse.builder()
-                .id(user.getUserId())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phoneNumber(user.getPhoneNumber())
-                .avatarUrl(user.getAvatarUrl())
-                .role(user.getRole() != null ? user.getRole().name() : null)
-                .status(user.getStatus() != null ? user.getStatus().name() : null)
-                .build();
+        UserProfileResponse response = new UserProfileResponse();
+        response.setId(user.getUserId());
+        response.setFullName(user.getFullName());
+        response.setEmail(user.getEmail());
+        response.setPhoneNumber(user.getPhoneNumber());
+        response.setAvatarUrl(user.getAvatarUrl());
+        if (user.getRole() != null) {
+            response.setRole(user.getRole().name());
+        }
+        if (user.getStatus() != null) {
+            response.setStatus(user.getStatus().name());
+        }
+        UserSubscription subscription = userSubscriptionRepository.findByUser(user).orElse(null);
+        if (subscription != null) {
+            response.setSubscriptionStatus(subscription.getStatus());
+            if (subscription.getMembershipPackage() != null) {
+                response.setMembershipPackageName(subscription.getMembershipPackage().getPackageName());
+            }
+            response.setRemainingStandardQuota(subscription.getRemainingStandardQuota());
+            response.setRemainingVipQuota(subscription.getRemainingVipQuota());
+            response.setRemainingRefreshQuota(subscription.getRemainingRefreshQuota());
+        }
+        UserPreference preference = userPreferenceRepository.findByUser_Email(user.getEmail()).orElse(null);
+        if (preference != null) response.setInterests(new java.util.ArrayList<>(preference.getInterests()));
+        return response;
     }
 
     public UserPreferenceDto getMyPreferences(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        if (userRepository.findByEmail(email).isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
 
         UserPreference preference = userPreferenceRepository.findByUser_Email(email).orElse(null);
 
         if (preference == null) {
-            return new UserPreferenceDto();
+            UserPreferenceDto empty = new UserPreferenceDto();
+            empty.setInterests(java.util.List.of());
+            return empty;
         }
 
-        return UserPreferenceDto.builder()
-                .minBudget(preference.getMinBudget())
-                .maxBudget(preference.getMaxBudget())
-                .hasPet(preference.getHasPet())
-                .preferredArea(preference.getPreferredArea())
-                .build();
+        UserPreferenceDto response = new UserPreferenceDto();
+        response.setInterests(new java.util.ArrayList<>(preference.getInterests()));
+        response.setMinBudget(preference.getMinBudget());
+        response.setMaxBudget(preference.getMaxBudget());
+        response.setHasPet(preference.getHasPet());
+        response.setPreferredArea(preference.getPreferredArea());
+        return response;
     }
 
     public UserPreferenceDto updateMyPreferences(String email, UserPreferenceDto request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+        java.util.Optional<User> userResult = userRepository.findByEmail(email);
+        if (userResult.isEmpty()) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        User user = userResult.get();
 
         UserPreference preference = userPreferenceRepository.findByUser_Email(email).orElse(null);
 
         if (preference == null) {
-            preference = UserPreference.builder()
-                    .user(user)
-                    .build();
+            preference = new UserPreference();
+            preference.setUser(user);
         }
 
+        if (request.getInterests() != null) {
+            preference.setInterests(new java.util.ArrayList<>(new java.util.LinkedHashSet<>(request.getInterests())));
+        }
         preference.setMinBudget(request.getMinBudget());
         preference.setMaxBudget(request.getMaxBudget());
         preference.setHasPet(request.getHasPet());
@@ -105,11 +149,12 @@ public class UserService {
 
         UserPreference updatedPreference = userPreferenceRepository.save(preference);
 
-        return UserPreferenceDto.builder()
-                .minBudget(updatedPreference.getMinBudget())
-                .maxBudget(updatedPreference.getMaxBudget())
-                .hasPet(updatedPreference.getHasPet())
-                .preferredArea(updatedPreference.getPreferredArea())
-                .build();
+        UserPreferenceDto response = new UserPreferenceDto();
+        response.setInterests(new java.util.ArrayList<>(updatedPreference.getInterests()));
+        response.setMinBudget(updatedPreference.getMinBudget());
+        response.setMaxBudget(updatedPreference.getMaxBudget());
+        response.setHasPet(updatedPreference.getHasPet());
+        response.setPreferredArea(updatedPreference.getPreferredArea());
+        return response;
     }
 }

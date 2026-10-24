@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+
 import '../storage/token_storage.dart';
 
 /// Dynamically resolve baseUrl depending on platform:
@@ -10,7 +11,8 @@ String get _baseUrl {
     return 'http://localhost:8080/api/v1';
   }
   if (defaultTargetPlatform == TargetPlatform.android) {
-    return 'http://10.0.2.2:8080/api/v1';
+    // Đổi về IP LAN của máy tính để test trên điện thoại thật
+    return 'http://192.168.100.72:8080/api/v1';
   }
   return 'http://localhost:8080/api/v1';
 }
@@ -19,14 +21,13 @@ class ApiClient {
   final Dio _dio;
 
   ApiClient()
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: _baseUrl,
-            connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 15),
-            headers: {'Content-Type': 'application/json'},
-          ),
-        ) {
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: _baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -40,13 +41,16 @@ class ApiClient {
     );
   }
 
-  Future<Response> post(String path, dynamic data) async {
-    return _dio.post(path, data: data);
+  Future<Response> post(String path, dynamic data, {Options? options}) async {
+    return _dio.post(path, data: data, options: options);
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParams}) async {
     return _dio.get(path, queryParameters: queryParams);
   }
+
+  Future<Response> getBytes(String path) =>
+      _dio.get(path, options: Options(responseType: ResponseType.bytes));
 
   Future<Response> put(String path, Map<String, dynamic> data) async {
     return _dio.put(path, data: data);
@@ -55,4 +59,6 @@ class ApiClient {
   Future<Response> patch(String path, {dynamic data}) async {
     return _dio.patch(path, data: data);
   }
+
+  Future<Response> delete(String path) async => _dio.delete(path);
 }

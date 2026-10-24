@@ -1,4 +1,5 @@
-﻿import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart';
+
 import '../../data/models/auth_models.dart';
 
 abstract class AuthState extends Equatable {
@@ -45,4 +46,8 @@ class AuthOtpSent extends AuthState {
 
   @override
   List<Object?> get props => [email];
+}
+
+class AuthOtpResent extends AuthState {
+  const AuthOtpResent();
 }

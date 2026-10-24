@@ -3,10 +3,9 @@ package com.rental.modules.user.controller;
 import com.rental.modules.user.dto.request.UpdateAvatarRequest;
 import com.rental.modules.user.dto.request.UpdateProfileRequest;
 import com.rental.modules.user.dto.request.UserPreferenceDto;
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import com.rental.modules.user.dto.response.UserProfileResponse;
 import com.rental.modules.user.service.UserService;
-import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +14,13 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/v1/users")
-@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(Principal principal) {
@@ -46,10 +48,10 @@ public class UserController {
     @PutMapping("/me/preferences")
     public ResponseEntity<ApiResponse<UserPreferenceDto>> updateMyPreferences(
             Principal principal,
-            @RequestBody UserPreferenceDto request) {
+            @Valid @RequestBody UserPreferenceDto request) {
         String email = principal.getName();
         UserPreferenceDto preferencesResponse = userService.updateMyPreferences(email, request);
-        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật sở thích người dùng thành công.", preferencesResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật sở thích cá nhân.", preferencesResponse));
     }
 
     @PatchMapping("/me/avatar")
@@ -58,6 +60,6 @@ public class UserController {
             @Valid @RequestBody UpdateAvatarRequest request) {
         String email = principal.getName();
         UserProfileResponse profileResponse = userService.updateAvatar(email, request);
-        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật avatar thành công.", profileResponse));
+        return ResponseEntity.ok(ApiResponse.success("ÄÃ£ cáº­p nháº­t avatar thÃ nh cÃ´ng.", profileResponse));
     }
 }

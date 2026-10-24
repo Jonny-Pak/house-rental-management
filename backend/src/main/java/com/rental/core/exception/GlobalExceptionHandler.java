@@ -1,6 +1,6 @@
-﻿package com.rental.core.exception;
+package com.rental.core.exception;
 
-import com.rental.modules.user.dto.response.ApiResponse;
+import com.rental.core.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -14,6 +14,29 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
+    public ResponseEntity<ApiResponse<Void>> handleInvalidInput(Exception ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error("Dữ liệu hoặc bộ lọc không hợp lệ."));
+    }
+
+    @ExceptionHandler({org.springframework.security.authentication.LockedException.class,
+            org.springframework.security.authentication.DisabledException.class})
+    public ResponseEntity<ApiResponse<Void>> handleInactiveAccount(Exception ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ApiResponse.error("Tài khoản đã bị khóa hoặc chưa xác thực. Vui lòng liên hệ hỗ trợ."));
+    }
+
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(Exception ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Bạn không có quyền thực hiện thao tác này."));
+    }
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStatus(org.springframework.web.server.ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(ApiResponse.error(ex.getReason()));
+    }
 
     // Validation errors (@Valid)
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -27,11 +50,7 @@ public class GlobalExceptionHandler {
         });
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.<Map<String, String>>builder()
-                        .success(false)
-                        .message("Validation failed")
-                        .data(errors)
-                        .build());
+                .body(new ApiResponse<>(false, "Validation failed", errors));
     }
 
     // Business logic errors

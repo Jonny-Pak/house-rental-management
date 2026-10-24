@@ -1,4 +1,4 @@
-﻿package com.rental.modules.area.repository;
+package com.rental.modules.area.repository;
 
 import com.rental.modules.area.domain.entity.AdministrativeArea;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +12,6 @@ public interface AdministrativeAreaRepository extends JpaRepository<Administrati
     List<AdministrativeArea> findByAreaTypeOrderByAreaNameAsc(String areaType);
 
     List<AdministrativeArea> findByParent_AreaIdAndAreaTypeOrderByAreaNameAsc(Long parentId, String areaType);
+
+    List<AdministrativeArea> findByParent_AreaIdAndAreaTypeInOrderByAreaNameAsc(Long parentId, List<String> areaTypes);
 }

@@ -1,84 +1,349 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../property/data/repositories/property_repository.dart';
-import '../../../property/data/models/property_model.dart';
-import '../../../property/presentation/pages/property_detail_page.dart';
-import '../../../favorites/data/repositories/favorite_repository.dart';
-import '../../../favorites/presentation/widgets/favorite_button.dart';
-import '../widgets/property_filter_bottom_sheet.dart';
-import '../cubit/home_cubit.dart';
-import '../cubit/home_state.dart';
+import '../../../notification/presentation/notification_store.dart';
+import '../../../notification/presentation/notifications_page.dart';
 
-// ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark   = Color(0xFF2C1D11); // Brown
-const kPrimaryAccent = Color(0xFFD85D15); // Orange
-const kBackground    = Color(0xFFFAF8F5); // Off-white
-const kBorderColor   = Color(0xFFE8DED1); // Border
-const kSubText       = Color(0xFF64748B); // Slate subtitle text
-// ──────────────────────────────────────────────────────────────────────
+import 'package:flutter/material.dart';
+
+import '../../../../core/layout/app_layout.dart';
+
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../widgets/home_feature_icon.dart';
+
+import '../../../contract/presentation/pages/my_contracts_page.dart';
+import '../../../listing/presentation/pages/create_listing_page.dart';
+import '../../../listing/presentation/pages/my_listings_page.dart';
+import '../../../listing/presentation/pages/listing_browse_page.dart';
+import '../../../map/presentation/pages/listing_map_page.dart';
+import '../../../membership/presentation/pages/membership_page.dart';
+
+const _orange = Color(0xFFFF751B);
+const _ink = Color(0xFF0B1535);
+const _background = Color(0xFFF8F9FB);
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.onMenu, this.onTabSelected});
+  final VoidCallback? onMenu;
+  final ValueChanged<int>? onTabSelected;
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HomeCubit(PropertyRepository(GetIt.I<ApiClient>())),
-      child: const _HomeView(),
+  void _open(BuildContext context, Widget page) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
+
+  void _information(
+    BuildContext context,
+    String title,
+    String body,
+    IconData icon,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HomeFeatureIcon(icon: icon, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(body, style: const TextStyle(fontSize: 15, height: 1.6)),
+            ],
+          ),
+        ),
+      ),
     );
   }
-}
 
-class _HomeView extends StatefulWidget {
-  const _HomeView();
-
-  @override
-  State<_HomeView> createState() => _HomeViewState();
-}
-
-class _HomeViewState extends State<_HomeView> {
-  @override
-  void initState() {
-    super.initState();
-    // Ensure initial load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final cubit = context.read<HomeCubit>();
-      if (cubit.state.status == HomeStatus.initial) {
-        cubit.fetchProperties();
+  List<_Action> _primary(BuildContext context) => [
+    _Action(
+      'Đăng Tin',
+      Symbols.post_add,
+      () => _open(context, const CreateListingPage()),
+    ),
+    _Action(
+      'Thuê Nhà',
+      Symbols.home_work,
+      () => _open(
+        context,
+        const ListingBrowsePage(title: 'Thuê nhà', listingType: 'WHOLE_HOUSE'),
+      ),
+    ),
+    _Action(
+      'Thuê Phòng Trọ',
+      Symbols.apartment,
+      () => _open(
+        context,
+        const ListingBrowsePage(
+          title: 'Thuê phòng trọ',
+          listingType: 'BOARDING_ROOM',
+        ),
+      ),
+    ),
+    _Action(
+      'Tìm Ở Ghép',
+      Symbols.group,
+      () => _open(
+        context,
+        const ListingBrowsePage(
+          title: 'Tìm người ở ghép',
+          listingType: 'SHARED_ROOM',
+        ),
+      ),
+    ),
+    _Action('Quản Lý\nTin Đăng', Symbols.assignment, () {
+      if (onTabSelected != null) {
+        onTabSelected!(2);
+      } else {
+        _open(context, const MyListingsPage());
       }
-    });
-  }
+    }),
+    _Action(
+      'Quản Lý\nHợp Đồng',
+      Symbols.receipt_long,
+      () => _open(context, const MyContractsPage(isLandlord: true)),
+    ),
+    _Action(
+      'Gói Dịch Vụ',
+      Symbols.payments,
+      () => _open(context, const MembershipPage()),
+    ),
+    _Action(
+      'Bản Đồ',
+      Symbols.map,
+      () => _open(context, const ListingMapPage()),
+    ),
+    _Action(
+      'Trợ Lý AI',
+      Symbols.smart_toy,
+      () => _information(
+        context,
+        'Trợ lý AI',
+        'Tính năng tìm nhà bằng ngôn ngữ tự nhiên đang được phát triển. Bạn có thể tìm tin theo địa chỉ hoặc xem vị trí trên bản đồ.',
+        Symbols.smart_toy,
+      ),
+    ),
+  ];
+
+  List<_Action> _secondary(BuildContext context) => [
+    _Action(
+      'Giới Thiệu',
+      Symbols.menu_book,
+      () => _information(
+        context,
+        'Giới thiệu',
+        'Ứng dụng kết nối người thuê và người cho thuê tại TP.HCM, hỗ trợ đăng tin, xem nhà trên bản đồ và quản lý hợp đồng.',
+        Symbols.tune,
+      ),
+    ),
+    _Action(
+      'Quy Định',
+      Symbols.gavel,
+      () => _information(
+        context,
+        'Quy định đăng tin',
+        'Cung cấp đúng địa chỉ, giá thuê và ảnh thực tế. Tin mới và tin chỉnh sửa phải được Admin duyệt trước khi xuất hiện công khai.',
+        Symbols.gavel,
+      ),
+    ),
+    _Action(
+      'Hướng Dẫn\nSử Dụng',
+      Symbols.help,
+      () => _information(
+        context,
+        'Hướng dẫn sử dụng',
+        '1. Chọn Đăng Tin và điền thông tin nhà/phòng.\n2. Gửi tin để Admin duyệt.\n3. Xem trạng thái trong Quản Lý Tin Đăng.\n4. Tìm nhà đã duyệt ở mục Thuê Nhà, Thuê Phòng Trọ hoặc Bản Đồ.',
+        Symbols.help,
+      ),
+    ),
+    _Action(
+      'Báo Cáo\nSự Cố',
+      Symbols.report,
+      () => _information(
+        context,
+        'Báo cáo sự cố',
+        'Bạn có thể ghi lại thao tác gặp lỗi và ảnh màn hình để gửi cho người quản trị. Chức năng gửi báo cáo trong ứng dụng chưa được kết nối.',
+        Symbols.report,
+      ),
+    ),
+    _Action(
+      'Liên Hệ',
+      Symbols.support_agent,
+      () => _information(
+        context,
+        'Liên hệ',
+        'Thông tin liên hệ hỗ trợ sẽ được cập nhật khi hệ thống chính thức triển khai.',
+        Symbols.support_agent,
+      ),
+    ),
+  ];
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBackground,
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: kPrimaryAccent,
-          onRefresh: () => context.read<HomeCubit>().fetchProperties(),
-          child: CustomScrollView(
-            slivers: [
-              // 0. Top App Bar Header Section
-              const _TopAppBarSliver(),
+  Widget build(BuildContext context) => Material(
+    color: _background,
+    child: AppContent(
+      child: SingleChildScrollView(
+        key: const PageStorageKey('home-scroll'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _HomeHero(
+              onMenu: onMenu ?? () => Scaffold.maybeOf(context)?.openDrawer(),
+              onSearch: () => _open(
+                context,
+                const ListingBrowsePage(
+                  title: 'Tìm kiếm nhà cho thuê',
+                  autofocus: true,
+                ),
+              ),
+              onNotifications: () {
+                if (onTabSelected != null) {
+                  onTabSelected!(3);
+                } else {
+                  _open(context, const NotificationsPage());
+                }
+              },
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+              child: Column(
+                children: [
+                  _SectionHeader(
+                    title: 'Chức năng',
+                    onMore: () => _showAll(context),
+                  ),
+                  const SizedBox(height: 16),
+                  _ActionGrid(actions: _primary(context)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SectionHeader(
+                    title: 'Khám Phá Thêm',
+                    onMore: () => _open(
+                      context,
+                      const ListingBrowsePage(title: 'Khám phá tin cho thuê'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stacked =
+                          constraints.maxWidth < 340 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 19;
+                      final width = stacked
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth - 12) / 2;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          SizedBox(
+                            width: width,
+                            child: _DiscoveryCard(
+                              title: 'TÌM NHÀ ĐÚNG Ý',
+                              subtitle: 'Khám phá hàng trăm căn nhà phù hợp với nhu cầu',
+                              image: 'assets/images/home/townhouse.webp',
+                              onTap: () => _open(
+                                context,
+                                const ListingBrowsePage(
+                                  title: 'Thuê nhà',
+                                  listingType: 'WHOLE_HOUSE',
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: width,
+                            child: _DiscoveryCard(
+                              title: 'PHÒNG TRỌ QUANH BẠN',
+                              subtitle: 'Xem vị trí trên bản đồ dễ dàng',
+                              image: 'assets/images/home/room.webp',
+                              onTap: () =>
+                                  _open(context, const ListingMapPage()),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 22),
+                  _SectionHeader(
+                    title: 'Các Chức Năng Khác',
+                    onMore: () => _showAll(context),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Column(
+                      children: [
+                        _ActionGrid(
+                          actions: _secondary(context).sublist(0, 4),
+                          round: true,
+                        ),
+                        const SizedBox(height: 8),
+                        _ContactTile(action: _secondary(context).last),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 124),
+          ],
+        ),
+      ),
+    ),
+  );
 
-              // 1. Hero Header Section
-              const _HeroHeaderSliver(),
-
-              // 2. Section Title: Tin nổi bật + Filter Chips
-              const _FeaturedHeaderSliver(),
-
-              // 3. Featured Properties List/Grid
-              const _PropertyListSliver(),
-
-              // 4. Tools & Utilities Section
-              const _ToolsAndUtilitiesSliver(),
-
-              // Bottom padding sliver
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 32),
+  void _showAll(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Tất cả chức năng',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 20),
+              _ActionGrid(
+                actions: [
+                  for (final action in [
+                    ..._primary(context),
+                    ..._secondary(context),
+                  ])
+                    _Action(action.label, action.icon, () {
+                      Navigator.pop(sheetContext);
+                      action.onTap();
+                    }),
+                ],
               ),
             ],
           ),
@@ -88,794 +353,478 @@ class _HomeViewState extends State<_HomeView> {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// 0. Top App Bar Header Section
-// ──────────────────────────────────────────────────────────────────────
-class _TopAppBarSliver extends StatelessWidget {
-  const _TopAppBarSliver();
+class _HomeHero extends StatefulWidget {
+  const _HomeHero({
+    required this.onMenu,
+    required this.onSearch,
+    required this.onNotifications,
+  });
+  final VoidCallback onMenu, onSearch, onNotifications;
+  @override
+  State<_HomeHero> createState() => _HomeHeroState();
+}
+
+class _HomeHeroState extends State<_HomeHero> {
+  int _index = 0;
+  static const _slides = [
+    (
+      'Quản lý nhà cho thuê',
+      'Dễ dàng\nHiệu quả hơn',
+      'Quản lý phòng, hợp đồng, thanh toán\ntất cả trong một ứng dụng',
+    ),
+    (
+      'Tìm nơi ở phù hợp',
+      'Nhà đẹp\nTrong tầm tay',
+      'Khám phá tin thuê theo khu vực,\ngiá và nhu cầu của bạn',
+    ),
+    (
+      'Kết nối chủ nhà và người thuê',
+      'An tâm thuê\nDễ quản lý',
+      'Theo dõi tin đăng và hợp đồng\nngay trên ứng dụng',
+    ),
+  ];
+  void _slide(int index) => setState(() => _index = index);
 
   @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Container(
-        color: const Color(0xFF2A1B0E),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: Row(
-          children: [
-            // Brand Logo & Location Indicator
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: kPrimaryAccent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 20),
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 760;
+      final top = MediaQuery.paddingOf(context).top;
+      return GestureDetector(
+        onHorizontalDragEnd: (details) {
+          final speed = details.primaryVelocity ?? 0;
+          if (speed < -100) {
+            _slide((_index + 1) % _slides.length);
+          }
+          if (speed > 100) {
+            _slide((_index + _slides.length - 1) % _slides.length);
+          }
+        },
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: (wide ? 350 : 280) + top),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/images/home/townhouse.webp',
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(.35, .1),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Thuê nhà Thành phố Hồ Chí Minh',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFFFFAF3).withValues(alpha: .97),
+                        const Color(0xFFFFFAF3).withValues(alpha: .70),
+                        Colors.white.withValues(alpha: .04),
+                      ],
+                      stops: const [0, .43, 1],
                     ),
-                    Row(
-                      children: const [
-                        Icon(Icons.location_on, color: kPrimaryAccent, size: 12),
-                        SizedBox(width: 2),
-                        Text(
-                          'Thành phố Hồ Chí Minh, Việt Nam',
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(8, top + 12, 8, 0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Mở menu',
+                          onPressed: widget.onMenu,
+                          icon: const Icon(Symbols.menu, color: _ink, size: 28),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Material(
+                            color: Colors.white.withValues(alpha: .97),
+                            borderRadius: BorderRadius.circular(32),
+                            elevation: 5,
+                            shadowColor: const Color(0x15233057),
+                            child: InkWell(
+                              key: const ValueKey('home-search'),
+                              borderRadius: BorderRadius.circular(32),
+                              onTap: widget.onSearch,
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 15,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Symbols.search, size: 24, color: _ink),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Tìm kiếm nhà, phòng trọ...',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF778096),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Colors.white, Color(0xFFFFF3E7)],
+                            ),
+                            border: Border.all(color: const Color(0xFFEAD8C5)),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x183F2918),
+                                blurRadius: 16,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            tooltip: 'Thông báo',
+                            onPressed: widget.onNotifications,
+                            style: IconButton.styleFrom(
+                              foregroundColor: const Color(0xFF573B28),
+                              fixedSize: const Size(48, 48),
+                              shape: const CircleBorder(),
+                            ),
+                            icon: const NotificationBadge(
+                              child: Icon(
+                                Symbols.notifications,
+                                size: 25,
+                                weight: 300,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const Spacer(),
-            // Notification Bell Button
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 20),
-                onPressed: () {},
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Profile / User Avatar
-            const CircleAvatar(
-              radius: 18,
-              backgroundColor: kPrimaryAccent,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// 1. Hero Header Section
-// ──────────────────────────────────────────────────────────────────────
-class _HeroHeaderSliver extends StatelessWidget {
-  const _HeroHeaderSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF2A1B0E), Color(0xFF442A15)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title
-            const Text(
-              'Tìm kiếm nhà cho thuê giá rẻ',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                height: 1.3,
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // Subtitle
-            const Text(
-              'Hàng ngàn tin đăng phòng trọ, nhà nguyên căn được cập nhật mỗi ngày',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Search Bar & Filter trigger
-            BlocBuilder<HomeCubit, HomeState>(
-              builder: (context, state) {
-                final hasFilter = state.filters != null && state.filters!.isNotEmpty;
-
-                return Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1F000000),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
                   ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 12),
-                      const Icon(Icons.search, color: kSubText, size: 20),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: TextField(
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            hintText: 'Tìm theo tên đường, quận/huyện...',
-                            hintStyle: TextStyle(color: kSubText, fontSize: 13),
-                            border: InputBorder.none,
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      // Search button
-                      GestureDetector(
-                        onTap: () async {
-                          final filters = await showModalBottomSheet<Map<String, dynamic>?>(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.white,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                            ),
-                            builder: (_) => FractionallySizedBox(
-                              heightFactor: 0.85,
-                              child: PropertyFilterBottomSheet(initialFilters: state.filters),
-                            ),
-                          );
-                          if (filters != null && context.mounted) {
-                            context
-                                .read<HomeCubit>()
-                                .fetchProperties(filters.isEmpty ? null : filters);
-                          }
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.all(4),
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: hasFilter ? kPrimaryDark : kPrimaryAccent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          alignment: Alignment.center,
-                          child: Row(
-                            children: [
-                              Icon(
-                                hasFilter ? Icons.tune : Icons.search,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              if (hasFilter) ...[
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'Đã lọc',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 14),
-
-            // Horizontal Scrollable Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: const [
-                  _HeroQuickChip(label: 'Phòng trọ hôm nay', icon: Icons.bolt),
-                  SizedBox(width: 8),
-                  _HeroQuickChip(label: 'Nhà cho thuê hôm nay', icon: Icons.home),
-                  SizedBox(width: 8),
-                  _HeroQuickChip(label: 'Ở ghép hôm nay', icon: Icons.group),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroQuickChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-
-  const _HeroQuickChip({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.amberAccent, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// 2. Section Title: Tin nổi bật + Filter Chips
-// ──────────────────────────────────────────────────────────────────────
-class _FeaturedHeaderSliver extends StatelessWidget {
-  const _FeaturedHeaderSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title with Orange Accent Border
-            Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: kPrimaryAccent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Tin nổi bật',
-                  style: TextStyle(
-                    color: kPrimaryDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Filter Chips Horizontal List
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: const [
-                  _CategoryChip(label: 'Hôm nay', icon: Icons.today, selected: true),
-                  SizedBox(width: 8),
-                  _CategoryChip(label: 'Khu vực', icon: Icons.location_on_outlined, hasDropdown: true),
-                  SizedBox(width: 8),
-                  _CategoryChip(label: 'Sắp xếp', icon: Icons.swap_vert_rounded, hasDropdown: true),
-                  SizedBox(width: 8),
-                  _CategoryChip(label: 'Mới nhất', icon: Icons.fiber_new_outlined),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final bool hasDropdown;
-
-  const _CategoryChip({
-    required this.label,
-    required this.icon,
-    this.selected = false,
-    this.hasDropdown = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: selected ? kPrimaryAccent.withValues(alpha: 0.12) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: selected ? kPrimaryAccent : kBorderColor,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 14,
-            color: selected ? kPrimaryAccent : kSubText,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-              color: selected ? kPrimaryAccent : kPrimaryDark,
-            ),
-          ),
-          if (hasDropdown) ...[
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, size: 16, color: kSubText),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// 3. Featured Properties List/Grid
-// ──────────────────────────────────────────────────────────────────────
-class _PropertyListSliver extends StatelessWidget {
-  const _PropertyListSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<HomeCubit, HomeState>(
-      builder: (context, state) {
-        if (state.status == HomeStatus.loading) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Center(
-                child: CircularProgressIndicator(color: kPrimaryAccent),
-              ),
-            ),
-          );
-        }
-
-        if (state.status == HomeStatus.error) {
-          return SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Lỗi: ${state.errorMessage}',
-                    style: const TextStyle(color: kSubText),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryAccent,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => context.read<HomeCubit>().fetchProperties(),
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        if (state.status == HomeStatus.success) {
-          if (state.properties.isEmpty) {
-            return const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: Center(
-                  child: Text(
-                    'Chưa có phòng trọ nào được đăng.',
-                    style: TextStyle(color: kSubText),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final property = state.properties[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: PropertyCard(property: property),
-                  );
-                },
-                childCount: state.properties.length,
-              ),
-            ),
-          );
-        }
-
-        return const SliverToBoxAdapter(child: SizedBox.shrink());
-      },
-    );
-  }
-}
-
-// ─── Property Card Widget ─────────────────────────────────────────────
-class PropertyCard extends StatelessWidget {
-  final PropertyModel property;
-
-  const PropertyCard({super.key, required this.property});
-
-  String _propertyTypeLabel(String type) {
-    switch (type) {
-      case 'WHOLE_HOUSE':
-        return 'Nhà nguyên căn';
-      case 'BOARDING_HOUSE':
-        return 'Khu trọ';
-      default:
-        return 'Căn hộ';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImage = property.imageUrls.isNotEmpty;
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PropertyDetailPage(propertyId: property.id),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kBorderColor),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Stack (Image, Heart icon top-right, Price tag bottom-left)
-            Stack(
-              children: [
-                SizedBox(
-                  height: 190,
-                  width: double.infinity,
-                  child: hasImage
-                      ? Image.network(
-                          property.imageUrls.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                          ),
-                        )
-                      : Container(
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.home_work_outlined, size: 50, color: Colors.grey),
-                        ),
-                ),
-
-                // Price Tag (Bottom Left)
-                Positioned(
-                  bottom: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: kPrimaryDark,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'Liên hệ giá',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Favorite Heart Button (Top Right)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: FavoriteButton(
-                    propertyId: property.id,
-                    repository: FavoriteRepository(GetIt.I<ApiClient>()),
-                    initialIsFavorite: false,
-                  ),
-                ),
-              ],
-            ),
-
-            // Property Details
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    property.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: kPrimaryDark,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Location & Type Chip
-                  Row(
-                    children: [
-                      // Property Type Chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: kPrimaryAccent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: kPrimaryAccent.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          _propertyTypeLabel(property.propertyType),
-                          style: const TextStyle(
-                            color: kPrimaryAccent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Location
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined, size: 14, color: kSubText),
-                            const SizedBox(width: 2),
-                            Expanded(
-                              child: Text(
-                                property.address,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: kSubText,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// 4. Tools & Utilities Section
-// ──────────────────────────────────────────────────────────────────────
-class _ToolsAndUtilitiesSliver extends StatelessWidget {
-  const _ToolsAndUtilitiesSliver();
-
-  @override
-  Widget build(BuildContext context) {
-    final tools = [
-      {
-        'title': 'Đăng tin mới',
-        'subtitle': 'Đăng tin cho thuê nhanh',
-        'icon': Icons.add_home_work_outlined,
-        'color': kPrimaryAccent,
-      },
-      {
-        'title': 'Tìm ở ghép',
-        'subtitle': 'Kết nối người ở ghép',
-        'icon': Icons.people_outline,
-        'color': Colors.blue,
-      },
-      {
-        'title': 'Tính chi phí thuê',
-        'subtitle': 'Ước tính điện nước phòng',
-        'icon': Icons.calculate_outlined,
-        'color': Colors.green,
-      },
-      {
-        'title': 'Hợp đồng mẫu',
-        'subtitle': 'Mẫu hợp đồng pháp lý',
-        'icon': Icons.description_outlined,
-        'color': Colors.purple,
-      },
-    ];
-
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Section Title
-            Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: kPrimaryAccent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Công cụ và tiện ích nổi bật',
-                  style: TextStyle(
-                    color: kPrimaryDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // 2x2 Grid of Tools
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: tools.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 2.3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-              ),
-              itemBuilder: (context, index) {
-                final tool = tools[index];
-                final iconColor = tool['color'] as Color;
-
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kBorderColor),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x05000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: iconColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          tool['icon'] as IconData,
-                          color: iconColor,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(wide ? 36 : 20, 24, 16, 0),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: SizedBox(
+                        width: wide ? 500 : constraints.maxWidth * .78,
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          key: ValueKey(_index),
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              tool['title'] as String,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: kPrimaryDark,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                              _slides[_index].$1,
+                              style: TextStyle(
+                                fontSize: wide ? 18 : 14,
+                                color: _ink,
                               ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
-                              tool['subtitle'] as String,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: kSubText,
-                                fontSize: 10,
+                              _slides[_index].$2,
+                              style: TextStyle(
+                                fontSize: wide ? 44 : 30,
+                                height: 1.08,
+                                letterSpacing: -.8,
+                                fontWeight: FontWeight.w800,
+                                color: _ink,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _slides[_index].$3,
+                              style: TextStyle(
+                                fontSize: wide ? 16 : 12.5,
+                                height: 1.4,
+                                color: const Color(0xFF46516A),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                );
-              },
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(wide ? 30 : 14, 8, 0, 24),
+                    child: Row(
+                      children: [
+                        for (var index = 0; index < _slides.length; index++)
+                          Semantics(
+                            selected: _index == index,
+                            child: IconButton(
+                              key: ValueKey('home-slide-$index'),
+                              tooltip: 'Trang giới thiệu ${index + 1}',
+                              constraints: const BoxConstraints(
+                                minWidth: 28,
+                                minHeight: 32,
+                              ),
+                              padding: const EdgeInsets.all(6),
+                              onPressed: () => _slide(index),
+                              icon: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _index == index
+                                      ? _orange
+                                      : const Color(0xFFD4CEC8),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _Action {
+  const _Action(this.label, this.icon, this.onTap);
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+}
+
+class _ActionGrid extends StatelessWidget {
+  const _ActionGrid({required this.actions, this.round = false});
+  final List<_Action> actions;
+  final bool round;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+      final columns = constraints.maxWidth < 330 || largeText
+          ? 2
+          : (constraints.maxWidth >= 1000 && !round ? 8 : 4);
+      final width = constraints.maxWidth / columns;
+      return Wrap(
+        runSpacing: 18,
+        children: [
+          for (final action in actions)
+            SizedBox(
+              width: width,
+              child: Semantics(
+                button: true,
+                label: action.label.replaceAll('\n', ' '),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: action.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
+                    ),
+                    child: Column(
+                      children: [
+                        _ActionIcon(action: action, round: round),
+                        const SizedBox(height: 8),
+                        Text(
+                          action.label,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.15,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
+        ],
+      );
+    },
+  );
+}
+
+class _ActionIcon extends StatelessWidget {
+  const _ActionIcon({required this.action, this.round = false});
+  final _Action action;
+  final bool round;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: round ? 62 : 72,
+      height: round ? 62 : 72,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFAF5),
+        border: Border.all(color: const Color(0xFFF3DDCD)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: Alignment.center,
+      child: HomeFeatureIcon(icon: action.icon, size: round ? 48 : 56),
+    );
+  }
+}
+
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({required this.action});
+  final _Action action;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(18),
+    onTap: action.onTap,
+    child: Padding(
+      padding: const EdgeInsets.all(5),
+      child: Row(
+        children: [
+          _ActionIcon(action: action, round: true),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              action.label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _ink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.onMore});
+  final String title;
+  final VoidCallback onMore;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 4,
+        height: 18,
+        decoration: BoxDecoration(
+          color: _orange,
+          borderRadius: BorderRadius.circular(3),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: _ink,
+          ),
+        ),
+      ),
+      TextButton(
+        onPressed: onMore,
+        style: TextButton.styleFrom(
+          foregroundColor: _ink,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Xem tất cả',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w400),
+            ),
+            SizedBox(width: 4),
+            Icon(Symbols.chevron_right, size: 18),
           ],
         ),
       ),
-    );
-  }
+    ],
+  );
+}
+
+class _DiscoveryCard extends StatelessWidget {
+  const _DiscoveryCard({
+    required this.title,
+    required this.subtitle,
+    required this.image,
+    required this.onTap,
+  });
+  final String title, subtitle, image;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: title,
+    child: Material(
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: MediaQuery.textScalerOf(context).scale(155),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(image, fit: BoxFit.cover),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xE60B1931)],
+                    stops: [.2, 1],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        height: 1.25,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const CircleAvatar(
+                      radius: 11,
+                      backgroundColor: Colors.white,
+                      child: Icon(Symbols.arrow_forward, size: 16, color: _ink),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

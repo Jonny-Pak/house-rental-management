@@ -1,10 +1,12 @@
-﻿class UserPreference {
+class UserPreference {
+  final List<String> interests;
   final double? minBudget;
   final double? maxBudget;
   final bool? hasPet;
   final String? preferredArea;
 
   const UserPreference({
+    this.interests = const [],
     this.minBudget,
     this.maxBudget,
     this.hasPet,
@@ -13,6 +15,7 @@
 
   factory UserPreference.fromJson(Map<String, dynamic> json) {
     return UserPreference(
+      interests: (json['interests'] as List?)?.cast<String>() ?? [],
       minBudget: (json['minBudget'] as num?)?.toDouble(),
       maxBudget: (json['maxBudget'] as num?)?.toDouble(),
       hasPet: json['hasPet'] as bool?,
@@ -21,9 +24,10 @@
   }
 
   Map<String, dynamic> toJson() => {
-        'minBudget': minBudget,
-        'maxBudget': maxBudget,
-        'hasPet': hasPet,
-        'preferredArea': preferredArea,
-      };
+    'interests': interests,
+    'minBudget': minBudget,
+    'maxBudget': maxBudget,
+    'hasPet': hasPet,
+    'preferredArea': preferredArea,
+  };
 }

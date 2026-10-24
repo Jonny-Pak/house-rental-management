@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -7,11 +8,11 @@ import '../../data/models/auth_models.dart';
 import 'otp_page.dart';
 
 // ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark   = Color(0xFF2C1D11);
+const kPrimaryDark = Color(0xFF2C1D11);
 const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground    = Color(0xFFFAF8F5);
-const kBorderColor   = Color(0xFFE8DED1);
-const kSubText       = Color(0xFF64748B);
+const kBackground = Color(0xFFFAF8F5);
+const kBorderColor = Color(0xFFE8DED1);
+const kSubText = Color(0xFF64748B);
 // ──────────────────────────────────────────────────────────────────────
 
 class RegisterPage extends StatefulWidget {
@@ -28,7 +29,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
-  String _role = 'USER'; // Default role
 
   @override
   void dispose() {
@@ -42,16 +42,16 @@ class _RegisterPageState extends State<RegisterPage> {
   void _onRegister(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            RegisterRequested(
-              RegisterRequest(
-                fullName: _fullNameCtrl.text.trim(),
-                email: _emailCtrl.text.trim(),
-                password: _passwordCtrl.text,
-                phoneNumber: _phoneCtrl.text.trim(),
-                role: _role,
-              ),
-            ),
-          );
+        RegisterRequested(
+          RegisterRequest(
+            fullName: _fullNameCtrl.text.trim(),
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text,
+            phoneNumber: _phoneCtrl.text.trim(),
+            role: 'MEMBER',
+          ),
+        ),
+      );
     }
   }
 
@@ -78,6 +78,18 @@ class _RegisterPageState extends State<RegisterPage> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          textInputAction: isPassword
+              ? TextInputAction.done
+              : TextInputAction.next,
+          onFieldSubmitted: (_) {
+            if (isPassword) {
+              if (context.read<AuthBloc>().state is! AuthLoading) {
+                _onRegister(context);
+              }
+            } else {
+              FocusScope.of(context).nextFocus();
+            }
+          },
           obscureText: isPassword ? _obscurePassword : false,
           style: const TextStyle(fontSize: 15, color: kPrimaryDark),
           decoration: InputDecoration(
@@ -89,7 +101,10 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: kBorderColor),
@@ -110,7 +125,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       });
                     },
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: kSubText,
                       size: 20,
                     ),
@@ -118,57 +135,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 : null,
           ),
           validator: validator,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRoleDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Bạn là ai?',
-          style: TextStyle(
-            color: kPrimaryDark,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InputDecorator(
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kBorderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kBorderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _role,
-              isExpanded: true,
-              icon: const Icon(Icons.expand_more, color: kSubText),
-              style: const TextStyle(fontSize: 15, color: kPrimaryDark, fontWeight: FontWeight.w500),
-              items: const [
-                DropdownMenuItem(value: 'USER', child: Text('Người thuê phòng')),
-                DropdownMenuItem(value: 'OWNER', child: Text('Chủ cho thuê')),
-              ],
-              onChanged: (val) {
-                if (val != null) setState(() => _role = val);
-              },
-            ),
-          ),
         ),
       ],
     );
@@ -182,28 +148,33 @@ class _RegisterPageState extends State<RegisterPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: kPrimaryDark, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: kPrimaryDark,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) {
+            if (ModalRoute.of(context)?.isCurrent != true) return;
             if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
                   backgroundColor: Colors.redAccent,
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               );
             } else if (state is AuthOtpSent) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => OtpPage(email: state.email),
-                ),
+                MaterialPageRoute(builder: (_) => OtpPage(email: state.email)),
               );
             }
           },
@@ -211,7 +182,10 @@ class _RegisterPageState extends State<RegisterPage> {
             final isLoading = state is AuthLoading;
             return Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 400),
                   child: Form(
@@ -239,48 +213,56 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        
+
                         _buildTextField(
                           label: 'Họ và tên',
                           hintText: 'Nhập họ và tên...',
                           controller: _fullNameCtrl,
-                          validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập họ tên' : null,
+                          validator: (v) => v == null || v.isEmpty
+                              ? 'Vui lòng nhập họ tên'
+                              : null,
                         ),
                         const SizedBox(height: 20),
-                        
+
                         _buildTextField(
                           label: 'Số điện thoại',
                           hintText: 'Nhập số điện thoại...',
                           controller: _phoneCtrl,
                           keyboardType: TextInputType.phone,
-                          validator: (v) => v == null || v.isEmpty ? 'Vui lòng nhập SĐT' : null,
+                          validator: (v) => v == null || v.isEmpty
+                              ? 'Vui lòng nhập SĐT'
+                              : null,
                         ),
                         const SizedBox(height: 20),
-                        
+
                         _buildTextField(
                           label: 'Email',
                           hintText: 'Nhập địa chỉ email...',
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
-                          validator: (v) => v == null || v.isEmpty || !v.contains('@') ? 'Email không hợp lệ' : null,
+                          validator: (v) =>
+                              v == null || v.isEmpty || !v.contains('@')
+                              ? 'Email không hợp lệ'
+                              : null,
                         ),
                         const SizedBox(height: 20),
-                        
+
                         _buildTextField(
                           label: 'Mật khẩu',
                           hintText: 'Tạo mật khẩu...',
                           controller: _passwordCtrl,
                           isPassword: true,
-                          validator: (v) => v == null || v.length < 8 ? 'Mật khẩu ít nhất 8 ký tự' : null,
+                          validator: (v) => v == null || v.length < 8
+                              ? 'Mật khẩu ít nhất 8 ký tự'
+                              : null,
                         ),
-                        const SizedBox(height: 20),
-                        
-                        _buildRoleDropdown(),
                         const SizedBox(height: 32),
 
                         // Register Button
                         ElevatedButton(
-                          onPressed: isLoading ? null : () => _onRegister(context),
+                          onPressed: isLoading
+                              ? null
+                              : () => _onRegister(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimaryAccent,
                             foregroundColor: Colors.white,
@@ -294,7 +276,10 @@ class _RegisterPageState extends State<RegisterPage> {
                               ? const SizedBox(
                                   height: 24,
                                   width: 24,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
                                 )
                               : const Text(
                                   'Đăng ký',
@@ -309,18 +294,19 @@ class _RegisterPageState extends State<RegisterPage> {
                         // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: kBorderColor, thickness: 1)),
+                            Expanded(
+                              child: Divider(color: kBorderColor, thickness: 1),
+                            ),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 'Hoặc',
-                                style: TextStyle(
-                                  color: kSubText,
-                                  fontSize: 13,
-                                ),
+                                style: TextStyle(color: kSubText, fontSize: 13),
                               ),
                             ),
-                            Expanded(child: Divider(color: kBorderColor, thickness: 1)),
+                            Expanded(
+                              child: Divider(color: kBorderColor, thickness: 1),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 32),
@@ -333,6 +319,9 @@ class _RegisterPageState extends State<RegisterPage> {
                           icon: Image.network(
                             'https://img.icons8.com/color/48/000000/google-logo.png',
                             height: 24,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.error_outline, size: 24);
+                            },
                           ),
                           label: const Text(
                             'Đăng ký với Google',
@@ -353,17 +342,14 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        
+
                         // Login Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Text(
                               'Đã có tài khoản? ',
-                              style: TextStyle(
-                                color: kSubText,
-                                fontSize: 15,
-                              ),
+                              style: TextStyle(color: kSubText, fontSize: 15),
                             ),
                             InkWell(
                               onTap: () => Navigator.pop(context),

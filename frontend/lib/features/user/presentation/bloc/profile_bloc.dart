@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
+
 import '../../data/repositories/user_repository.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
@@ -10,10 +11,18 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ProfileBloc(this._userRepository) : super(ProfileInitial()) {
     on<FetchProfileEvent>(_onFetchProfile);
     on<ChangeAvatarEvent>(_onChangeAvatar);
+    on<ProfileInterestsSaved>((event, emit) {
+      final current = state;
+      if (current is ProfileLoaded) {
+        emit(ProfileLoaded(current.profile.withInterests(event.interests)));
+      }
+    });
   }
 
   Future<void> _onFetchProfile(
-      FetchProfileEvent event, Emitter<ProfileState> emit) async {
+    FetchProfileEvent event,
+    Emitter<ProfileState> emit,
+  ) async {
     emit(ProfileLoading());
     try {
       final profile = await _userRepository.getProfile();
@@ -28,20 +37,23 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   }
 
   Future<void> _onChangeAvatar(
-      ChangeAvatarEvent event, Emitter<ProfileState> emit) async {
+    ChangeAvatarEvent event,
+    Emitter<ProfileState> emit,
+  ) async {
     if (state is! ProfileLoaded) return;
-    
+
     final currentState = state as ProfileLoaded;
-    
+
     try {
       emit(ProfileAvatarUploading(currentState.profile));
-      
+
       final uploadedUrl = await _userRepository.uploadImage(event.file);
       final updatedProfile = await _userRepository.updateAvatar(uploadedUrl);
-      
+
       emit(ProfileLoaded(updatedProfile));
     } on DioException catch (e) {
-      final errorMsg = e.response?.data['message'] ?? e.message ?? 'Unknown error occurred';
+      final errorMsg =
+          e.response?.data['message'] ?? e.message ?? 'Unknown error occurred';
       emit(ProfileAvatarUploadError(currentState.profile, errorMsg));
       emit(currentState);
     } catch (e) {

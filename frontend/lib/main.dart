@@ -1,63 +1,11 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'core/network/api_client.dart';
-import 'features/auth/data/datasources/auth_remote_data_source.dart';
-import 'features/auth/data/repositories/auth_repository.dart';
-import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/auth/presentation/pages/login_page.dart';
+import 'package:flutter/widgets.dart';
 
-import 'package:get_it/get_it.dart';
+import 'app/app_launcher.dart';
 
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-  }
-}
+export 'app/user/user_app.dart' show MyApp;
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  HttpOverrides.global = MyHttpOverrides();
-  
-  // Register DI
-  GetIt.I.registerLazySingleton<ApiClient>(() => ApiClient());
-  
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Dependency Wiring
-    final apiClient = GetIt.I<ApiClient>();
-    final remoteDataSource = AuthRemoteDataSourceImpl(apiClient);
-    final authRepository = AuthRepositoryImpl(remoteDataSource);
-
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(authRepository),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'House Rental Management',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.indigo,
-          inputDecorationTheme: const InputDecorationTheme(
-            filled: true,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-          ),
-        ),
-        home: const LoginPage(),
-      ),
-    );
-  }
+  configureApp();
+  runApp(const AppLauncher());
 }

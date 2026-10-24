@@ -1,4 +1,5 @@
-﻿import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart';
+
 import '../../data/models/auth_models.dart';
 
 abstract class AuthEvent extends Equatable {
@@ -6,6 +7,10 @@ abstract class AuthEvent extends Equatable {
 
   @override
   List<Object?> get props => [];
+}
+
+class LogoutRequested extends AuthEvent {
+  const LogoutRequested();
 }
 
 class LoginRequested extends AuthEvent {
@@ -33,4 +38,11 @@ class VerifyOtpRequested extends AuthEvent {
 
   @override
   List<Object?> get props => [request.email, request.otp];
+}
+
+class ResendOtpRequested extends AuthEvent {
+  const ResendOtpRequested(this.email);
+  final String email;
+  @override
+  List<Object?> get props => [email];
 }

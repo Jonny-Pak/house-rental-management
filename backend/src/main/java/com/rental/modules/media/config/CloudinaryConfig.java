@@ -1,4 +1,4 @@
-﻿package com.rental.modules.media.config;
+package com.rental.modules.media.config;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;

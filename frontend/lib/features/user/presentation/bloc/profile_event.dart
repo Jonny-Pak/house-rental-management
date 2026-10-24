@@ -6,6 +6,12 @@ abstract class ProfileEvent {}
 
 class FetchProfileEvent extends ProfileEvent {}
 
+class ProfileInterestsSaved extends ProfileEvent {
+  final List<String> interests;
+
+  ProfileInterestsSaved(this.interests);
+}
+
 class ChangeAvatarEvent extends ProfileEvent {
   final XFile file;
 

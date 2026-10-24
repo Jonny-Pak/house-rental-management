@@ -22,7 +22,7 @@ class RegisterRequest {
     required this.email,
     required this.password,
     required this.phoneNumber,
-    this.role = 'USER',
+    this.role = 'MEMBER',
   });
 
   Map<String, dynamic> toJson() => {

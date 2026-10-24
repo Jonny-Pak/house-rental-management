@@ -1,10 +1,11 @@
-﻿import '../datasources/auth_remote_data_source.dart';
+import '../datasources/auth_remote_data_source.dart';
 import '../models/auth_models.dart';
 
 abstract class AuthRepository {
   Future<AuthResponse> login(LoginRequest request);
   Future<void> register(RegisterRequest request);
   Future<void> verifyOtp(VerifyOtpRequest request);
+  Future<void> resendOtp(String email);
 }
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -26,4 +27,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> verifyOtp(VerifyOtpRequest request) async {
     return _remoteDataSource.verifyOtp(request);
   }
+
+  @override
+  Future<void> resendOtp(String email) => _remoteDataSource.resendOtp(email);
 }
