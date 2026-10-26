@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kite_ui/kite_ui.dart';
 
 import '../../../../../app/admin/auth/session.dart';
+import '../../../../auth/presentation/pages/password_page.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -58,6 +59,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               description: 'Wire this to your storage provider.',
             ),
             child: const Text('Change photo'),
+          ),
+          const SizedBox(height: KiteSpace.lg),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.lock_outline),
+            label: const Text('Đổi mật khẩu'),
+            onPressed: () async {
+              final changed = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PasswordPage(changePassword: true),
+                ),
+              );
+              if (changed == true && mounted) {
+                await ref.read(sessionProvider.notifier).signOut();
+              }
+            },
           ),
           const SizedBox(height: KiteSpace.lg),
           const KiteSeparator(),

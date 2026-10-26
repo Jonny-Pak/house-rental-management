@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 
 import '../../../auth/presentation/logout.dart';
+import '../../../auth/presentation/pages/password_page.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -222,7 +223,18 @@ class ProfileView extends StatelessWidget {
                       'Sở thích của tôi',
                       () => _editInterests(context),
                     ),
-                    _menu(Symbols.shield, 'Đổi mật khẩu', null),
+                    _menu(Symbols.shield, 'Đổi mật khẩu', () async {
+                      final changed = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const PasswordPage(changePassword: true),
+                        ),
+                      );
+                      if (changed == true && context.mounted) {
+                        await logout(context);
+                      }
+                    }),
                   ],
                 ),
               ),

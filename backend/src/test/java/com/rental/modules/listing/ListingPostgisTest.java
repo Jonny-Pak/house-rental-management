@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -74,6 +74,62 @@ class ListingPostgisTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP SCHEMA " + SCHEMA + " CASCADE");
         }
+    }
+
+    @Autowired com.rental.modules.user.service.PasswordService passwords;
+
+    @Test void passwordResetAndChangePersistEncodedPasswords() {
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4);
+        org.mockito.Mockito.when(adminPasswords.encode(org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call -> encoder.encode(call.getArgument(0)));
+        org.mockito.Mockito.when(adminPasswords.matches(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call -> encoder.matches(call.getArgument(0), call.getArgument(1)));
+        Long id = jdbc.queryForObject("INSERT INTO users(full_name,email,role,status,is_verified,password_hash) VALUES ('Password test','password-flow@test.local','MEMBER','ACTIVE',true,?) RETURNING user_id", Long.class, adminPasswords.encode("OldPassword123"));
+        passwords.requestReset("password-flow@test.local");
+        var code = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(adminEmail).sendPasswordResetEmail(org.mockito.ArgumentMatchers.eq("password-flow@test.local"), code.capture());
+        passwords.reset(new com.rental.modules.user.dto.request.ResetPasswordRequest("password-flow@test.local", code.getValue(), "NewPassword123"));
+        entityManager.flush(); entityManager.clear();
+        User user = users.findById(id).orElseThrow();
+        assertTrue(adminPasswords.matches("NewPassword123", user.getPasswordHash())); assertEquals(1, user.getPasswordVersion());
+        passwords.change(user.getEmail(), new com.rental.modules.user.dto.request.ChangePasswordRequest("NewPassword123", "AnotherPassword123"));
+        entityManager.flush(); entityManager.clear();
+        user = users.findById(id).orElseThrow();
+        assertTrue(adminPasswords.matches("AnotherPassword123", user.getPasswordHash())); assertEquals(2, user.getPasswordVersion());
+    }
+
+    @Autowired com.rental.modules.report.ReportService reports;
+    @Autowired com.rental.modules.report.ReportExcel reportExcel;
+
+    @Test void reportsAggregateRealDataBoundariesStatusesAndExport() throws Exception {
+        java.time.LocalDate from = java.time.LocalDate.of(2090, 1, 1);
+        java.time.LocalDate to = from.plusDays(2);
+        Long member = jdbc.queryForObject("INSERT INTO users(full_name,email,role,status,created_at) VALUES ('Report member','report-member@test.local','MEMBER','ACTIVE','2090-01-01 00:00:00') RETURNING user_id", Long.class);
+        Long admin = jdbc.queryForObject("INSERT INTO users(full_name,email,role,status,created_at) VALUES ('Report admin','report-admin@test.local','ADMIN','ACTIVE','2090-01-02 12:00:00') RETURNING user_id", Long.class);
+        jdbc.update("INSERT INTO users(full_name,email,role,status,created_at) VALUES ('Outside','outside@test.local','MEMBER','ACTIVE','2090-01-04 00:00:00')");
+        Long area = jdbc.queryForObject("SELECT MIN(area_id) FROM administrative_areas", Long.class);
+        Long listing = jdbc.queryForObject("INSERT INTO listings(owner_id,area_id,title,listing_type,rent_price,approval_status,created_at) VALUES (?,?,'Report listing','WHOLE_HOUSE',9000000,'APPROVED','2090-01-03 23:59:59.999999') RETURNING listing_id", Long.class, member, area);
+        jdbc.update("INSERT INTO contracts(listing_id,landlord_id,tenant_id,start_date,end_date,monthly_rent,deposit_amount,status,created_at) VALUES (?,?,?,'2090-01-01','2091-01-01',9000000,0,'DRAFT','2090-01-02 12:00:00')", listing, member, admin);
+        jdbc.update("INSERT INTO payment_transactions(user_id,amount,status,transaction_date) VALUES (?,123456.78,'SUCCESS','2090-01-01 00:00:00'), (?,200000,'SUCCESS','2090-01-03 23:59:59.999999'), (?,900000,'FAILED','2090-01-02'), (?,800000,'PENDING','2090-01-02'), (?,700000,'SUCCESS','2090-01-04 00:00:00')", member, member, member, member, member);
+        var report = reports.report(from, to);
+        assertEquals(1, report.members()); assertEquals(1, report.listings()); assertEquals(1, report.contracts());
+        assertEquals(2, report.successfulPayments());
+        assertEquals(0, new BigDecimal("323456.78").compareTo(report.revenue()));
+        assertEquals(3, report.daily().size());
+        assertEquals(BigDecimal.ZERO, report.daily().get(1).revenue());
+        assertEquals(1, report.daily().get(2).listings());
+        assertEquals("APPROVED", report.listingStatuses().getFirst().status());
+        assertEquals("DRAFT", report.contractStatuses().getFirst().status());
+        try (var workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(reportExcel.write(report)))) {
+            assertEquals(3, workbook.getNumberOfSheets());
+            assertEquals(323456.78, workbook.getSheetAt(0).getRow(5).getCell(1).getNumericCellValue(), .001);
+            assertEquals(4, workbook.getSheetAt(1).getPhysicalNumberOfRows());
+            assertEquals("2090-01-03", workbook.getSheetAt(1).getRow(3).getCell(0).getStringCellValue());
+        }
+        var empty = reports.report(java.time.LocalDate.of(2095, 1, 1), java.time.LocalDate.of(2095, 1, 1));
+        assertEquals(0, empty.members()); assertEquals(0, empty.listings()); assertEquals(0, empty.contracts());
+        assertEquals(BigDecimal.ZERO, empty.revenue()); assertEquals(1, empty.daily().size());
+        assertTrue(empty.listingStatuses().isEmpty());
     }
 
     @Autowired com.rental.modules.content.service.SystemContentService contentService;

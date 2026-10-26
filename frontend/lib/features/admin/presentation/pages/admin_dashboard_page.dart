@@ -657,6 +657,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
         }
 
         final filtered = _filterListings(rawListings);
+        int roommateListings = 0;
+        for (final listing in rawListings) {
+          if (listing.listingType == 'SHARED_ROOM') roommateListings++;
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(KiteSpace.xl),
@@ -715,14 +719,14 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     value: rawListings.isEmpty
                         ? '0 m²'
                         : '${(rawListings.fold<double>(0, (s, e) => s + e.areaSqm) / rawListings.length).toStringAsFixed(1)} m²',
-                    delta: 'Phòng trọ chuẩn',
+                    delta: 'Trong hàng đợi',
                     deltaTone: KiteTone.neutral,
                   ),
-                  const KiteStat(
-                    label: 'Tỷ lệ duyệt chuẩn',
-                    value: '95.4%',
-                    delta: '+1.2% tháng này',
-                    deltaTone: KiteTone.success,
+                  KiteStat(
+                    label: 'Tin tìm người ở ghép',
+                    value: '$roommateListings',
+                    delta: 'Trong hàng đợi',
+                    deltaTone: KiteTone.info,
                   ),
                 ],
               ),

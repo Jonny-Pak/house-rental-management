@@ -1,722 +1,457 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kite_ui/kite_ui.dart';
+import 'package:intl/intl.dart';
 
-import '../../../data/providers/data_provider.dart';
-import '../../../data/providers/mock_data_provider.dart';
-import '../../../../../shared/admin/widgets/states.dart';
+import '../../../../../core/network/api_client.dart';
+import '../../../../../core/excel/excel_files.dart';
+import '../../../../content/data/repositories/system_content_repository.dart'
+    show contentError;
+import '../../../data/repositories/report_repository.dart';
 
-final _recentProvider = FutureProvider<ListResult>((Ref ref) async {
-  return ref
-      .watch(dataProvider)
-      .getList(
-        'orders',
-        const ListParams(perPage: 6, sort: SortSpec('date', SortDir.desc)),
-      );
-});
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key, this.repository, this.files});
+  final ReportRepository? repository;
+  final ExcelFiles? files;
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
 
-final _topProductsProvider = FutureProvider<ListResult>((Ref ref) async {
-  return ref
-      .watch(dataProvider)
-      .getList(
-        'products',
-        const ListParams(perPage: 5, sort: SortSpec('price', SortDir.desc)),
-      );
-});
-
-/// The dashboard.
-///
-/// This is the screenshot the product is judged on before anyone clones it, so
-/// it earns more than four tiles and a line chart: trend in every stat, a
-/// ranked breakdown, a funnel, an activity feed and live tables — each one a
-/// different shape, because a page of identical cards reads as filler.
-class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+class _DashboardScreenState extends State<DashboardScreen> {
+  late final _repository = widget.repository ?? ReportRepository(ApiClient());
+  late final _files = widget.files ?? ExcelFiles();
+  late DateTime _from, _to;
+  ReportData? _report;
+  bool _loading = false, _exporting = false;
+  String? _error;
+  int _page = 0;
+  static const _orange = Color(0xFFD66A2B);
+  static const _green = Color(0xFF298774);
+  final _number = NumberFormat.decimalPattern('vi_VN');
+  String _money(num value) => '${_number.format(value)} ₫';
+  String _date(DateTime value) => DateFormat('dd/MM/yyyy').format(value);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final wide = KiteBreak.isDesktop(context);
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _to = DateTime(now.year, now.month, now.day);
+    _from = DateTime(now.year, now.month, 1);
+    _load();
+  }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(KiteSpace.xl),
-      child: Column(
+  Future<void> _load() async {
+    if (_loading || _exporting) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _report = null;
+    });
+    try {
+      final report = await _repository.load(_from, _to);
+      if (mounted) {
+        setState(() {
+          _report = report;
+          _page = 0;
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = contentError(error));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _chooseDates() async {
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100, 12, 31),
+      initialDateRange: DateTimeRange(start: _from, end: _to),
+      helpText: 'Chọn khoảng báo cáo (tối đa 366 ngày)',
+      saveText: 'Áp dụng',
+    );
+    if (range == null || !mounted) return;
+    if (range.end.difference(range.start).inDays > 365) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Chọn tối đa 366 ngày.')));
+      return;
+    }
+    setState(() {
+      _from = range.start;
+      _to = range.end;
+    });
+    await _load();
+  }
+
+  Future<void> _export() async {
+    final report = _report;
+    if (report == null || _loading || _exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final bytes = await _repository.export(report.from, report.to);
+      if (!mounted) return;
+      final saved = await _files.save(
+        bytes,
+        'bao-cao-${reportDate(report.from)}-${reportDate(report.to)}.xlsx',
+      );
+      if (mounted && saved) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã xuất báo cáo Excel.')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(contentError(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Widget _panel(String title, Widget child) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
+        color: Theme.of(context).dividerColor.withValues(alpha: .15),
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 18),
+        child,
+      ],
+    ),
+  );
+
+  Widget _metric(String label, String value, IconData icon, double width) =>
+      SizedBox(
+        width: width,
+        child: _panel(
+          label,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: _orange),
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  String _status(String status) {
+    switch (status) {
+      case 'PENDING':
+        return 'Chờ duyệt';
+      case 'APPROVED':
+        return 'Đã duyệt';
+      case 'REJECTED':
+        return 'Bị từ chối';
+      case 'DRAFT':
+        return 'Bản nháp';
+      case 'ACTIVE':
+        return 'Đang hiệu lực';
+      case 'EXPIRED':
+        return 'Hết hạn';
+      case 'TERMINATED':
+        return 'Đã chấm dứt';
+      case 'CANCELLED':
+        return 'Đã hủy';
+      default:
+        return status;
+    }
+  }
+
+  Widget _statuses(String title, Map<String, int> items) => _panel(
+    title,
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (items.isEmpty) const Text('Chưa có dữ liệu trong khoảng đã chọn.'),
+        for (final item in items.entries)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Expanded(child: Text(_status(item.key))),
+                Text(
+                  _number.format(item.value),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Widget _revenue(ReportData report) {
+    final months = <String, double>{};
+    double largest = 0;
+    for (final day in report.daily) {
+      final month = DateFormat('MM/yyyy').format(day.date);
+      months[month] = (months[month] ?? 0) + day.revenue;
+      if (months[month]! > largest) largest = months[month]!;
+    }
+    return _panel(
+      'Doanh thu dịch vụ theo tháng',
+      Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _StatRow(),
-          const SizedBox(height: KiteSpace.xl),
-          if (wide)
-            const IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          Text(
+            '${report.successfulPayments} giao dịch thành công trong khoảng đã chọn',
+          ),
+          if (report.revenue == 0)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text('Chưa phát sinh doanh thu dịch vụ.'),
+            ),
+          for (final month in months.entries)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Column(
                 children: [
-                  Expanded(flex: 5, child: _RevenueCard()),
-                  SizedBox(width: KiteSpace.xl),
-                  Expanded(flex: 3, child: _FunnelCard()),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 12,
+                    children: [Text(month.key), Text(_money(month.value))],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: largest == 0 ? 0 : month.value / largest,
+                    minHeight: 10,
+                    color: _orange,
+                    borderRadius: BorderRadius.circular(6),
+                    backgroundColor: _orange.withValues(alpha: .1),
+                  ),
                 ],
               ),
-            )
-          else ...[
-            const _RevenueCard(),
-            const SizedBox(height: KiteSpace.xl),
-            const _FunnelCard(),
-          ],
-          const SizedBox(height: KiteSpace.xl),
-          if (wide)
-            const IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: _ChannelsCard()),
-                  SizedBox(width: KiteSpace.xl),
-                  Expanded(child: _TopProductsCard()),
-                  SizedBox(width: KiteSpace.xl),
-                  Expanded(child: _ActivityCard()),
-                ],
-              ),
-            )
-          else ...[
-            const _ChannelsCard(),
-            const SizedBox(height: KiteSpace.xl),
-            const _TopProductsCard(),
-            const SizedBox(height: KiteSpace.xl),
-            const _ActivityCard(),
-          ],
-          const SizedBox(height: KiteSpace.xl),
-          if (wide)
-            const IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(flex: 3, child: _RecentOrdersCard()),
-                  SizedBox(width: KiteSpace.xl),
-                  Expanded(flex: 2, child: _OrderStatusCard()),
-                ],
-              ),
-            )
-          else ...[
-            const _RecentOrdersCard(),
-            const SizedBox(height: KiteSpace.xl),
-            const _OrderStatusCard(),
-          ],
+            ),
         ],
       ),
     );
   }
-}
 
-// ---------------------------------------------------------------- stat row
-
-class _StatRow extends StatelessWidget {
-  const _StatRow();
-
-  static const _stats = <(String, String, String, KiteTone, List<double>)>[
-    (
-      'Doanh thu dịch vụ',
-      '284.120.000 ₫',
-      '+12.4%',
-      KiteTone.success,
-      [31, 34, 33, 38, 41, 39, 45, 44, 49, 53, 51, 58],
-    ),
-    (
-      'Bài đăng trọ',
-      '3.412',
-      '+4.1%',
-      KiteTone.success,
-      [42, 40, 44, 43, 47, 45, 48, 47, 50, 49, 52, 54],
-    ),
-    (
-      'Người dùng',
-      '1.208',
-      '+8.9%',
-      KiteTone.success,
-      [22, 25, 24, 28, 27, 31, 33, 32, 36, 38, 41, 44],
-    ),
-    (
-      'Tỉ lệ lấp đầy',
-      '94.6%',
-      '+0.8%',
-      KiteTone.success,
-      [26, 25, 27, 24, 23, 24, 21, 22, 19, 18, 17, 15],
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return KiteStatGrid(
-      children: [
-        for (final (label, value, delta, tone, spark) in _stats)
-          _TrendStat(
-            label: label,
-            value: value,
-            delta: delta,
-            tone: tone,
-            spark: spark,
+  Widget _daily(ReportData report) {
+    final start = _page * 10;
+    int end = start + 10;
+    if (end > report.daily.length) end = report.daily.length;
+    return _panel(
+      'Chi tiết theo ngày',
+      Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columns: const [
+                DataColumn(label: Text('Ngày')),
+                DataColumn(label: Text('Member mới')),
+                DataColumn(label: Text('Tin mới')),
+                DataColumn(label: Text('Hợp đồng mới')),
+                DataColumn(label: Text('Doanh thu dịch vụ')),
+              ],
+              rows: [
+                for (final day in report.daily.sublist(start, end))
+                  DataRow(
+                    cells: [
+                      DataCell(Text(_date(day.date))),
+                      DataCell(Text('${day.members}')),
+                      DataCell(Text('${day.listings}')),
+                      DataCell(Text('${day.contracts}')),
+                      DataCell(Text(_money(day.revenue))),
+                    ],
+                  ),
+              ],
+            ),
           ),
+          const SizedBox(height: 12),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            children: [
+              IconButton(
+                tooltip: 'Trang trước',
+                onPressed: _page == 0 ? null : () => setState(() => _page--),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Text('Trang ${_page + 1}/${(report.daily.length / 10).ceil()}'),
+              IconButton(
+                tooltip: 'Trang sau',
+                onPressed: end >= report.daily.length
+                    ? null
+                    : () => setState(() => _page++),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _results(ReportData report, double width) {
+    final metricWidth = width >= 1100
+        ? (width - 48) / 4
+        : width >= 600
+        ? (width - 16) / 2
+        : width;
+    final columns = width >= 900;
+    final listing = _statuses(
+      'Tin tạo trong kỳ · trạng thái hiện tại',
+      report.listingStatuses,
+    );
+    final contracts = _statuses(
+      'Hợp đồng tạo trong kỳ · trạng thái hiện tại',
+      report.contractStatuses,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _metric(
+              'Doanh thu dịch vụ',
+              _money(report.revenue),
+              Icons.payments_outlined,
+              metricWidth,
+            ),
+            _metric(
+              'Member đăng ký mới',
+              _number.format(report.members),
+              Icons.people_outline,
+              metricWidth,
+            ),
+            _metric(
+              'Tin đăng tạo mới',
+              _number.format(report.listings),
+              Icons.home_work_outlined,
+              metricWidth,
+            ),
+            _metric(
+              'Hợp đồng tạo mới',
+              _number.format(report.contracts),
+              Icons.description_outlined,
+              metricWidth,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Dữ liệu từ ${_date(report.from)} đến ${_date(report.to)} (bao gồm cả hai ngày). Cập nhật: ${DateFormat('dd/MM/yyyy HH:mm').format(report.generatedAt)}.',
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Doanh thu tính giao dịch SUCCESS theo ngày tạo giao dịch, không gồm tiền thuê và tiền cọc. Trạng thái dưới đây là trạng thái hiện tại của bản ghi tạo trong kỳ, không phải lịch sử tại ngày kết thúc.',
+          style: TextStyle(fontSize: 12, height: 1.6),
+        ),
+        const SizedBox(height: 20),
+        _revenue(report),
+        const SizedBox(height: 20),
+        if (columns)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: listing),
+              const SizedBox(width: 20),
+              Expanded(child: contracts),
+            ],
+          )
+        else ...[
+          listing,
+          const SizedBox(height: 20),
+          contracts,
+        ],
+        const SizedBox(height: 20),
+        _daily(report),
       ],
     );
   }
-}
-
-class _TrendStat extends StatelessWidget {
-  const _TrendStat({
-    required this.label,
-    required this.value,
-    required this.delta,
-    required this.tone,
-    required this.spark,
-  });
-
-  final String label;
-  final String value;
-  final String delta;
-  final KiteTone tone;
-  final List<double> spark;
 
   @override
-  Widget build(BuildContext context) {
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-    final good = tone == KiteTone.success;
-    final accent = good ? const Color(0xFF0C6B62) : const Color(0xFFB03D0B);
-    return Container(
-      // Tighter at the bottom than the sides: the chart runs to the card edge,
-      // so it needs less breathing room under it than the text needs beside it.
-      padding: const EdgeInsets.fromLTRB(
-        KiteSpace.xl,
-        KiteSpace.xl,
-        KiteSpace.xl,
-        KiteSpace.lg,
-      ),
-      decoration: BoxDecoration(
-        color: c.card,
-        border: Border.all(color: c.border),
-        borderRadius: KiteRadius.allLg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: t.muted),
-          const SizedBox(height: KiteSpace.xs),
-          Text(
-            value,
-            style: t.h3.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          const SizedBox(height: KiteSpace.xs),
-          Row(
-            children: [
-              Icon(
-                good ? Icons.trending_up : Icons.trending_down,
-                size: 14,
-                color: accent,
-              ),
-              const SizedBox(width: 4),
-              Text(delta, style: t.small.copyWith(fontSize: 12, color: accent)),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'vs last month',
-                  overflow: TextOverflow.ellipsis,
-                  style: t.muted.copyWith(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KiteSpace.md),
-          // Fills whatever the card has left. On a wide screen the tiles grow
-          // taller with their width, and a pinned-height line stranded at the
-          // bottom of one is the odd-looking part.
-          Expanded(
-            child: KiteSparkline(values: spark, color: accent),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ------------------------------------------------------------------ charts
-
-class _RevenueCard extends StatelessWidget {
-  const _RevenueCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final rnd = Random(9);
-    var y = 42.0;
-    final spots = <(double, double)>[];
-    for (var i = 0; i < 60; i++) {
-      y = (y + rnd.nextDouble() * 11 - 4.6).clamp(12, 92);
-      spots.add((i.toDouble(), y));
-    }
-    return KiteCard(
-      title: 'Revenue',
-      trailing: const KiteBadge('Last 60 days', tone: KiteTone.info),
-      child: SizedBox(
-        height: 250,
-        child: KiteLineChart(
-          spots: spots,
-          valueLabel: (v) => KiteFormat.money(v * 1000),
-        ),
-      ),
-    );
-  }
-}
-
-/// A funnel. Stage-to-stage drop-off is the number that matters, so each row
-/// carries its own conversion rather than only its count.
-class _FunnelCard extends StatelessWidget {
-  const _FunnelCard();
-
-  static const _stages = <(String, int)>[
-    ('Lượt truy cập', 48210),
-    ('Xem phòng trọ', 21430),
-    ('Lưu yêu thích', 7860),
-    ('Liên hệ chủ trọ', 4120),
-    ('Ký hợp đồng thuê', 3412),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-    final top = _stages.first.$2.toDouble();
-    return KiteCard(
-      title: 'Phễu tìm kiếm & thuê phòng',
-      trailing: const KiteBadge('7.1% hoàn tất', tone: KiteTone.success),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < _stages.length; i++) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: KiteSpace.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _stages[i].$1,
-                          style: t.small.copyWith(fontSize: 13),
-                        ),
-                      ),
-                      Text(
-                        KiteFormat.count(_stages[i].$2),
-                        style: t.small.copyWith(
-                          fontSize: 13,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      if (i > 0) ...[
-                        const SizedBox(width: KiteSpace.sm),
-                        SizedBox(
-                          width: 44,
-                          child: Text(
-                            '${(_stages[i].$2 / _stages[i - 1].$2 * 100).round()}%',
-                            textAlign: TextAlign.right,
-                            style: t.muted.copyWith(fontSize: 11),
-                          ),
-                        ),
-                      ] else
-                        const SizedBox(width: 52),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: FractionallySizedBox(
-                        widthFactor: _stages[i].$2 / top,
-                        child: Container(
-                          height: 20,
-                          decoration: BoxDecoration(
-                            // Blend toward the surface rather than fading
-                            // opacity — a translucent bar over a card reads
-                            // muddy, especially in dark mode.
-                            color: Color.lerp(
-                              c.primary,
-                              c.muted,
-                              i / (_stages.length - 1) * 0.72,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ChannelsCard extends StatelessWidget {
-  const _ChannelsCard();
-
-  static const _channels = <(String, double, String)>[
-    ('Direct', 20460, '42%'),
-    ('Organic', 13010, '27%'),
-    ('Referral', 8680, '18%'),
-    ('Email', 6060, '13%'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return KiteCard(
-      title: 'Traffic by channel',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (label, value, pct) in _channels)
-            KiteBarRow(label: label, value: value, max: 20460, display: pct),
-          const SizedBox(height: KiteSpace.sm),
-          const KiteSeparator(),
-          const SizedBox(height: KiteSpace.md),
-          const _MiniFact(label: 'Sessions today', value: '4,812'),
-          const _MiniFact(label: 'Avg. session', value: '3m 12s'),
-          const _MiniFact(label: 'Bounce rate', value: '38.4%'),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniFact extends StatelessWidget {
-  const _MiniFact({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = KiteText.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: t.muted.copyWith(fontSize: 12))),
-          Text(
-            value,
-            style: t.small.copyWith(
-              fontSize: 12,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopProductsCard extends ConsumerWidget {
-  const _TopProductsCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(_topProductsProvider);
-    final t = KiteText.of(context);
-    return KiteCard(
-      title: 'Phòng trọ được quan tâm',
-      child: async.when(
-        loading: () => const SizedBox(height: 180, child: LoadingState()),
-        error: (e, _) =>
-            SizedBox(height: 180, child: ErrorState(message: '$e')),
-        data: (result) => Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final padding = box.maxWidth < 650 ? 16.0 : 28.0;
+      final busy = _loading || _exporting;
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(padding),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final row in result.rows)
-              Padding(
-                padding: const EdgeInsets.only(bottom: KiteSpace.md),
-                child: Row(
+            const Text(
+              'Thống kê & báo cáo',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text('Theo dõi hoạt động từ dữ liệu hệ thống.'),
+            const SizedBox(height: 22),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: busy ? null : _chooseDates,
+                  icon: const Icon(Icons.date_range),
+                  label: Text('${_date(_from)} – ${_date(_to)}'),
+                ),
+                OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () {
+                          final now = DateTime.now();
+                          setState(() {
+                            _to = DateTime(now.year, now.month, now.day);
+                            _from = _to.subtract(const Duration(days: 29));
+                          });
+                          _load();
+                        },
+                  child: const Text('30 ngày gần nhất'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Làm mới'),
+                ),
+                FilledButton.icon(
+                  onPressed: busy || _report == null ? null : _export,
+                  icon: const Icon(Icons.download_outlined),
+                  label: Text(_exporting ? 'Đang xuất...' : 'Xuất Excel'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (_loading) const Center(child: CircularProgressIndicator()),
+            if (_error != null)
+              _panel(
+                'Không tải được báo cáo',
+                Column(
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${row['name']}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: t.small.copyWith(fontSize: 13),
-                      ),
-                    ),
-                    const SizedBox(width: KiteSpace.sm),
-                    Text(
-                      KiteFormat.money(row['price']),
-                      style: t.small.copyWith(
-                        fontSize: 13,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
+                    Text(_error!),
+                    TextButton(onPressed: _load, child: const Text('Thử lại')),
                   ],
                 ),
               ),
-            const SizedBox(height: KiteSpace.sm),
-            const KiteSeparator(),
-            const SizedBox(height: KiteSpace.md),
-            const _MiniFact(label: 'Units sold this month', value: '8,412'),
-            const _MiniFact(label: 'Average order value', value: r'$83.27'),
-            const _MiniFact(label: 'Out of stock', value: '3 SKUs'),
+            if (_report != null) _results(_report!, box.maxWidth - padding * 2),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// An activity feed. A timeline rail is honest here — these events really are
-/// a sequence, so the ordering device encodes something true.
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard();
-
-  static const _events = <(String, String, String, KiteTone)>[
-    ('Nguyễn Văn Nam', 'vừa đăng tin phòng trọ mới', '4m', KiteTone.info),
-    ('Trần Thị Hoa', 'hoàn tất ký hợp đồng thuê #102', '31m', KiteTone.success),
-    ('Lê Văn Tuấn', 'đã thanh toán gói PRO 30 ngày', '1h', KiteTone.success),
-    ('Quản trị viên', 'đã duyệt bài đăng trọ #88', '3h', KiteTone.info),
-    ('Đặng Minh Khôi', 'gửi yêu cầu xem phòng trọ #95', '5h', KiteTone.neutral),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-    return KiteCard(
-      title: 'Hoạt động gần đây',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < _events.length; i++)
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(top: 5),
-                        decoration: BoxDecoration(
-                          color: switch (_events[i].$4) {
-                            KiteTone.success => const Color(0xFF0C6B62),
-                            KiteTone.warning => const Color(0xFFC08A19),
-                            KiteTone.danger => c.destructive,
-                            KiteTone.info => c.primary,
-                            KiteTone.neutral => c.mutedForeground,
-                          },
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      if (i != _events.length - 1)
-                        Expanded(child: Container(width: 1, color: c.border)),
-                    ],
-                  ),
-                  const SizedBox(width: KiteSpace.md),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: KiteSpace.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: _events[i].$1,
-                                  style: t.small.copyWith(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' ${_events[i].$2}',
-                                  style: t.small.copyWith(fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '${_events[i].$3} ago',
-                            style: t.muted.copyWith(fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentOrdersCard extends ConsumerWidget {
-  const _RecentOrdersCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recent = ref.watch(_recentProvider);
-    return KiteCard(
-      title: 'Hợp đồng & giao dịch gần đây',
-      trailing: KiteButton.ghost(
-        onPressed: () => KiteToast.show(context, title: 'Đang mở danh sách'),
-        child: const Text('Xem tất cả'),
-      ),
-      child: recent.when(
-        loading: () => const SizedBox(height: 200, child: LoadingState()),
-        error: (e, _) =>
-            SizedBox(height: 200, child: ErrorState(message: '$e')),
-        data: (result) => Column(
-          children: [for (final row in result.rows) _OrderRow(row: row)],
-        ),
-      ),
-    );
-  }
-}
-
-/// Sits beside the orders list. A donut is the one shape this page does not
-/// already use, and status mix is the obvious question to ask of the table
-/// next to it — the two cards answer each other.
-class _OrderStatusCard extends StatelessWidget {
-  const _OrderStatusCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-    final slices = [
-      const KiteSlice(label: 'Đang thuê', value: 1412, color: Color(0xFF0C6B62)),
-      const KiteSlice(label: 'Còn trống', value: 986, color: Color(0xFFD85D15)),
-      const KiteSlice(label: 'Chờ duyệt', value: 604, color: Color(0xFFC08A19)),
-      const KiteSlice(label: 'Hết hạn', value: 271, color: Color(0xFF0663CE)),
-      const KiteSlice(label: 'Đã ẩn', value: 139, color: Color(0xFFB03D0B)),
-    ];
-
-    return KiteCard(
-      title: 'Tình trạng phòng trọ',
-      trailing: const KiteBadge('Tháng này', tone: KiteTone.neutral),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          KiteDonut(
-            slices: slices,
-            centerLabel: 'phòng',
-            centerValue: KiteFormat.count(
-              slices.fold<double>(0, (s, e) => s + e.value).round(),
-            ),
-          ),
-          const SizedBox(height: KiteSpace.lg),
-          const KiteSeparator(),
-          const SizedBox(height: KiteSpace.md),
-          Row(
-            children: [
-              Icon(Icons.schedule, size: 14, color: c.mutedForeground),
-              const SizedBox(width: KiteSpace.sm),
-              Expanded(
-                child: Text(
-                  'Average time to ship',
-                  style: t.muted.copyWith(fontSize: 12),
-                ),
-              ),
-              Text(
-                '1d 4h',
-                style: t.small.copyWith(
-                  fontSize: 12,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KiteSpace.sm),
-          Row(
-            children: [
-              Icon(
-                Icons.local_shipping_outlined,
-                size: 14,
-                color: c.mutedForeground,
-              ),
-              const SizedBox(width: KiteSpace.sm),
-              Expanded(
-                child: Text(
-                  'Awaiting dispatch',
-                  style: t.muted.copyWith(fontSize: 12),
-                ),
-              ),
-              const KiteBadge('604', tone: KiteTone.warning),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OrderRow extends StatelessWidget {
-  const _OrderRow({required this.row});
-  final JsonMap row;
-
-  static KiteTone _tone(String status) => switch (status) {
-    'Paid' || 'Shipped' => KiteTone.success,
-    'Pending' => KiteTone.warning,
-    'Refunded' => KiteTone.info,
-    'Cancelled' => KiteTone.danger,
-    _ => KiteTone.neutral,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-    final status = '${row['status']}';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 84,
-            child: Text(
-              '${row['reference']}',
-              style: t.small.copyWith(
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: c.mutedForeground,
-              ),
-            ),
-          ),
-          KiteAvatar(name: '${row['customer']}', size: 28),
-          const SizedBox(width: KiteSpace.md),
-          Expanded(
-            child: Text(
-              '${row['customer']}',
-              style: t.p.copyWith(fontSize: 14),
-            ),
-          ),
-          KiteBadge(status, tone: _tone(status)),
-          const SizedBox(width: KiteSpace.xl),
-          SizedBox(
-            width: 92,
-            child: Text(
-              KiteFormat.money(row['total']),
-              textAlign: TextAlign.right,
-              style: t.p.copyWith(
-                fontSize: 14,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      );
+    },
+  );
 }

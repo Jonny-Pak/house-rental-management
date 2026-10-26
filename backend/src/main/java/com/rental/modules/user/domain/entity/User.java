@@ -54,6 +54,12 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "password_version", nullable = false)
+    private int passwordVersion = 0;
+
+    public int getPasswordVersion() { return passwordVersion; }
+    public void setPasswordVersion(int value) { passwordVersion = value; }
+
     public Long getUserId() {
         return userId;
     }

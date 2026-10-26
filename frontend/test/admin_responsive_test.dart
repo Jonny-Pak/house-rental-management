@@ -90,6 +90,8 @@ void main() {
       await tester.ensureVisible(find.text('Nhà cho thuê thử nghiệm'));
       await tester.pumpAndSettle();
       expect(find.text('Xem xét'), findsOneWidget);
+      expect(find.text('95.4%'), findsNothing);
+      expect(find.text('Tin tìm người ở ghép'), findsOneWidget);
       expect(
         find.text('Phê duyệt'),
         width < 1440 ? findsOneWidget : findsNothing,

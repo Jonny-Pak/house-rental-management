@@ -32,11 +32,14 @@ public class JwtService {
     public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
+        claims.put("passwordVersion", user.getPasswordVersion());
         return buildToken(claims, user.getEmail(), accessExpiration);
     }
 
     public String generateRefreshToken(User user) {
-        return buildToken(new HashMap<>(), user.getEmail(), refreshExpiration);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("passwordVersion", user.getPasswordVersion());
+        return buildToken(claims, user.getEmail(), refreshExpiration);
     }
 
     private String buildToken(Map<String, Object> extraClaims, String subject, long expiration) {
@@ -52,12 +55,12 @@ public class JwtService {
     // Token Validation
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String email = extractEmail(token);
-        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+        Claims claims = extractAllClaims(token);
+        if (!claims.getSubject().equals(userDetails.getUsername()) || claims.getExpiration().before(new Date())) return false;
+        if (!(userDetails instanceof CustomUserDetails details)) return false;
+        Number version = claims.get("passwordVersion", Number.class);
+        int tokenVersion = version == null ? 0 : version.intValue();
+        return tokenVersion == details.getUser().getPasswordVersion();
     }
 
     // Claims Extraction

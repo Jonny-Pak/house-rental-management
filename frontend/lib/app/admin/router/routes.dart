@@ -40,7 +40,7 @@ class NavItem {
   final bool inSidebar;
 
   String labelOf(L l) => switch (path) {
-    R.dashboard => 'Dashboard',
+    R.dashboard => 'Thống kê & báo cáo',
     R.listings => 'Duyệt bài đăng',
     R.users => 'Quản lý người dùng',
     R.areas => 'Khu vực hành chính',
@@ -69,7 +69,7 @@ class NavGroup {
 
 const kNavGroups = <NavGroup>[
   NavGroup('Overview', [
-    NavItem('Dashboard', R.dashboard, Icons.dashboard_outlined),
+    NavItem('Thống kê & báo cáo', R.dashboard, Icons.dashboard_outlined),
   ]),
   NavGroup('Manage', [
     NavItem('Duyệt bài đăng', R.listings, Icons.approval_outlined),

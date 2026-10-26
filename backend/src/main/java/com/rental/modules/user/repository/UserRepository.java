@@ -33,6 +33,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from User u where lower(u.email) = lower(:email)")
+    Optional<User> findForPasswordUpdate(@org.springframework.data.repository.query.Param("email") String email);
+
     Optional<User> findByPhoneNumber(String phoneNumber);
 
     java.util.List<User> findByPhoneNumberIn(java.util.List<String> phoneNumbers);

@@ -21,13 +21,45 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.user.service.PasswordService passwords;
+    @Test void passwordResetIsPublicAndChangeUsesAuthenticatedIdentity() throws Exception {
+        mvc.perform(post("/api/v1/auth/forgot-password").contentType("application/json").content("{\"email\":\"member@example.com\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/reset-password").contentType("application/json").content("{\"email\":\"member@example.com\",\"otp\":\"123456\",\"newPassword\":\"NewPassword123\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/reset-password").contentType("application/json").content("{\"email\":\"member@example.com\",\"otp\":\"12\",\"newPassword\":\"short\"}")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/auth/forgot-password").contentType("application/json").content("{\"email\":\"invalid\"}")).andExpect(status().isBadRequest());
+        String body = "{\"currentPassword\":\"OldPassword123\",\"newPassword\":\"NewPassword123\",\"email\":\"victim@example.com\"}";
+        mvc.perform(post("/api/v1/users/me/change-password").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/users/me/change-password").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(passwords).change(eq("owner"), any());
+        mvc.perform(post("/api/v1/users/me/change-password").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(passwords).change(eq("admin"), any());
+    }
+
+    @MockBean com.rental.modules.report.ReportService reports;
+    @MockBean com.rental.modules.report.ReportExcel reportExcel;
+
+    @Test void reportsAndExcelRequireAdmin() throws Exception {
+        for (String path : java.util.List.of("/api/v1/admin/reports", "/api/v1/admin/reports/export")) {
+            mvc.perform(get(path).param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isForbidden());
+            mvc.perform(get(path).header("Authorization", "Bearer owner").param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(reports, reportExcel);
+        mvc.perform(get("/api/v1/admin/reports").header("Authorization", "Bearer admin").param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isOk());
+        verify(reports).report(java.time.LocalDate.of(2026, 1, 1), java.time.LocalDate.of(2026, 1, 31));
+        when(reportExcel.write(any())).thenReturn(new byte[]{1,2});
+        mvc.perform(get("/api/v1/admin/reports/export").header("Authorization", "Bearer admin").param("from", "2026-01-01").param("to", "2026-01-31"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        mvc.perform(get("/api/v1/admin/reports").header("Authorization", "Bearer admin").param("from", "bad").param("to", "2026-01-31")).andExpect(status().isBadRequest());
+    }
+
     @MockBean com.rental.modules.content.service.SystemContentService contentService;
 
     @Test void contentReadersOnlyReceivePublishedFieldsAndOnlyAdminsCanEdit() throws Exception {

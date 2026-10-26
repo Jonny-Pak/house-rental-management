@@ -22,6 +22,9 @@ public class OtpService {
     }
 
     public synchronized String generateAndStoreOtp(String email) {
+        for (java.util.Map.Entry<String, OtpEntry> item : codes.entrySet()) {
+            if (clock.millis() - item.getValue().createdAt >= 300000) codes.remove(item.getKey(), item.getValue());
+        }
         OtpEntry previous = codes.get(email);
         long now = clock.millis();
         if (previous != null && now - previous.createdAt < 60000) {
@@ -32,14 +35,18 @@ public class OtpService {
         return code;
     }
 
-    public boolean validateOtp(String email, String code) {
+    public synchronized boolean validateOtp(String email, String code) {
         OtpEntry entry = codes.get(email);
         if (entry == null) return false;
         if (clock.millis() - entry.createdAt >= 300000) {
             codes.remove(email, entry);
             return false;
         }
-        if (!entry.code.equals(code)) return false;
+        if (entry.attempts >= 5) return false;
+        if (!entry.code.equals(code)) {
+            entry.attempts++;
+            return false;
+        }
         return codes.remove(email, entry);
     }
 
@@ -48,6 +55,7 @@ public class OtpService {
     }
 
     private static class OtpEntry {
+        private int attempts = 0;
         private final String code;
         private final long createdAt;
         private OtpEntry(String code, long createdAt) {

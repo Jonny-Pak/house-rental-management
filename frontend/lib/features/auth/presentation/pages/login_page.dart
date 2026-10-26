@@ -9,6 +9,7 @@ import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'register_page.dart';
 import 'otp_page.dart';
+import 'password_page.dart';
 
 // ─── Design System Colors ─────────────────────────────────────────────
 const kPrimaryDark = Color(0xFF2C1D11);
@@ -270,9 +271,14 @@ class _LoginPageState extends State<LoginPage> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              // TODO: Quên mật khẩu
-                            },
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PasswordPage(
+                                  initialEmail: _emailCtrl.text.trim(),
+                                ),
+                              ),
+                            ),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
