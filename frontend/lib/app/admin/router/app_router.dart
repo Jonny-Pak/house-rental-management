@@ -1,3 +1,5 @@
+import '../../../features/incident/presentation/incidents_page.dart';
+
 import 'package:flutter/widgets.dart';
 
 import '../../../features/admin/presentation/pages/admin_users_page.dart';
@@ -15,7 +17,7 @@ import '../../../features/admin/presentation/screens/system/settings_screen.dart
 import '../../../shared/admin/layout/app_shell.dart';
 import '../../../features/admin/presentation/pages/admin_dashboard_page.dart';
 import '../../../features/contract/presentation/pages/my_contracts_page.dart';
-import '../../../features/membership/presentation/pages/membership_page.dart';
+import '../../../features/admin/presentation/pages/admin_packages_page.dart';
 import '../auth/session.dart';
 import 'routes.dart';
 
@@ -65,6 +67,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: R.listings,
             builder: (_, _) => const AdminDashboardPage(),
           ),
+          GoRoute(
+            path: R.incidents,
+            builder: (_, _) => const IncidentsPage(admin: true),
+          ),
           GoRoute(path: R.users, builder: (_, _) => const AdminUsersPage()),
           GoRoute(path: R.areas, builder: (_, _) => const AdminAreasPage()),
           GoRoute(
@@ -81,7 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: R.memberships,
-            builder: (_, _) => const MembershipPage(),
+            builder: (_, _) => const AdminPackagesPage(),
           ),
           GoRoute(path: R.settings, builder: (_, _) => const SettingsScreen()),
           GoRoute(path: R.profile, builder: (_, _) => const ProfileScreen()),

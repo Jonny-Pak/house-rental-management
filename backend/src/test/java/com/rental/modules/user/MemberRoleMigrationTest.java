@@ -43,7 +43,7 @@ class MemberRoleMigrationTest {
                 }
                 var flyway = Flyway.configure().dataSource(testUrl, username, password)
                     .schemas(schema).defaultSchema(schema).load();
-                assertEquals(4, flyway.migrate().migrationsExecuted);
+                assertEquals(6, flyway.migrate().migrationsExecuted);
                 flyway.validate();
                 assertEquals(0, flyway.migrate().migrationsExecuted);
                 try (var testConnection = DriverManager.getConnection(testUrl, username, password);

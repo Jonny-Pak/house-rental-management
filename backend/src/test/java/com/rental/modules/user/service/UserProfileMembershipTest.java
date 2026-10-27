@@ -25,16 +25,16 @@ class UserProfileMembershipTest {
         membership.setPackageName("Gói PRO");
         UserSubscription subscription = new UserSubscription();
         subscription.setMembershipPackage(membership);
-        subscription.setRemainingStandardQuota((short) 18);
-        subscription.setRemainingVipQuota((short) 3);
-        subscription.setRemainingRefreshQuota((short) 8);
+        subscription.setRemainingStandardQuota(18);
+        subscription.setRemainingVipQuota(3);
+        subscription.setRemainingRefreshQuota(8);
         when(subscriptions.findByUser(user)).thenReturn(Optional.of(subscription));
         var profile = service.getMyProfile(user.getEmail());
         assertEquals("Gói PRO", profile.getMembershipPackageName());
         assertEquals("ACTIVE", profile.getSubscriptionStatus());
-        assertEquals((short) 18, profile.getRemainingStandardQuota());
-        assertEquals((short) 3, profile.getRemainingVipQuota());
-        assertEquals((short) 8, profile.getRemainingRefreshQuota());
+        assertEquals(18, profile.getRemainingStandardQuota());
+        assertEquals(3, profile.getRemainingVipQuota());
+        assertEquals(8, profile.getRemainingRefreshQuota());
     }
 
     @Test

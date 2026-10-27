@@ -1,3 +1,4 @@
+import '../../../incident/presentation/incidents_page.dart';
 import '../../../preferences/data/models/personal_interests.dart';
 import '../../../preferences/data/repositories/preference_repository.dart';
 import '../../../../core/layout/app_layout.dart';
@@ -223,6 +224,16 @@ class ProfileView extends StatelessWidget {
                       'Sở thích của tôi',
                       () => _editInterests(context),
                     ),
+                    _menu(
+                      Symbols.report,
+                      'Báo cáo sự cố của tôi',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const IncidentsPage(),
+                        ),
+                      ),
+                    ),
                     _menu(Symbols.shield, 'Đổi mật khẩu', () async {
                       final changed = await Navigator.push<bool>(
                         context,
@@ -268,6 +279,12 @@ class ProfileView extends StatelessWidget {
     final active = profile.subscriptionStatus == 'ACTIVE';
     final package = profile.membershipPackageName?.toUpperCase() ?? '';
     String rank = 'FREE';
+    if (active &&
+        package.isNotEmpty &&
+        !package.contains('CƠ BẢN') &&
+        !package.contains('FREE')) {
+      rank = package.replaceFirst('GÓI ', '');
+    }
     if (active && package.contains('PRO')) rank = 'PRO';
     if (active && package.contains('PLUS')) rank = 'PLUS';
     final rankColor = rank == 'PRO' ? const Color(0xFF7350AA) : kPrimaryAccent;

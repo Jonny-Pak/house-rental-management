@@ -10,12 +10,13 @@ class Notice {
     required this.createdAt,
     this.listingId,
     this.contractId,
+    this.incidentId,
   });
   final int id;
   final String type, title, content;
   final bool read;
   final DateTime? createdAt;
-  final int? listingId, contractId;
+  final int? listingId, contractId, incidentId;
   Notice withRead(bool value) => Notice(
     id: id,
     type: type,
@@ -25,6 +26,7 @@ class Notice {
     createdAt: createdAt,
     listingId: listingId,
     contractId: contractId,
+    incidentId: incidentId,
   );
   factory Notice.fromJson(Map<String, dynamic> json) => Notice(
     id: json['id'] as int,
@@ -35,6 +37,7 @@ class Notice {
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
     listingId: json['listingId'] as int?,
     contractId: json['contractId'] as int?,
+    incidentId: json['incidentId'] as int?,
   );
 }
 

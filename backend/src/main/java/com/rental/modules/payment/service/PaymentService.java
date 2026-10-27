@@ -41,20 +41,28 @@ public class PaymentService {
     public String createPaymentUrl(String userEmail, Short packageId, HttpServletRequest request) {
         java.util.Optional<User> userResult = userRepository.findByEmail(userEmail);
         if (userResult.isEmpty()) {
-            throw new RuntimeException("User not found");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy tài khoản.");
         }
-        User user = userResult.get();
+        User user = userRepository.findForAdminUpdate(userResult.get().getUserId()).orElseThrow();
 
-        java.util.Optional<MembershipPackage> membershipPackageResult = membershipPackageRepository.findById(packageId);
+        java.util.Optional<MembershipPackage> membershipPackageResult = membershipPackageRepository.findForUpdate(packageId);
         if (membershipPackageResult.isEmpty()) {
-            throw new RuntimeException("Membership package not found");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Gói dịch vụ không còn tồn tại. Vui lòng tải lại danh sách.");
         }
         MembershipPackage membershipPackage = membershipPackageResult.get();
+        if (!membershipPackage.isActive()) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Gói dịch vụ đã ngừng bán. Vui lòng tải lại danh sách gói.");
+        }
 
-        String vnp_TxnRef = packageId + "_" + user.getUserId() + "_" + System.currentTimeMillis();
+        String vnp_TxnRef = packageId + "_" + user.getUserId() + "_" + UUID.randomUUID();
 
         PaymentTransaction transaction = new PaymentTransaction();
         transaction.setUser(user);
+        transaction.setPurchasedPackage(membershipPackage);
+        transaction.setPackageNameSnapshot(membershipPackage.getPackageName());
+        transaction.setStandardQuotaSnapshot(membershipPackage.getStandardPostQuota());
+        transaction.setVipQuotaSnapshot(membershipPackage.getVipPostQuota());
+        transaction.setRefreshQuotaSnapshot(membershipPackage.getRefreshQuota());
         transaction.setAmount(membershipPackage.getPrice());
         transaction.setVnpayTransactionRef(vnp_TxnRef);
         transaction.setStatus("PENDING");
@@ -74,7 +82,7 @@ public class PaymentService {
             transaction.setStatus("SUCCESS");
             paymentTransactionRepository.save(transaction);
 
-            addPackageToUser(user, membershipPackage);
+            addPackageToUser(transaction);
 
             return "FREE_SUCCESS";
         }
@@ -148,6 +156,7 @@ public class PaymentService {
 
     @Transactional
     public boolean processVnPayReturn(Map<String, String> vnpayParams) {
+        vnpayParams = new HashMap<>(vnpayParams);
         String vnp_SecureHash = vnpayParams.get("vnp_SecureHash");
         vnpayParams.remove("vnp_SecureHash");
         vnpayParams.remove("vnp_SecureHashType");
@@ -174,57 +183,49 @@ public class PaymentService {
         }
 
         String signValue = vnPayConfig.hmacSHA512(vnPayConfig.getVnp_HashSecret(), hashData.toString());
-        if (!signValue.equals(vnp_SecureHash)) {
+        if (signValue.isEmpty() || !signValue.equals(vnp_SecureHash)) {
             return false;
         }
 
         String vnp_TxnRef = vnpayParams.get("vnp_TxnRef");
-        PaymentTransaction transaction = paymentTransactionRepository.findByVnpayTransactionRef(vnp_TxnRef)
-                .orElse(null);
-
-        if (transaction == null) {
-            return false;
-        }
-
-        String responseCode = vnpayParams.get("vnp_ResponseCode");
-        if ("00".equals(responseCode)) {
+        PaymentTransaction transaction = paymentTransactionRepository.findForUpdate(vnp_TxnRef).orElse(null);
+        if (transaction == null || transaction.getPurchasedPackage() == null || transaction.getStandardQuotaSnapshot() == null
+            || transaction.getVipQuotaSnapshot() == null || transaction.getRefreshQuotaSnapshot() == null) return false;
+        String paidAmount = vnpayParams.get("vnp_Amount");
+        if (paidAmount == null || !paidAmount.matches("[0-9]{1,18}")
+            || new BigDecimal(paidAmount).compareTo(transaction.getAmount().multiply(new BigDecimal(100))) != 0) return false;
+        if ("SUCCESS".equals(transaction.getStatus())) return true;
+        if (!"PENDING".equals(transaction.getStatus())) return false;
+        if ("00".equals(vnpayParams.get("vnp_ResponseCode"))
+            && (vnpayParams.get("vnp_TransactionStatus") == null || "00".equals(vnpayParams.get("vnp_TransactionStatus")))) {
+            addPackageToUser(transaction);
             transaction.setStatus("SUCCESS");
             paymentTransactionRepository.save(transaction);
-
-            String[] parts = vnp_TxnRef.split("_");
-            if (parts.length >= 2) {
-                Short packageId = Short.valueOf(parts[0]);
-                MembershipPackage pkg = membershipPackageRepository.findById(packageId).orElse(null);
-                if (pkg != null) {
-                    addPackageToUser(transaction.getUser(), pkg);
-                }
-            }
             return true;
-        } else {
-            transaction.setStatus("FAILED");
-            paymentTransactionRepository.save(transaction);
-            return false;
         }
+        transaction.setStatus("FAILED");
+        paymentTransactionRepository.save(transaction);
+        return false;
     }
 
-    private void addPackageToUser(User user, MembershipPackage membershipPackage) {
-        UserSubscription subscription = userSubscriptionRepository.findByUser(user)
-                .orElse(new UserSubscription());
+    private void addPackageToUser(PaymentTransaction payment) {
+        User user = userRepository.findForAdminUpdate(payment.getUser().getUserId()).orElseThrow();
+        UserSubscription subscription = userSubscriptionRepository.findByUser(user).orElse(new UserSubscription());
         subscription.setUser(user);
-        subscription.setMembershipPackage(membershipPackage);
+        subscription.setMembershipPackage(payment.getPurchasedPackage());
+        subscription.setPackageNameSnapshot(payment.getPackageNameSnapshot());
         subscription.setPurchasedAt(LocalDateTime.now());
-        subscription.setRemainingStandardQuota((short) (safeShort(subscription.getRemainingStandardQuota()) + safeShort(membershipPackage.getStandardPostQuota())));
-        subscription.setRemainingVipQuota((short) (safeShort(subscription.getRemainingVipQuota()) + safeShort(membershipPackage.getVipPostQuota())));
-        subscription.setRemainingRefreshQuota((short) (safeShort(subscription.getRemainingRefreshQuota()) + safeShort(membershipPackage.getRefreshQuota())));
+        subscription.setRemainingStandardQuota(addQuota(subscription.getRemainingStandardQuota(), payment.getStandardQuotaSnapshot()));
+        subscription.setRemainingVipQuota(addQuota(subscription.getRemainingVipQuota(), payment.getVipQuotaSnapshot()));
+        subscription.setRemainingRefreshQuota(addQuota(subscription.getRemainingRefreshQuota(), payment.getRefreshQuotaSnapshot()));
         subscription.setStatus("ACTIVE");
         subscription.setQuotaResetAt(LocalDateTime.now().plusDays(30));
         userSubscriptionRepository.save(subscription);
     }
 
-    private short safeShort(Short val) {
-        if (val == null) {
-            return 0;
-        }
-        return val;
+    private int addQuota(Integer remaining, Short purchased) {
+        int current = remaining == null ? 0 : remaining;
+        int extra = purchased == null ? 0 : purchased;
+        return Math.addExact(current, extra);
     }
 }

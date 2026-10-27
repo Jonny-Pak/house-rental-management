@@ -71,6 +71,20 @@ public class NotificationService {
         }
     }
 
+    public void sendIncident(Long userId, String type, String title, String content, Long incidentId) {
+        String message = content;
+        if (message.length() > 500) message = message.substring(0, 497) + "...";
+        Notification notification = new Notification(userId, type, title, message, null, null);
+        notification.setIncidentId(incidentId);
+        notifications.save(notification);
+    }
+
+    public void notifyIncidentAdmins(Long incidentId, String title, String content) {
+        for (com.rental.modules.user.domain.entity.User admin : users.findByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)) {
+            if (Boolean.TRUE.equals(admin.getIsVerified())) sendIncident(admin.getUserId(), "INCIDENT_CREATED", title, content, incidentId);
+        }
+    }
+
     public int broadcast(String title, String content) {
         var recipients = users.findVerifiedIds(UserStatus.ACTIVE);
         for (Long id : recipients) send(id, "SYSTEM", title.trim(), content.trim(), null, null);

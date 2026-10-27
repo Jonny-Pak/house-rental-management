@@ -1,0 +1,3 @@
+package com.rental.modules.incident.dto;
+import java.util.List;
+public record IncidentPage(List<IncidentResponse> items, long total, int page, int totalPages) {}

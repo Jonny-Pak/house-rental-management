@@ -18,6 +18,6 @@ public class MembershipPackageService {
 
     @Transactional(readOnly = true)
     public List<MembershipPackage> getAllPackages() {
-        return membershipPackageRepository.findAll();
+        return membershipPackageRepository.findByActiveTrueOrderByPriceAscIdAsc();
     }
 }

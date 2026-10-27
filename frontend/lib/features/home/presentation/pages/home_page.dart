@@ -1,3 +1,5 @@
+import '../../../incident/data/incident_repository.dart';
+import '../../../incident/presentation/incidents_page.dart';
 import '../../../content/presentation/system_content_page.dart';
 import '../../../content/data/repositories/system_content_repository.dart';
 import '../../../notification/presentation/notification_store.dart';
@@ -28,8 +30,10 @@ class HomePage extends StatelessWidget {
     this.onMenu,
     this.onTabSelected,
     this.contentRepository,
+    this.incidentRepository,
   });
   final SystemContentRepository? contentRepository;
+  final IncidentRepository? incidentRepository;
   final VoidCallback? onMenu;
   final ValueChanged<int>? onTabSelected;
 
@@ -172,7 +176,10 @@ class HomePage extends StatelessWidget {
       Symbols.report,
       () => _open(
         context,
-        SystemContentPage(slug: 'support', repository: contentRepository),
+        IncidentsPage(
+          contentRepository: contentRepository,
+          repository: incidentRepository,
+        ),
       ),
     ),
     _Action(

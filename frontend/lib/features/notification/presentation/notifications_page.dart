@@ -1,3 +1,5 @@
+import '../../incident/data/incident_repository.dart';
+import '../../incident/presentation/incident_detail_page.dart';
 import '../../admin/presentation/pages/admin_dashboard_page.dart';
 
 import 'package:flutter/material.dart';
@@ -15,9 +17,15 @@ import '../data/notification_repository.dart';
 import 'notification_store.dart';
 
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key, this.store, this.admin = false});
+  const NotificationsPage({
+    super.key,
+    this.store,
+    this.admin = false,
+    this.incidentRepository,
+  });
   final NotificationStore? store;
   final bool admin;
+  final IncidentRepository? incidentRepository;
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
@@ -65,6 +73,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget? _destination(Notice notice) {
+    if (notice.incidentId != null) {
+      return IncidentDetailPage(
+        id: notice.incidentId!,
+        admin: widget.admin,
+        repository: widget.incidentRepository,
+      );
+    }
     if (notice.contractId != null) {
       return ContractDetailPage(
         id: notice.contractId!,
@@ -105,7 +120,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
                 child: Text(
-                  notice.contractId != null ? 'Xem hợp đồng' : 'Xem tin đăng',
+                  notice.incidentId != null
+                      ? 'Xem báo cáo'
+                      : notice.contractId != null
+                      ? 'Xem hợp đồng'
+                      : 'Xem tin đăng',
                 ),
               ),
           ],

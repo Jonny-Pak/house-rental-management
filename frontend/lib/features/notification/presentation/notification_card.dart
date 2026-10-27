@@ -17,6 +17,7 @@ class NotificationCard extends StatelessWidget {
   final ValueChanged<String> onAction;
 
   IconData _icon() {
+    if (notice.type.startsWith('INCIDENT')) return Icons.support_agent_outlined;
     if (notice.type.startsWith('CONTRACT')) return Icons.description_outlined;
     if (notice.type == 'SYSTEM') return Icons.campaign_outlined;
     return Icons.home_work_outlined;

@@ -1,5 +1,7 @@
 class MembershipPackage {
   final int id;
+  final bool active;
+  final int version;
   final String packageName;
   final double price;
   final int standardPostQuota;
@@ -15,6 +17,8 @@ class MembershipPackage {
     required this.vipPostQuota,
     required this.refreshQuota,
     this.description,
+    this.active = true,
+    this.version = 0,
   });
 
   factory MembershipPackage.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,8 @@ class MembershipPackage {
       vipPostQuota: json['vipPostQuota'] as int,
       refreshQuota: json['refreshQuota'] as int,
       description: json['description'] as String?,
+      active: json['active'] != false,
+      version: (json['version'] as num?)?.toInt() ?? 0,
     );
   }
 }

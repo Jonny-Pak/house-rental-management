@@ -31,6 +31,13 @@ public class MembershipPackage {
     @Column(length = 255)
     private String description;
 
+    @Column(nullable = false)
+    private boolean active = true;
+    @Version private Long version;
+    public boolean isActive() { return active; }
+    public void setActive(boolean value) { active = value; }
+    public Long getVersion() { return version; }
+
     public MembershipPackage() {}
     public MembershipPackage(Short id, String packageName, BigDecimal price, Short standardPostQuota, Short vipPostQuota, Short refreshQuota, String description) {
         this.id = id;

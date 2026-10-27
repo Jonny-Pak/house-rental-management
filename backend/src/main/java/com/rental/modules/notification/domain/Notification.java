@@ -17,6 +17,10 @@ public class Notification {
     @Column(name = "is_read", nullable = false) private boolean read;
     @Column(name = "created_at") private LocalDateTime createdAt;
 
+    @Column(name = "incident_id") private Long incidentId;
+    public Long getIncidentId() { return incidentId; }
+    public void setIncidentId(Long value) { incidentId = value; }
+
     public Notification() {}
     public Notification(Long userId, String type, String title, String content, Long listingId, Long contractId) {
         this.userId = userId; this.type = type; this.title = title; this.content = content;

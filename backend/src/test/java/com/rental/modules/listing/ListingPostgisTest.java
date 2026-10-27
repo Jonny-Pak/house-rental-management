@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -74,6 +74,110 @@ class ListingPostgisTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP SCHEMA " + SCHEMA + " CASCADE");
         }
+    }
+
+    @Autowired com.rental.modules.subscription.service.AdminPackageService adminPackages;
+    @Autowired com.rental.modules.subscription.service.MembershipPackageService memberPackages;
+    @Autowired com.rental.modules.payment.service.PaymentService payments;
+    @Autowired com.rental.modules.payment.config.VnPayConfig vnPay;
+    @Autowired com.rental.modules.subscription.repository.UserSubscriptionRepository subscriptions;
+
+    @Test void adminPackageCrudVisibilityVersionsAndPurchasedRightsUseRealData() {
+        var request = new com.rental.modules.subscription.dto.SavePackageRequest("Gói thử", BigDecimal.ZERO, 10, 2, 3, "Quyền lợi thử", true, null);
+        var item = adminPackages.create(request);
+        Short id = item.getId(); Long version = item.getVersion();
+        assertTrue(memberPackages.getAllPackages().stream().anyMatch(p -> p.getId().equals(id)));
+        var hidden = adminPackages.changeStatus(id, false, version);
+        assertFalse(memberPackages.getAllPackages().stream().anyMatch(p -> p.getId().equals(id)));
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminPackages.changeStatus(id, true, version)).getStatusCode().value());
+        var enabled = adminPackages.changeStatus(id, true, hidden.getVersion());
+        User buyer = user("packageBuyer", Role.MEMBER);
+        assertEquals("FREE_SUCCESS", payments.createPaymentUrl(buyer.getEmail(), id, null));
+        var owned = subscriptions.findByUser(buyer).orElseThrow();
+        assertEquals(10, owned.getRemainingStandardQuota()); assertEquals("Gói thử", owned.getPackageNameSnapshot());
+        var edited = adminPackages.update(id, new com.rental.modules.subscription.dto.SavePackageRequest("Gói sửa", new BigDecimal("50000"), 20, 4, 5, "Đã sửa", true, enabled.getVersion()));
+        assertEquals(10, owned.getRemainingStandardQuota()); assertEquals("Gói thử", owned.getPackageNameSnapshot());
+        assertEquals("Gói thử", userService.getMyProfile(buyer.getEmail()).getMembershipPackageName());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminPackages.delete(id, edited.getVersion())).getStatusCode().value());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("gói sửa", BigDecimal.ZERO, 1, 0, 0, "", true, null))).getStatusCode().value());
+        var unused = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("Gói bỏ", BigDecimal.ZERO, 1, 0, 0, "", false, null));
+        adminPackages.delete(unused.getId(), unused.getVersion());
+        assertEquals(0, adminPackages.list("Gói bỏ", null, 0).total());
+        assertEquals(1, adminPackages.list("Gói sửa", true, 0).total());
+        assertEquals(0, adminPackages.list("%", null, 0).total());
+    }
+
+    @Test void pendingPaymentKeepsPackageSnapshotAndDuplicateCallbackDoesNotGrantTwice() {
+        User buyer = user("pendingPackage", Role.MEMBER);
+        var item = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("Gói chờ", new BigDecimal("50000"), 8, 2, 3, "", true, null));
+        var http = new org.springframework.mock.web.MockHttpServletRequest(); http.setRemoteAddr("127.0.0.1");
+        payments.createPaymentUrl(buyer.getEmail(), item.getId(), http);
+        String ref = jdbc.queryForObject("SELECT vnpay_transaction_ref FROM payment_transactions WHERE user_id=?", String.class, buyer.getUserId());
+        var changed = adminPackages.update(item.getId(), new com.rental.modules.subscription.dto.SavePackageRequest("Gói khác", new BigDecimal("90000"), 99, 8, 9, "", false, item.getVersion()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> payments.createPaymentUrl(buyer.getEmail(), item.getId(), http));
+        java.util.Map<String,String> callback = new java.util.HashMap<>();
+        callback.put("vnp_Amount", "5000000"); callback.put("vnp_ResponseCode", "00"); callback.put("vnp_TxnRef", ref);
+        callback.put("vnp_SecureHash", vnPay.hmacSHA512(vnPay.getVnp_HashSecret(), "vnp_Amount=5000000&vnp_ResponseCode=00&vnp_TxnRef=" + ref));
+        assertTrue(payments.processVnPayReturn(callback)); assertTrue(payments.processVnPayReturn(callback));
+        var subscription = subscriptions.findByUser(buyer).orElseThrow();
+        assertEquals(8, subscription.getRemainingStandardQuota()); assertEquals(2, subscription.getRemainingVipQuota());
+        assertEquals("Gói chờ", subscription.getPackageNameSnapshot());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM payment_transactions WHERE user_id=? AND status='SUCCESS'", Long.class, buyer.getUserId()));
+    }
+
+    @Autowired com.rental.modules.incident.service.IncidentService incidents;
+
+    @Test void incidentCreationPrivacyIdempotencyProcessingAndNotificationsWork() {
+        User reporter = user("incidentReporter", Role.MEMBER);
+        User other = user("incidentOther", Role.MEMBER);
+        User admin = user("incidentAdmin", Role.ADMIN);
+        var request = new com.rental.modules.incident.dto.CreateIncidentRequest("request-1", "  Không xem được bản đồ  ", "TECHNICAL", "  Mở bản đồ thì không tải dữ liệu.  ");
+        var created = incidents.create(reporter.getUserId(), request);
+        assertEquals("OPEN", created.status()); assertEquals(1, created.history().size());
+        assertEquals("Không xem được bản đồ", created.title());
+        assertEquals(1, incidents.search(reporter.getUserId(), "bản đồ", null, null, 0).total());
+        assertEquals(0, incidents.search(other.getUserId(), "", null, null, 0).total());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.detail(created.id(), other.getUserId())).getStatusCode().value());
+        assertEquals(created.id(), incidents.create(reporter.getUserId(), request).id());
+        assertEquals(1, incidents.search(reporter.getUserId(), "", null, null, 0).total());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE incident_id=? AND user_id=? AND notification_type='INCIDENT_CREATED'", Long.class, created.id(), admin.getUserId()));
+        assertEquals(429, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.create(reporter.getUserId(), new com.rental.modules.incident.dto.CreateIncidentRequest("request-2", "Khác", "OTHER", "Mô tả khác"))).getStatusCode().value());
+        var pending = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("IN_PROGRESS", "Đã tiếp nhận, đang kiểm tra.", created.version()));
+        assertEquals("IN_PROGRESS", pending.status()); assertEquals(2, pending.history().size());
+        assertTrue(pending.version() > created.version());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Cũ", created.version()))).getStatusCode().value());
+        var resolved = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Đã khắc phục lỗi bản đồ.", pending.version()));
+        assertEquals("RESOLVED", resolved.status()); assertEquals(3, incidents.detail(created.id(), reporter.getUserId()).history().size());
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE incident_id=? AND user_id=? AND notification_type='INCIDENT_UPDATED'", Long.class, created.id(), reporter.getUserId()));
+        assertEquals(1, incidents.search(null, "", "RESOLVED", "TECHNICAL", 0).total());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("REJECTED", "Không hợp lệ", resolved.version())));
+        var reopened = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("IN_PROGRESS", "Mở lại để kiểm tra thêm.", resolved.version()));
+        assertEquals(4, reopened.history().size()); assertEquals("IN_PROGRESS", reopened.status());
+        assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.update(created.id(), other.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Giả mạo", reopened.version()))).getStatusCode().value());
+    }
+
+    @Test void incidentSearchPaginationAndRejectedRepliesRemainVisibleToReporter() {
+        User reporter = user("incidentPages", Role.MEMBER), admin = user("incidentPagesAdmin", Role.ADMIN);
+        Long first = null;
+        for (int i = 0; i < 22; i++) {
+            Long id = jdbc.queryForObject("INSERT INTO incident_reports(reporter_id,request_key,title,category,description) VALUES (?,?,'Lỗi kiểm thử','OTHER','Nội dung') RETURNING id", Long.class, reporter.getUserId(), "page-" + i);
+            if (first == null) first = id;
+        }
+        assertEquals(22, incidents.search(reporter.getUserId(), "kiểm thử", null, null, 0).total());
+        assertEquals(20, incidents.search(reporter.getUserId(), "", null, null, 0).items().size());
+        assertEquals(2, incidents.search(reporter.getUserId(), "", null, null, 1).items().size());
+        assertEquals(0, incidents.search(reporter.getUserId(), "%", null, null, 0).total());
+        var detail = incidents.detail(first, reporter.getUserId());
+        var rejected = incidents.update(first, admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("REJECTED", "Báo cáo trùng, vui lòng theo dõi mã trước đó.", detail.version()));
+        assertEquals("REJECTED", rejected.status()); assertEquals(1, rejected.history().size());
+        assertTrue(incidents.detail(first, reporter.getUserId()).history().getFirst().message().contains("trùng"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.search(null, "", "INVALID", null, 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.search(null, "", null, "INVALID", 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.search(null, "", null, null, -1));
     }
 
     @Autowired com.rental.modules.user.service.PasswordService passwords;

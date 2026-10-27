@@ -16,6 +16,7 @@ abstract final class R {
   static const users = '/users';
   static const areas = '/areas';
   static const content = '/content';
+  static const incidents = '/incidents';
   static const contracts = '/contracts';
   static const memberships = '/memberships';
   static const settings = '/settings';
@@ -45,8 +46,9 @@ class NavItem {
     R.users => 'Quản lý người dùng',
     R.areas => 'Khu vực hành chính',
     R.content => 'Nội dung hệ thống',
+    R.incidents => 'Báo cáo sự cố',
     R.contracts => 'Hợp đồng thuê',
-    R.memberships => 'Gói thành viên',
+    R.memberships => 'Gói dịch vụ',
     R.settings => 'Cài đặt',
     R.profile => l.navProfile,
     _ => label,
@@ -76,9 +78,10 @@ const kNavGroups = <NavGroup>[
     NavItem('Quản lý người dùng', R.users, Icons.people_outline),
     NavItem('Khu vực hành chính', R.areas, Icons.location_city_outlined),
     NavItem('Hợp đồng thuê', R.contracts, Icons.description_outlined),
-    NavItem('Gói thành viên', R.memberships, Icons.card_membership_outlined),
+    NavItem('Gói dịch vụ', R.memberships, Icons.card_membership_outlined),
   ]),
   NavGroup('System', [
+    NavItem('Báo cáo sự cố', R.incidents, Icons.support_agent_outlined),
     NavItem('Nội dung hệ thống', R.content, Icons.article_outlined),
     NavItem('Cài đặt', R.settings, Icons.settings_outlined),
     NavItem('Profile', R.profile, Icons.person_outline, inSidebar: false),

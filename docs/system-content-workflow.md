@@ -35,6 +35,6 @@ Mỗi lần cập nhật có phiên bản. Khi hai Admin cùng sửa, yêu cầu
 - Gỡ xuất bản; app phải thông báo nội dung chưa công bố. Xuất bản lại phải xem được.
 - Mở cùng một trang ở hai phiên Admin, lưu ở phiên thứ nhất, phiên thứ hai phải báo xung đột và giữ nội dung đang soạn.
 - Thử tiêu đề/nội dung trống, chữ tiếng Việt, nhiều đoạn dài, màn hình hẹp và chữ phóng to.
-- Mục Hướng dẫn báo sự cố chỉ quản lý bài hướng dẫn; không tự tạo chức năng gửi báo cáo hay gửi email.
+- Mục Hướng dẫn báo sự cố quản lý bài hướng dẫn; chức năng gửi và xử lý báo cáo nằm riêng tại Báo cáo sự cố (xem incidents-workflow.md).
 
 Kiểm thử backend dùng schema PostGIS riêng; kiểm thử giao diện dùng dữ liệu giả, không sửa nội dung thật đang sử dụng.

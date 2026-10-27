@@ -10,4 +10,5 @@ import java.util.Optional;
 @Repository
 public interface UserSubscriptionRepository extends JpaRepository<UserSubscription, Long> {
     Optional<UserSubscription> findByUser(User user);
+    boolean existsByMembershipPackageId(Short id);
 }

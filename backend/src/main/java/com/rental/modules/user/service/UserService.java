@@ -91,7 +91,9 @@ public class UserService {
         UserSubscription subscription = userSubscriptionRepository.findByUser(user).orElse(null);
         if (subscription != null) {
             response.setSubscriptionStatus(subscription.getStatus());
-            if (subscription.getMembershipPackage() != null) {
+            if (subscription.getPackageNameSnapshot() != null) {
+                response.setMembershipPackageName(subscription.getPackageNameSnapshot());
+            } else if (subscription.getMembershipPackage() != null) {
                 response.setMembershipPackageName(subscription.getMembershipPackage().getPackageName());
             }
             response.setRemainingStandardQuota(subscription.getRemainingStandardQuota());

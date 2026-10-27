@@ -19,24 +19,12 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    public record CreatePaymentRequest(@jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(32767) Integer packageId) {}
     @PostMapping("/create")
-    @SuppressWarnings("all")
     public ResponseEntity<Map<String, String>> createPayment(
-            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails,
-            @RequestBody Map<String, Object> requestBody,
-            HttpServletRequest request) {
-
-        Object packageIdObj = requestBody.get("packageId");
-        Short packageId = null;
-        if (packageIdObj instanceof Number) {
-            packageId = ((Number) packageIdObj).shortValue();
-        } else if (packageIdObj instanceof String) {
-            packageId = Short.valueOf((String) packageIdObj);
-        } else {
-            throw new IllegalArgumentException("Invalid packageId");
-        }
-
-        String paymentUrl = paymentService.createPaymentUrl(userDetails.getUsername(), packageId, request);
+        @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails,
+        @jakarta.validation.Valid @RequestBody CreatePaymentRequest body, HttpServletRequest request) {
+        String paymentUrl = paymentService.createPaymentUrl(userDetails.getUsername(), body.packageId().shortValue(), request);
         return ResponseEntity.ok(Map.of("paymentUrl", paymentUrl));
     }
 
