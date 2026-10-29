@@ -55,6 +55,9 @@ class _CreateIncidentPageState extends State<CreateIncidentPage> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
     child: Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? const Color(0xFFF8F9FB)
+          : null,
       appBar: AppBar(title: const Text('Gửi báo cáo sự cố')),
       body: AppContent(
         maxWidth: AppLayout.formWidth,
@@ -65,15 +68,9 @@ class _CreateIncidentPageState extends State<CreateIncidentPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
-                  Icons.support_agent,
-                  size: 46,
-                  color: Color(0xFFD76B28),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Hãy mô tả sự cố và các bước bạn đã thực hiện để Admin có thể hỗ trợ.',
-                  style: TextStyle(height: 1.6),
+                const IncidentHeader(
+                  title: 'Chúng tôi luôn sẵn sàng hỗ trợ',
+                  description: 'Hãy mô tả sự cố và các bước bạn đã thực hiện để Admin có thể hỗ trợ.',
                 ),
                 const SizedBox(height: 22),
                 if (_error != null) ...[

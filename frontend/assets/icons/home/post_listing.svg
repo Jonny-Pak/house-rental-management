@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
-<g stroke="#92512E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<rect x="19" y="14" width="48" height="63" rx="7" fill="#FFF0DF"/>
+<g stroke="#9A4C24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="19" y="14" width="48" height="63" rx="7" fill="#FFF2E7"/>
 <path d="M28 25h27M28 33h18" fill="none"/>
-<path d="m28 53 15-12 15 12v17H28Z" fill="#FFD6B3"/>
+<path d="m28 53 15-12 15 12v17H28Z" fill="#FFD8B5"/>
 <path d="m24 54 19-16 19 16" fill="none"/>
 <rect x="39" y="57" width="9" height="13" rx="2" fill="#FFFAF4"/>
-<circle cx="68" cy="68" r="17" fill="#FF914D"/>
+<circle cx="68" cy="68" r="17" fill="#E97A32"/>
 <path d="M68 60v16M60 68h16" stroke="#FFFFFF" stroke-width="3"/>
-<path d="M76 19v8M72 23h8" stroke="#FFB77F"/>
-<circle cx="15" cy="68" r="3" fill="#FFE5BE" stroke="none"/>
+<path d="M76 19v8M72 23h8" stroke="#F9B375"/>
+<circle cx="15" cy="68" r="3" fill="#FFE6C9" stroke="none"/>
 </g>
 </svg>

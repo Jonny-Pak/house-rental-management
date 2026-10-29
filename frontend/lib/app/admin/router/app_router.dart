@@ -16,7 +16,7 @@ import '../../../features/admin/presentation/screens/system/profile_screen.dart'
 import '../../../features/admin/presentation/screens/system/settings_screen.dart';
 import '../../../shared/admin/layout/app_shell.dart';
 import '../../../features/admin/presentation/pages/admin_dashboard_page.dart';
-import '../../../features/contract/presentation/pages/my_contracts_page.dart';
+import '../../../features/admin/presentation/pages/admin_contracts_page.dart';
 import '../../../features/admin/presentation/pages/admin_packages_page.dart';
 import '../auth/session.dart';
 import 'routes.dart';
@@ -83,7 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: R.contracts,
-            builder: (_, _) => const MyContractsPage(isLandlord: true),
+            builder: (_, _) => const AdminContractsPage(),
           ),
           GoRoute(
             path: R.memberships,

@@ -672,8 +672,8 @@ class _ActionIcon extends StatelessWidget {
       width: round ? 62 : 72,
       height: round ? 62 : 72,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFAF5),
-        border: Border.all(color: const Color(0xFFF3DDCD)),
+        color: HomeFeatureIcon(icon: action.icon).backgroundColor,
+        border: Border.all(color: const Color(0x0F26384A)),
         borderRadius: BorderRadius.circular(20),
       ),
       alignment: Alignment.center,

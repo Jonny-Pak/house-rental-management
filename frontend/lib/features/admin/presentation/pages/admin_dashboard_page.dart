@@ -859,13 +859,13 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD85D15).withValues(alpha: 0.1),
+                      color: const Color(0xFF15803D).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.lock_person_outlined,
                       size: 40,
-                      color: Color(0xFFD85D15),
+                      color: Color(0xFF15803D),
                     ),
                   ),
                   const SizedBox(height: KiteSpace.lg),

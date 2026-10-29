@@ -8,6 +8,18 @@ class HomeFeatureIcon extends StatelessWidget {
   final IconData icon;
   final double size;
 
+  Color get backgroundColor => switch (assetName) {
+    'rent_house' || 'guide' => const Color(0xFFF0F8F5),
+    'rent_room' || 'introduction' => const Color(0xFFF0F5FC),
+    'manage_listings' || 'contact' => const Color(0xFFF6F2FC),
+    'contracts' || 'report' => const Color(0xFFFDF2F4),
+    'subscription' => const Color(0xFFFFF8E9),
+    'map' => const Color(0xFFF1F8EF),
+    'assistant' => const Color(0xFFEEF8FC),
+    'rules' => const Color(0xFFFAF4EE),
+    _ => const Color(0xFFFFF5EC),
+  };
+
   String? get assetName => switch (icon) {
     Symbols.post_add => 'post_listing',
     Symbols.home_work => 'rent_house',

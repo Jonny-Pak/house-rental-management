@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kite_ui/shadcn.dart';
 
-/// Accents. Three is deliberate: enough to prove the theming is real, few
-/// enough that every one is checked in both brightnesses before release.
 enum KiteAccent {
-  orange('Orange'),
+  green('Green'),
   slate('Slate'),
   blue('Blue'),
   violet('Violet');
@@ -15,18 +13,18 @@ enum KiteAccent {
   final String label;
 
   ShadColorScheme scheme(Brightness b) => switch ((this, b)) {
-    (KiteAccent.orange, Brightness.light) => const ShadOrangeColorScheme.light(
-        primary: Color(0xFFD85D15),
-        ring: Color(0xFFD85D15),
-        accent: Color(0xFFFFF2EB),
-        accentForeground: Color(0xFFD85D15),
-      ),
-    (KiteAccent.orange, Brightness.dark) => const ShadOrangeColorScheme.dark(
-        primary: Color(0xFFD85D15),
-        ring: Color(0xFFD85D15),
-        accent: Color(0xFF2C1D11),
-        accentForeground: Color(0xFFFFA066),
-      ),
+    (KiteAccent.green, Brightness.light) => const ShadGreenColorScheme.light(
+      primary: Color(0xFF15803D),
+      ring: Color(0xFF15803D),
+      accent: Color(0xFFEDF8F0),
+      accentForeground: Color(0xFF15803D),
+    ),
+    (KiteAccent.green, Brightness.dark) => const ShadGreenColorScheme.dark(
+      primary: Color(0xFF4ADE80),
+      ring: Color(0xFF4ADE80),
+      accent: Color(0xFF142D20),
+      accentForeground: Color(0xFF86E0A1),
+    ),
     (KiteAccent.slate, Brightness.light) => const ShadSlateColorScheme.light(),
     (KiteAccent.slate, Brightness.dark) => const ShadSlateColorScheme.dark(),
     (KiteAccent.blue, Brightness.light) => const ShadBlueColorScheme.light(),
@@ -41,7 +39,7 @@ enum KiteAccent {
 class ThemeState {
   const ThemeState({
     this.mode = ThemeMode.system,
-    this.accent = KiteAccent.orange,
+    this.accent = KiteAccent.green,
   });
 
   final ThemeMode mode;

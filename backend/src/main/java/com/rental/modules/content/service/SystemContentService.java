@@ -52,7 +52,7 @@ public class SystemContentService {
     public AdminContentResponse saveDraft(String slug, ContentRequest request) {
         SystemContent content = findContentForUpdate(slug, request.version());
         content.setTitle(request.title().trim());
-        content.setBody(request.body().trim());
+        content.setBody(ContentHtml.clean(request.body()));
         contents.saveAndFlush(content);
         return AdminContentResponse.from(content);
     }
@@ -60,7 +60,7 @@ public class SystemContentService {
     public AdminContentResponse publish(String slug, ContentRequest request) {
         SystemContent content = findContentForUpdate(slug, request.version());
         content.setTitle(request.title().trim());
-        content.setBody(request.body().trim());
+        content.setBody(ContentHtml.clean(request.body()));
         content.setPublishedTitle(content.getTitle());
         content.setPublishedBody(content.getBody());
         content.setPublished(true);

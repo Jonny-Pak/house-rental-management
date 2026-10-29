@@ -232,7 +232,7 @@ class _AdminPackagesPageState extends State<AdminPackagesPage> {
                   Text(
                     '${NumberFormat.decimalPattern('vi_VN').format(item.price)} đ',
                     style: const TextStyle(
-                      color: Color(0xFFD76B28),
+                      color: Color(0xFF15803D),
                       fontWeight: FontWeight.w700,
                       fontSize: 22,
                     ),

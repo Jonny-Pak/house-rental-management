@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -264,6 +264,21 @@ class ListingPostgisTest {
             () -> contentService.published("about")).getStatusCode().value());
         contentService.publish("about", new com.rental.modules.content.dto.ContentRequest(hidden.title(), hidden.body(), hidden.version()));
         assertEquals(draft.body(), contentService.published("about").body());
+    }
+
+    @Test void formattedContentRoundTripsThroughDraftAndPublication() {
+        var original = contentService.published("guide");
+        var current = contentService.detail("guide");
+        String html = "<h2>Hướng dẫn</h2><p style='color:#337788'>Nội dung <strong>in đậm</strong></p>"
+            + "<table><tr><td>Bảng dữ liệu</td></tr></table><script>alert(1)</script>";
+        var draft = contentService.saveDraft("guide", new com.rental.modules.content.dto.ContentRequest("Hướng dẫn mới", html, current.version()));
+        assertTrue(draft.body().contains("<strong>in đậm</strong>"));
+        assertTrue(draft.body().contains("<table>"));
+        assertFalse(draft.body().contains("script"));
+        assertEquals(original, contentService.published("guide"));
+        var published = contentService.publish("guide", new com.rental.modules.content.dto.ContentRequest(draft.title(), draft.body(), draft.version()));
+        assertEquals(published.body(), contentService.published("guide").body());
+        assertFalse(published.hasDraft());
     }
 
     @Test void hiddenContentStaysHiddenWhenSavingNewDraftAndUnknownPagesReturn404() {
@@ -600,6 +615,64 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.area.service.AreaService areas;
     @Autowired com.rental.modules.property.service.PropertyService properties;
     @Autowired com.rental.modules.favorite.service.ListingFavoriteService favorites;
+    @Autowired com.rental.modules.contract.service.AdminContractService adminContracts;
+    @Test void adminContractSearchPaginationDetailsAndExpiredViewAreReadOnly() {
+        User owner = user("adminleaseowner", Role.MEMBER), tenant = user("adminleasetenant", Role.MEMBER);
+        User other = user("adminleaseother", Role.MEMBER);
+        tenant.setPhoneNumber("0907654321"); users.saveAndFlush(tenant);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Nhà kiểm tra Admin"); request.setListingType("WHOLE_HOUSE");
+        request.setRentPrice(new BigDecimal("4000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("Đường kiểm tra"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/room.jpg"));
+        Long listingId = listings.createListing(owner.getUserId(), request).getId();
+        var listing = entityManager.find(com.rental.modules.listing.domain.entity.Listing.class, listingId);
+        listing.setRentalStatus("RENTED");
+        var today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        com.rental.modules.contract.domain.entity.Contract expired = null;
+        for (int i = 0; i < 23; i++) {
+            var contract = new com.rental.modules.contract.domain.entity.Contract(listing, i == 0 ? other : owner,
+                tenant, today.minusMonths(2), i == 0 ? today.minusDays(1) : today.plusMonths(2),
+                new BigDecimal("4000000"), BigDecimal.ZERO, i == 0 ? "ACTIVE" : "DRAFT", null, java.time.LocalDateTime.now());
+            contract.setContractType(i == 0 ? "ROOM" : i == 22 ? null : "HOUSE");
+            contract.setDetailsJson("{\"landlordName\":\"Tên trên hợp đồng\",\"tenantName\":\"Người thuê thử\",\"tenantPhone\":\"0911111111\"}");
+            contract.setDocumentText("Thỏa thuận gốc của hai bên");
+            entityManager.persist(contract);
+            if (i == 0) expired = contract;
+        }
+        entityManager.flush();
+        Long version = expired.getVersion();
+        long notices = jdbc.queryForObject("select count(*) from notifications", Long.class);
+        var page = adminContracts.search("", "", "", 0);
+        assertEquals(23, page.total()); assertEquals(20, page.items().size());
+        assertEquals(3, adminContracts.search("", "", "", 1).items().size());
+        assertEquals("ADMIN", page.items().get(0).myRole());
+        assertNull(page.items().get(0).documentText()); assertNull(page.items().get(0).details());
+        assertEquals(22, adminContracts.search("", "DRAFT", "HOUSE", 0).total());
+        assertEquals(1, adminContracts.search("", "EXPIRED", "ROOM", 0).total());
+        assertEquals(0, adminContracts.search("", "ACTIVE", "", 0).total());
+        assertEquals(23, adminContracts.search("0911111111", "", "", 0).total());
+        assertEquals(23, adminContracts.search("0907654321", "", "", 0).total());
+        assertEquals(1, adminContracts.search("#" + expired.getId(), "", "", 0).total());
+        assertEquals(0, adminContracts.search("%", "", "", 0).total());
+        var detail = adminContracts.detail(expired.getId());
+        assertEquals("EXPIRED", detail.status()); assertEquals("Tên trên hợp đồng", detail.landlordName());
+        assertEquals("Thỏa thuận gốc của hai bên", detail.documentText());
+        entityManager.flush(); entityManager.refresh(expired); entityManager.refresh(listing);
+        assertEquals("ACTIVE", expired.getStatus()); assertEquals(version, expired.getVersion());
+        assertEquals("RENTED", listing.getRentalStatus());
+        assertEquals(notices, jdbc.queryForObject("select count(*) from notifications", Long.class));
+        final Long inaccessible = expired.getId();
+        assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> leases.getContract(owner.getEmail(), inaccessible)).getStatusCode().value());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminContracts.detail(Long.MAX_VALUE)).getStatusCode().value());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminContracts.search("", "BAD", "", 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminContracts.search("", "", "BAD", 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminContracts.search("", "", "", -1));
+    }
+
     @Autowired com.rental.modules.contract.service.ContractService leases;
 
     @Test void roomContractRequiresCompleteSnapshotAndRejectsOutdatedConsent() {

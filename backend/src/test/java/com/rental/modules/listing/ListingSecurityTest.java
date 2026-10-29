@@ -21,13 +21,30 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.contract.service.AdminContractService adminContracts;
+    @Test void adminContractReadAccessIsSeparateFromMemberActions() throws Exception {
+        for (String path : java.util.List.of("/api/v1/admin/contracts", "/api/v1/admin/contracts/1")) {
+            mvc.perform(get(path)).andExpect(status().isForbidden());
+            mvc.perform(get(path).header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+            mvc.perform(get(path).header("Authorization", "Bearer admin")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"));
+        }
+        verify(adminContracts).search("", "", "", 0);
+        verify(adminContracts).detail(1L);
+        mvc.perform(post("/api/v1/admin/contracts").header("Authorization", "Bearer admin")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(put("/api/v1/admin/contracts/1").header("Authorization", "Bearer admin")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(delete("/api/v1/admin/contracts/1").header("Authorization", "Bearer admin")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(patch("/api/v1/admin/contracts/1/status").header("Authorization", "Bearer admin")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/admin/contracts").header("Authorization", "Bearer admin").param("page", "bad")).andExpect(status().isBadRequest());
+    }
+
     @MockBean com.rental.modules.subscription.service.AdminPackageService adminPackages;
     @MockBean com.rental.modules.payment.service.PaymentService payments;
     @Test void packageManagementIsAdminOnlyAndValidatesPricesQuotasAndVersions() throws Exception {

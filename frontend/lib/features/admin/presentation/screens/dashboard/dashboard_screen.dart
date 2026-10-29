@@ -23,7 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loading = false, _exporting = false;
   String? _error;
   int _page = 0;
-  static const _orange = Color(0xFFD66A2B);
+  static const _accent = Color(0xFF15803D);
   static const _green = Color(0xFF298774);
   final _number = NumberFormat.decimalPattern('vi_VN');
   String _money(num value) => '${_number.format(value)} ₫';
@@ -138,7 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: _orange),
+              Icon(icon, color: _accent),
               const SizedBox(height: 12),
               Text(
                 value,
@@ -236,9 +236,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   LinearProgressIndicator(
                     value: largest == 0 ? 0 : month.value / largest,
                     minHeight: 10,
-                    color: _orange,
+                    color: _accent,
                     borderRadius: BorderRadius.circular(6),
-                    backgroundColor: _orange.withValues(alpha: .1),
+                    backgroundColor: _accent.withValues(alpha: .1),
                   ),
                 ],
               ),

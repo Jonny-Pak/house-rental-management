@@ -92,7 +92,11 @@ class _SystemContentPageState extends State<SystemContentPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Theme.of(context).brightness == Brightness.light
+        ? const Color(0xFFF8F9FB)
+        : null,
     appBar: AppBar(
+      centerTitle: false,
       title: Text(contentPages[widget.slug] ?? 'Thông tin'),
       actions: [
         IconButton(

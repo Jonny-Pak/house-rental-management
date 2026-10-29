@@ -124,23 +124,24 @@ class _IncidentsPageState extends State<IncidentsPage> {
   );
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Theme.of(context).brightness == Brightness.light
+        ? const Color(0xFFF8F9FB)
+        : null,
     appBar: widget.admin
         ? null
         : AppBar(title: const Text('Báo cáo sự cố của tôi')),
     body: AppContent(
-      maxWidth: 1300,
+      maxWidth: widget.admin ? 1300 : 860,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              widget.admin ? 'Xử lý báo cáo sự cố' : 'Cần hỗ trợ điều gì?',
-              style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.admin
+            IncidentHeader(
+              title: widget.admin
+                  ? 'Xử lý báo cáo sự cố'
+                  : 'Cần hỗ trợ điều gì?',
+              description: widget.admin
                   ? 'Tiếp nhận, phản hồi và theo dõi tiến độ hỗ trợ người dùng.'
                   : 'Gửi báo cáo và theo dõi phản hồi từ Admin tại đây.',
             ),
@@ -253,7 +254,11 @@ class _IncidentsPageState extends State<IncidentsPage> {
                 const IncidentPanel(
                   child: Column(
                     children: [
-                      Icon(Icons.inbox_outlined, size: 40),
+                      Icon(
+                        Icons.mark_chat_read_outlined,
+                        size: 48,
+                        color: Color(0xFF589B90),
+                      ),
                       SizedBox(height: 14),
                       Text('Chưa có báo cáo phù hợp.'),
                     ],

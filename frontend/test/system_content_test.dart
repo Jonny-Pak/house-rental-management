@@ -450,4 +450,31 @@ void main() {
     await press(tester, 'Lưu nháp');
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+    'Formatted content displays headings, lists and tables on narrow screens',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ContentArticle(
+                slug: 'guide',
+                title: 'Hướng dẫn',
+                body: '<h2>Tiêu đề mục</h2><p style="color:#337788">Nội dung <strong>in đậm</strong></p><ul><li>Mục một</li></ul><figure><table><tbody><tr><td>Ô đầu</td><td>Ô cuối</td></tr></tbody></table></figure>',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Tiêu đề mục', findRichText: true),
+        findsWidgets,
+      );
+      expect(find.textContaining('Ô đầu', findRichText: true), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

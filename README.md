@@ -9,7 +9,9 @@
 - `docs/architecture.md`: quy ước tổ chức mã nguồn và ranh giới module.
 - `docs/listing-workflow.md`: hướng dẫn đăng tin, Admin duyệt, bản đồ và quản lý tin.
 - `docs/incidents-workflow.md`: người dùng gửi báo cáo sự cố, Admin xử lý và phản hồi.
+- `docs/admin-contracts-workflow.md`: Admin tra cứu toàn bộ hợp đồng và xem chi tiết.
 - `docs/admin-packages-workflow.md`: Admin quản lý gói và bảo toàn thông tin gói đã mua.
+- `docs/ckeditor-content.md`: soạn thảo nội dung định dạng bằng CKEditor và cấu hình giấy phép.
 - `docker-compose.yml`: môi trường cơ sở dữ liệu PostGIS cục bộ.
 
 ## Chạy cục bộ

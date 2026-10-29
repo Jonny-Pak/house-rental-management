@@ -5,6 +5,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../content/data/models/system_content.dart';
 import '../../../content/data/repositories/system_content_repository.dart';
 import '../../../content/presentation/content_article.dart';
+import '../../../content/presentation/content_editor.dart';
 import '../widgets/admin_user_badges.dart' show AdminUserBadge;
 
 class AdminContentPage extends StatefulWidget {
@@ -24,7 +25,7 @@ class AdminContentPageState extends State<AdminContentPage> {
   SystemContent? _selected;
   bool _busy = false;
   String? _error;
-  static const _accent = Color(0xFFD66A2B);
+  static const _accent = Color(0xFF15803D);
   bool get _dirty {
     final content = _selected;
     if (content == null) {
@@ -489,25 +490,14 @@ class AdminContentPageState extends State<AdminContentPage> {
                   : null,
             ),
             const SizedBox(height: 14),
-            TextFormField(
-              key: const ValueKey('content-body'),
+            ContentEditor(
               controller: _body,
               enabled: !_busy,
-              maxLength: 20000,
-              minLines: 10,
-              maxLines: 18,
-              keyboardType: TextInputType.multiline,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: _input('Nội dung'),
-              style: const TextStyle(fontSize: 14, height: 1.6),
               onChanged: (_) => setState(() {}),
-              validator: (value) => value == null || value.trim().isEmpty
-                  ? 'Vui lòng nhập nội dung.'
-                  : null,
             ),
             const SizedBox(height: 6),
             Text(
-              'Dùng xuống dòng để chia đoạn. Bạn có thể xem trước trước khi xuất bản.',
+              'Định dạng nội dung bằng thanh công cụ. Xem trước trước khi xuất bản.',
               style: TextStyle(fontSize: 12, color: _muted),
             ),
             if (_dirty || (content.published && content.hasDraft))

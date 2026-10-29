@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="vendor/ckeditor5/ckeditor5.css">
+<style>
+body{margin:0;background:#f3f5f8;font-family:Arial,sans-serif;color:#263448}
+.ck-editor{height:100%;--ck-border-radius:8px;--ck-color-base-border:#dce1e9}
+.ck-editor__editable_inline{min-height:470px;max-height:470px;padding:24px 32px!important;background:white}
+.ck-content{font-size:15px;line-height:1.8}.ck-toolbar{padding:8px!important}
+@media(max-width:480px){.ck-editor__editable_inline{padding:16px!important}}
+</style></head><body><div id="editor"></div>
+<script type="module">
+import {ClassicEditor, Essentials, Paragraph, Heading, Bold, Italic, Underline,
+ Strikethrough, Font, Alignment, List, Indent, IndentBlock, BlockQuote,
+ Table, TableToolbar, Link, RemoveFormat, HorizontalLine, PasteFromOffice, vi} from './vendor/ckeditor5/ckeditor5.js';
+let editor, initializing, original = '', syncing = false, revision = 0;
+const send = data => parent.postMessage(JSON.stringify(data), location.origin);
+const toHtml = value => {
+ if (/<[a-z][\s\S]*>/i.test(value)) return value;
+ const div = document.createElement('div'); div.textContent = value;
+ return '<p>' + div.innerHTML.replace(/\n/g, '<br>') + '</p>';
+};
+window.addEventListener('message', async event => {
+ if(event.origin !== location.origin || event.source !== parent || typeof event.data !== 'string') return;
+ const data = JSON.parse(event.data);
+ if(data.type !== 'set') return;
+ const current = ++revision;
+ try {
+  if(!initializing) {
+   initializing = ClassicEditor.create(document.querySelector('#editor'), {
+    licenseKey: data.licenseKey, language: 'vi', translations: [vi],
+    plugins: [Essentials, Paragraph, Heading, Bold, Italic, Underline, Strikethrough,
+      Font, Alignment, List, Indent, IndentBlock, BlockQuote, Table, TableToolbar,
+      Link, RemoveFormat, HorizontalLine, PasteFromOffice],
+    toolbar: {items: ['undo','redo','|','heading','|','fontFamily','fontSize',
+      'fontColor','fontBackgroundColor','|','bold','italic','underline','strikethrough',
+      '|','alignment','bulletedList','numberedList','outdent','indent','|',
+      'link','insertTable','blockQuote','horizontalLine','removeFormat'], shouldNotGroupWhenFull:false},
+    fontSize: {options: [12,14,16,18,20,24,28,36]},
+    table: {contentToolbar:['tableColumn','tableRow','mergeTableCells']},
+    link: {defaultProtocol:'https://'},
+   });
+  }
+  editor = await initializing;
+  if(current !== revision) return;
+  if(!editor._rentalListener) {
+   editor._rentalListener = true;
+   editor.model.document.on('change:data', () => {
+    if(syncing) return;
+    original = editor.getData(); send({type:'change', html:original});
+   });
+  }
+  if(original !== data.html) {
+   syncing = true; original = data.html; editor.setData(toHtml(data.html)); syncing = false;
+  }
+  if(data.enabled) editor.disableReadOnlyMode('saving');
+  else editor.enableReadOnlyMode('saving');
+  send({type:'initialized'});
+ } catch(error) { console.error(error); send({type:'error'}); }
+});
+send({type:'ready'});
+</script></body></html>

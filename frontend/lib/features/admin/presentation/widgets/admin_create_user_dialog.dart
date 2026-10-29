@@ -210,7 +210,7 @@ class _AdminCreateUserDialogState extends State<AdminCreateUserDialog> {
         FilledButton(
           onPressed: _saving ? null : _create,
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFD66A2B),
+            backgroundColor: const Color(0xFF15803D),
             foregroundColor: Colors.white,
           ),
           child: Text(_saving ? 'Đang tạo và gửi OTP...' : 'Tạo và gửi OTP'),

@@ -207,7 +207,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFD66A2B)),
+          borderSide: const BorderSide(color: Color(0xFF15803D)),
         ),
       );
 
@@ -289,7 +289,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         'Chỉnh sửa',
         Icons.edit_outlined,
         _acting || user.isAdmin ? null : () => _open(user),
-        const Color(0xFFD66A2B),
+        const Color(0xFF15803D),
       ),
       _action(
         user.locked ? 'Mở khóa' : 'Khóa tài khoản',
@@ -424,10 +424,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFFD66A2B).withValues(alpha: .08),
+            color: const Color(0xFF15803D).withValues(alpha: .08),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 32, color: const Color(0xFFD66A2B)),
+          child: Icon(icon, size: 32, color: const Color(0xFF15803D)),
         ),
         const SizedBox(height: 16),
         Text(
@@ -541,12 +541,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           Container(
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: const Color(0xFFD66A2B).withValues(alpha: .1),
+              color: const Color(0xFF15803D).withValues(alpha: .1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.manage_accounts_outlined,
-              color: Color(0xFFD66A2B),
+              color: Color(0xFF15803D),
               size: 28,
             ),
           ),
@@ -585,7 +585,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           FilledButton.icon(
             onPressed: _loading || _acting ? null : _add,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFD66A2B),
+              backgroundColor: const Color(0xFF15803D),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               shape: RoundedRectangleBorder(
@@ -643,9 +643,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 tooltip: 'Tìm kiếm',
                 onPressed: _acting ? null : _load,
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFFD66A2B)
+                  backgroundColor: const Color(0xFF15803D)
                       .withValues(alpha: .1),
-                  foregroundColor: const Color(0xFFD66A2B),
+                  foregroundColor: const Color(0xFF15803D),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(7),
                   ),
@@ -741,7 +741,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             const SizedBox(width: 10),
             AdminUserBadge(
               label: _loading || _error != null ? '—' : '${_data?.total ?? 0}',
-              color: const Color(0xFFD66A2B),
+              color: const Color(0xFF15803D),
             ),
           ],
         ),

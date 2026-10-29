@@ -26,7 +26,7 @@ class _AdminAreasPageState extends State<AdminAreasPage> {
   bool? _active;
   bool _loading = true, _acting = false;
   int _request = 0, _page = 0;
-  static const _accent = Color(0xFFD66A2B);
+  static const _accent = Color(0xFF15803D);
 
   @override
   void initState() {

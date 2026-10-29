@@ -20,7 +20,7 @@ class AdminUserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = user.isAdmin
         ? const Color(0xFF7C5CC4)
-        : const Color(0xFFD36B2C);
+        : const Color(0xFF15803D);
     final placeholder = ColoredBox(
       color: color.withValues(alpha: .12),
       child: Center(
@@ -108,7 +108,7 @@ class AdminUserBadge extends StatelessWidget {
 
 Widget adminRoleBadge(AdminUser user) => AdminUserBadge(
   label: user.roleLabel,
-  color: user.isAdmin ? const Color(0xFF7956B5) : const Color(0xFFB7682C),
+  color: user.isAdmin ? const Color(0xFF7956B5) : const Color(0xFF15803D),
   icon: user.isAdmin ? Icons.shield_outlined : Icons.person_outline,
 );
 

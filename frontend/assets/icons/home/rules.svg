@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
-<g stroke="#92512E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<path d="M18 16h36l13 13v52H18Z" fill="#FFF0DF"/>
+<g stroke="#815D43" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M18 16h36l13 13v52H18Z" fill="#FAF4EE"/>
 <path d="M54 16v13h13M27 35h20M27 43h18M27 51h18" fill="none"/>
-<path d="M64 39v37M48 48h32M52 48l-8 17h16ZM77 48l-8 17h16Z" fill="#FFE5BE"/>
-<path d="M44 65q8 10 16 0M69 65q8 10 16 0" fill="#FFB77F"/>
-<path d="M54 81h21M58 76h12v5" fill="#FFD6B3"/>
-<circle cx="64" cy="38" r="4" fill="#FF914D"/>
-<path d="m27 65 4 4 7-8" fill="none" stroke="#D97735"/>
+<path d="M64 39v37M48 48h32M52 48l-8 17h16ZM77 48l-8 17h16Z" fill="#F1E6DC"/>
+<path d="M44 65q8 10 16 0M69 65q8 10 16 0" fill="#CDB095"/>
+<path d="M54 81h21M58 76h12v5" fill="#E8D6C6"/>
+<circle cx="64" cy="38" r="4" fill="#B38B67"/>
+<path d="m27 65 4 4 7-8" fill="none" stroke="#B38B67"/>
 </g>
 </svg>

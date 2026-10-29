@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-const areaAccent = Color(0xFFD66A2B);
+const areaAccent = Color(0xFF15803D);
 
 Color areaTypeColor(String type) => switch (type) {
   'PROVINCE' => const Color(0xFF5177B7),
