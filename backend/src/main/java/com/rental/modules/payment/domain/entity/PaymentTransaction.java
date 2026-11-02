@@ -10,6 +10,11 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "payment_transactions")
 public class PaymentTransaction {
+    @Column(name = "vnpay_response_code", length = 2)
+    private String responseCode;
+
+    public String getResponseCode() { return responseCode; }
+    public void setResponseCode(String value) { responseCode = value; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

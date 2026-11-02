@@ -8,6 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, Long> {
+    java.util.List<PaymentTransaction> findTop20ByUser_UserIdOrderByTransactionDateDescIdDesc(Long userId);
     Optional<PaymentTransaction> findByVnpayTransactionRef(String vnpayTransactionRef);
     boolean existsByPurchasedPackageId(Short id);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

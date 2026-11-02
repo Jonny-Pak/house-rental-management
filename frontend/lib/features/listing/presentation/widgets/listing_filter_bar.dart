@@ -1,3 +1,7 @@
+import 'package:latlong2/latlong.dart';
+
+import '../pages/search_location_page.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout.dart';
@@ -105,7 +109,7 @@ class _ListingFilterBarState extends State<ListingFilterBar> {
               children: [
                 Expanded(
                   child: Text(
-                    '${widget.filter.count} bộ lọc${widget.filter.areaName == null ? '' : ' • ${widget.filter.areaName}'}',
+                    '${widget.filter.count} bộ lọc${widget.filter.hasRadius ? ' • ${widget.filter.radiusKm} km' : ''}${widget.filter.areaName == null ? '' : ' • ${widget.filter.areaName}'}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -150,6 +154,9 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
   late String _sort = widget.initial.sort;
   late int? _areaId = widget.initial.areaId;
   late String? _areaName = widget.initial.areaName;
+  late LatLng? _center = widget.initial.center;
+  late String? _centerName = widget.initial.centerName;
+  late double _radiusKm = widget.initial.radiusKm ?? 3;
   List<Ward> _wards = [];
   bool _loading = true;
   String? _areaError, _error;
@@ -207,6 +214,25 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
     }
   }
 
+  Future<void> _chooseCenter() async {
+    final location = await Navigator.push<SearchLocation>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SearchLocationPage(
+          initial: _center == null
+              ? null
+              : SearchLocation(_center!, _centerName ?? 'Vị trí đã chọn'),
+        ),
+      ),
+    );
+    if (!mounted || location == null) return;
+    setState(() {
+      _center = location.point;
+      _centerName = location.name;
+      _sort = 'nearest';
+    });
+  }
+
   double? _parse(TextEditingController controller) =>
       double.tryParse(controller.text.trim().replaceAll(',', '.'));
   Widget _input(
@@ -235,6 +261,9 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
     if (!_form.currentState!.validate()) return;
     final filter = ListingFilter(
       query: widget.initial.query,
+      center: _center,
+      centerName: _centerName,
+      radiusKm: _center == null ? null : _radiusKm,
       areaId: _areaId,
       areaName: _areaName,
       listingType: _type,
@@ -287,6 +316,45 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
+                    const Text(
+                      'Tìm quanh một vị trí',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.my_location),
+                      title: Text(_centerName ?? 'Chọn vị trí tìm kiếm'),
+                      subtitle: const Text(
+                        'Chọn trên bản đồ, địa chỉ hoặc GPS',
+                      ),
+                      onTap: _chooseCenter,
+                      trailing: _center == null
+                          ? const Icon(Icons.chevron_right)
+                          : IconButton(
+                              tooltip: 'Bỏ giới hạn bán kính',
+                              icon: const Icon(Icons.close),
+                              onPressed: () => setState(() {
+                                _center = null;
+                                _centerName = null;
+                                if (_sort == 'nearest') _sort = 'newest';
+                              }),
+                            ),
+                    ),
+                    if (_center != null) ...[
+                      Text('Bán kính: ${_radiusKm.toStringAsFixed(1)} km'),
+                      Slider(
+                        value: _radiusKm.clamp(0.1, 50),
+                        min: 0.1,
+                        max: 50,
+                        divisions: 499,
+                        label: '${_radiusKm.toStringAsFixed(1)} km',
+                        onChanged: (value) => setState(() => _radiusKm = value),
+                      ),
+                      const Text(
+                        'Khoảng cách đường chim bay, không phải quãng đường di chuyển.',
+                      ),
+                    ],
+                    const Divider(height: 28),
                     const Text('Khu vực TP.HCM sau sáp nhập'),
                     const SizedBox(height: 8),
                     ListTile(
@@ -388,8 +456,13 @@ class _ListingFilterSheetState extends State<ListingFilterSheet> {
                       initialValue: _sort,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Sắp xếp'),
-                      items: const [
-                        DropdownMenuItem(
+                      items: [
+                        if (_center != null)
+                          const DropdownMenuItem(
+                            value: 'nearest',
+                            child: Text('Gần nhất'),
+                          ),
+                        const DropdownMenuItem(
                           value: 'newest',
                           child: Text('Mới nhất'),
                         ),

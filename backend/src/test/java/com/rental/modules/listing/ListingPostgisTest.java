@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -82,6 +82,347 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.payment.config.VnPayConfig vnPay;
     @Autowired com.rental.modules.subscription.repository.UserSubscriptionRepository subscriptions;
 
+    @Autowired com.rental.modules.subscription.service.DefaultMembershipService defaultMembership;
+    @Autowired com.rental.modules.subscription.repository.MembershipPackageRepository packageRepository;
+    @org.junit.jupiter.api.AfterEach
+    void removeCommittedBenefitFixtures() {
+        String owners = "SELECT user_id FROM users WHERE email IN ('concurrentBenefits@example.com','excelQuotaOwner@example.com')";
+        jdbc.update("DELETE FROM notifications WHERE user_id IN (" + owners + ") OR listing_id IN (SELECT listing_id FROM listings WHERE owner_id IN (" + owners + "))");
+        jdbc.update("DELETE FROM listings WHERE owner_id IN (" + owners + ")");
+        jdbc.update("DELETE FROM user_subscriptions WHERE user_id IN (" + owners + ")");
+        jdbc.update("DELETE FROM users WHERE user_id IN (" + owners + ")");
+    }
+
+    @Autowired com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    private CreateListingRequest benefitRequest(String title) {
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle(title); request.setListingType("BOARDING_ROOM");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("25"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/benefits.jpg"));
+        return request;
+    }
+
+    @Test void publicOrderPrefersActiveVipThenLastRefreshAndIgnoresExpiredVip() {
+        User owner = user("priorityOwner", Role.MEMBER), reviewer = user("priorityAdmin", Role.ADMIN);
+        Long first = listings.createListing(owner.getUserId(), benefitRequest("Old VIP")).getId();
+        Long second = listings.createListing(owner.getUserId(), benefitRequest("Fresh normal")).getId();
+        Long third = listings.createListing(owner.getUserId(), benefitRequest("Newest normal")).getId();
+        for (Long id : List.of(first, second, third)) admin.approveListing(id, reviewer.getUserId());
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingVipQuota(1); subscription.setRemainingRefreshQuota(1);
+        listings.promoteVip(first, owner.getUserId());
+        listings.refreshListing(second, owner.getUserId());
+        assertEquals(List.of(first, second, third), listings.getApprovedListings().stream().map(item -> item.getId()).toList());
+        listingRepository.findById(first).orElseThrow().setVipExpiresAt(java.time.LocalDateTime.now().minusMinutes(1));
+        assertEquals(List.of(second, third, first), listings.getApprovedListings().stream().map(item -> item.getId()).toList());
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void excelImportRollsBackAllRowsAndQuotaWhenTheFileExceedsBalance() throws Exception {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        Long ownerId = transaction.execute(status -> {
+            User owner = user("excelQuotaOwner", Role.MEMBER);
+            defaultMembership.assignIfMissing(owner.getUserId());
+            subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(1);
+            return owner.getUserId();
+        });
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS,
+            List.of(ListingExcelTest.listingRow("Quota row A"), ListingExcelTest.listingRow("Quota row B")));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listingExcel.importListings(ownerId, file));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, ownerId));
+        assertEquals(1, transaction.execute(status -> benefits.getBenefits(ownerId).standard()));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE user_id=?", Integer.class, ownerId));
+    }
+
+    @Test void postingConsumesQuotaAndEditingOrDeletingDoesNotRefillIt() {
+        User owner = user("quotaOwner", Role.MEMBER);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingStandardQuota(1);
+        Long id = listings.createListing(owner.getUserId(), benefitRequest("Quota test")).getId();
+        assertEquals(0, benefits.getBenefits(owner.getUserId()).standard());
+        listings.updateListing(id, owner.getUserId(), benefitRequest("Edited"));
+        listings.deleteListing(id, owner.getUserId());
+        assertEquals(0, subscription.getRemainingStandardQuota());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> listings.createListing(owner.getUserId(), benefitRequest("Out of quota"))).getStatusCode().value());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, owner.getUserId()));
+    }
+
+    @Test void vipAndRefreshRequirePublicOwnedListingsAndConsumeOnlyOneQuota() {
+        User owner = user("benefitOwner", Role.MEMBER), reviewer = user("benefitAdmin", Role.ADMIN);
+        User other = user("benefitOther", Role.MEMBER);
+        Long id = listings.createListing(owner.getUserId(), benefitRequest("Promoted")).getId();
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingVipQuota(2); subscription.setRemainingRefreshQuota(2);
+        subscription.setQuotaResetAt(java.time.LocalDateTime.now().plusDays(5));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.promoteVip(id, owner.getUserId()));
+        assertEquals(2, subscription.getRemainingVipQuota());
+        admin.approveListing(id, reviewer.getUserId());
+        assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> listings.refreshListing(id, other.getUserId())).getStatusCode().value());
+        var promoted = listings.promoteVip(id, owner.getUserId());
+        assertTrue(promoted.isIsVip()); assertEquals(subscription.getQuotaResetAt(), promoted.getVipExpiresAt());
+        assertEquals(1, subscription.getRemainingVipQuota());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.promoteVip(id, owner.getUserId()));
+        assertEquals(1, subscription.getRemainingVipQuota());
+        assertNotNull(listings.refreshListing(id, owner.getUserId()).getRefreshedAt());
+        assertEquals(1, subscription.getRemainingRefreshQuota());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.refreshListing(id, owner.getUserId()));
+        assertEquals(1, subscription.getRemainingRefreshQuota());
+        var stored = listingRepository.findById(id).orElseThrow();
+        stored.setRefreshedAt(java.time.LocalDateTime.now().minusHours(25));
+        listings.refreshListing(id, owner.getUserId());
+        assertEquals(0, subscription.getRemainingRefreshQuota());
+        stored.setVipExpiresAt(java.time.LocalDateTime.now().minusSeconds(1));
+        assertFalse(listings.getPublicListing(id).isIsVip());
+        listings.updateRentalStatus(id, owner.getUserId(), "HIDDEN");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.promoteVip(id, owner.getUserId()));
+    }
+
+    @Test void expiredRightsCannotBeUsedOrRevivedByBuyingAnotherPackage() {
+        User owner = user("expiredBenefits", Role.MEMBER);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingStandardQuota(20); subscription.setRemainingVipQuota(20);
+        subscription.setRemainingRefreshQuota(20);
+        subscription.setQuotaResetAt(java.time.LocalDateTime.now().minusDays(1));
+        assertEquals("EXPIRED", benefits.getBenefits(owner.getUserId()).status());
+        assertEquals(0, benefits.getBenefits(owner.getUserId()).standard());
+        assertEquals(0, userService.getMyProfile(owner.getEmail()).getRemainingStandardQuota());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> listings.createListing(owner.getUserId(), benefitRequest("Expired")));
+        var offer = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest(
+            "New rights", BigDecimal.ZERO, 2, 1, 1, "", true, null));
+        payments.createPaymentUrl(owner.getEmail(), offer.getId(), null);
+        assertEquals(2, subscription.getRemainingStandardQuota());
+        assertEquals(1, subscription.getRemainingVipQuota());
+        assertEquals(1, subscription.getRemainingRefreshQuota());
+        assertNotNull(listings.createListing(owner.getUserId(), benefitRequest("Renewed")).getId());
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void simultaneousPostsCannotSpendTheLastQuotaTwice() throws Exception {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        Long ownerId = transaction.execute(status -> {
+            User owner = user("concurrentBenefits", Role.MEMBER);
+            defaultMembership.assignIfMissing(owner.getUserId());
+            subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(1);
+            return owner.getUserId();
+        });
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Integer> post = () -> {
+            start.await();
+            try {
+                listings.createListing(ownerId, benefitRequest("Concurrent quota"));
+                return 201;
+            } catch (org.springframework.web.server.ResponseStatusException error) {
+                return error.getStatusCode().value();
+            }
+        };
+        try {
+            var first = executor.submit(post); var second = executor.submit(post);
+            start.countDown();
+            var results = new java.util.ArrayList<>(List.of(first.get(30, java.util.concurrent.TimeUnit.SECONDS), second.get(30, java.util.concurrent.TimeUnit.SECONDS)));
+            java.util.Collections.sort(results);
+            assertEquals(List.of(201, 409), results);
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, ownerId));
+            assertEquals(0, transaction.execute(status -> benefits.getBenefits(ownerId).standard()));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test void otpActivationGrantsDefaultPackageAndNeverRefillsUsedQuotas() {
+        User member = user("defaultMember", Role.MEMBER);
+        member.setIsVerified(false); users.saveAndFlush(member);
+        var otp = org.mockito.Mockito.mock(com.rental.modules.user.service.OtpService.class);
+        org.mockito.Mockito.when(otp.validateOtp(member.getEmail(), "123456")).thenReturn(true);
+        var auth = new com.rental.modules.user.service.AuthService(users,
+            org.mockito.Mockito.mock(org.springframework.security.crypto.password.PasswordEncoder.class), otp,
+            org.mockito.Mockito.mock(com.rental.modules.user.service.EmailService.class),
+            org.mockito.Mockito.mock(org.springframework.security.authentication.AuthenticationManager.class),
+            org.mockito.Mockito.mock(com.rental.core.security.JwtService.class), defaultMembership);
+        assertTrue(subscriptions.findByUser(member).isEmpty());
+        auth.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest(member.getEmail(), "123456"));
+        entityManager.flush();
+        var basic = packageRepository.findByDefaultPackageTrue().orElseThrow();
+        assertEquals(0, basic.getPrice().signum()); assertTrue(basic.isActive());
+        var owned = subscriptions.findByUser(member).orElseThrow();
+        assertEquals(basic.getId(), owned.getMembershipPackage().getId());
+        assertEquals(basic.getStandardPostQuota().intValue(), owned.getRemainingStandardQuota());
+        assertEquals(basic.getPackageName(), userService.getMyProfile(member.getEmail()).getMembershipPackageName());
+        owned.setRemainingStandardQuota(0); subscriptions.saveAndFlush(owned);
+        defaultMembership.assignIfMissing(member.getUserId());
+        entityManager.flush(); entityManager.clear();
+        var reloaded = users.findById(member.getUserId()).orElseThrow();
+        assertEquals(0, subscriptions.findByUser(reloaded).orElseThrow().getRemainingStandardQuota());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM user_subscriptions WHERE user_id=?", Long.class, member.getUserId()));
+    }
+
+    @Test void defaultPlanCannotBeRepurchasedRemovedDisabledOrMadePaid() {
+        User buyer = user("defaultBuyer", Role.MEMBER);
+        var basic = packageRepository.findByDefaultPackageTrue().orElseThrow();
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> payments.createPaymentUrl(buyer.getEmail(), basic.getId(), null)).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminPackages.delete(basic.getId(), basic.getVersion())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminPackages.changeStatus(basic.getId(), false, basic.getVersion())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminPackages.update(basic.getId(), new com.rental.modules.subscription.dto.SavePackageRequest(
+                basic.getPackageName(), BigDecimal.ONE, 3, 0, 0, "", true, basic.getVersion()))).getStatusCode().value());
+        assertTrue(subscriptions.findByUser(buyer).isEmpty());
+    }
+
+    @Test void upgradeAddsPaidRightsAndDefaultGrantDoesNotReplaceThem() {
+        User buyer = user("defaultUpgrade", Role.MEMBER);
+        defaultMembership.assignIfMissing(buyer.getUserId());
+        var owned = subscriptions.findByUser(buyer).orElseThrow();
+        int initial = owned.getRemainingStandardQuota();
+        var offer = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest(
+            "Upgrade test", BigDecimal.ZERO, 10, 2, 5, "", true, null));
+        assertEquals("FREE_SUCCESS", payments.createPaymentUrl(buyer.getEmail(), offer.getId(), null));
+        defaultMembership.assignIfMissing(buyer.getUserId());
+        assertEquals(initial + 10, owned.getRemainingStandardQuota());
+        assertEquals("Upgrade test", owned.getPackageNameSnapshot());
+        assertEquals(2, owned.getRemainingVipQuota());
+        assertEquals(5, owned.getRemainingRefreshQuota());
+    }
+
+    @Test void profileStatisticsCountOnlyTheCurrentUsersVisibleData() {
+        User owner = user("statsOwner", Role.MEMBER), renter = user("statsRenter", Role.MEMBER), other = user("statsOther", Role.MEMBER);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setListingType("WHOLE_HOUSE"); request.setTitle("Profile statistics");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/stats.jpg"));
+        Long visible = listings.createListing(owner.getUserId(), request).getId();
+        Long hidden = listings.createListing(owner.getUserId(), request).getId();
+        Long deleted = listings.createListing(owner.getUserId(), request).getId();
+        entityManager.flush();
+        jdbc.update("UPDATE listings SET approval_status='APPROVED' WHERE listing_id IN (?,?,?)", visible, hidden, deleted);
+        jdbc.update("UPDATE listings SET rental_status='HIDDEN' WHERE listing_id=?", hidden);
+        jdbc.update("UPDATE listings SET rental_status='DELETED' WHERE listing_id=?", deleted);
+        for (Long id : List.of(visible, hidden, deleted)) {
+            jdbc.update("INSERT INTO user_favorites(user_id,listing_id) VALUES (?,?)", renter.getUserId(), id);
+        }
+        jdbc.update("INSERT INTO contracts(listing_id,landlord_id,tenant_id,start_date,end_date,monthly_rent,deposit_amount,status) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'ACTIVE')", visible, owner.getUserId(), renter.getUserId());
+        jdbc.update("INSERT INTO contracts(listing_id,landlord_id,tenant_id,start_date,end_date,monthly_rent,deposit_amount,status) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'DRAFT')", visible, renter.getUserId(), other.getUserId());
+        entityManager.clear();
+        var ownerProfile = userService.getMyProfile(owner.getEmail());
+        assertEquals(2L, ownerProfile.getListingCount()); assertEquals(1L, ownerProfile.getContractCount()); assertEquals(0L, ownerProfile.getSavedListingCount());
+        var renterProfile = userService.getMyProfile(renter.getEmail());
+        assertEquals(0L, renterProfile.getListingCount()); assertEquals(2L, renterProfile.getContractCount()); assertEquals(1L, renterProfile.getSavedListingCount());
+        var otherProfile = userService.getMyProfile(other.getEmail());
+        assertEquals(0L, otherProfile.getListingCount()); assertEquals(1L, otherProfile.getContractCount()); assertEquals(0L, otherProfile.getSavedListingCount());
+    }
+
+    @Autowired com.rental.modules.amenity.service.AmenityService amenityService;
+
+    @Test void amenityCatalogCrudVersionsAndListingLifecycleUseRealDatabase() {
+        var wifi = amenityService.create(new com.rental.modules.amenity.dto.SaveAmenityRequest("Wi-Fi riêng", "UTILITY", "Internet", true, null));
+        var bed = amenityService.create(new com.rental.modules.amenity.dto.SaveAmenityRequest("Giường riêng", "FURNITURE", "", true, null));
+        assertEquals(1, amenityService.search("Wi-Fi riêng", "UTILITY", true, 0).total());
+        assertEquals(0, amenityService.search("%", null, null, 0).total());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.create(new com.rental.modules.amenity.dto.SaveAmenityRequest("wi-fi RIÊNG", "UTILITY", "", true, null))).getStatusCode().value());
+        User owner = user("amenityOwner", Role.MEMBER), reviewer = user("amenityAdmin", Role.ADMIN);
+        var request = amenityListingRequest(); request.setAmenityIds(List.of(wifi.id(), bed.id()));
+        Long id = listings.createListing(owner.getUserId(), request).getId();
+        entityManager.flush();
+        assertEquals(2, listings.getMyListings(owner.getUserId()).get(0).getAmenities().size());
+        assertEquals(2, admin.getPendingListings().stream().filter(item -> item.getId().equals(id)).findFirst().orElseThrow().getAmenities().size());
+        admin.approveListing(id, reviewer.getUserId());
+        assertEquals(2, listings.getPublicListing(id).getAmenities().size());
+        var hidden = amenityService.changeStatus(wifi.id(), false, wifi.version());
+        assertTrue(amenityService.activeItems().stream().noneMatch(item -> item.id().equals(wifi.id())));
+        assertEquals(2, listings.getPublicListing(id).getAmenities().size());
+        assertEquals(1, amenityService.search("Wi-Fi riêng", null, false, 0).items().get(0).listingCount());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.delete(wifi.id(), hidden.version())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.update(wifi.id(), new com.rental.modules.amenity.dto.SaveAmenityRequest("Wifi", "FURNITURE", "", false, hidden.version()))).getStatusCode().value());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.changeStatus(wifi.id(), true, wifi.version())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request)).getStatusCode().value());
+        listings.updateListing(id, owner.getUserId(), request);
+        assertEquals("PENDING", listings.getMyListings(owner.getUserId()).get(0).getApprovalStatus());
+        request.setAmenityIds(null);
+        listings.updateListing(id, owner.getUserId(), request);
+        assertEquals(2, listings.getMyListings(owner.getUserId()).get(0).getAmenities().size());
+        request.setAmenityIds(List.of(bed.id()));
+        listings.updateListing(id, owner.getUserId(), request); entityManager.flush();
+        amenityService.delete(wifi.id(), hidden.version());
+        assertEquals(0, amenityService.search("Wi-Fi riêng", null, null, 0).total());
+        request.setAmenityIds(List.of());
+        listings.updateListing(id, owner.getUserId(), request); entityManager.flush();
+        amenityService.delete(bed.id(), bed.version());
+        assertTrue(listings.getMyListings(owner.getUserId()).get(0).getAmenities().isEmpty());
+    }
+
+    @Test void invalidAmenitySelectionNeverCreatesAPartialListing() {
+        User owner = user("badAmenity", Role.MEMBER);
+        var request = amenityListingRequest();
+        request.setAmenityIds(List.of(1L, 1L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        request.setAmenityIds(List.of(999999L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        request.setAmenityIds(java.util.Collections.nCopies(31, 1L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        assertTrue(listings.getMyListings(owner.getUserId()).isEmpty());
+    }
+
+    private CreateListingRequest amenityListingRequest() {
+        var request = new CreateListingRequest();
+        request.setTitle("Tin có tiện ích"); request.setListingType("BOARDING_ROOM");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L); request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/amenity.jpg"));
+        return request;
+    }
+
+    @Test void excelAmenityColumnIsOptionalAndInvalidIdsAreRejectedBeforeImport() throws Exception {
+        User owner = user("excelAmenityOwner", Role.MEMBER);
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin có nội thất")));
+        assertTrue(listingExcel.preview(owner.getUserId(), file).errors().isEmpty());
+        byte[] bytes;
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(file.getInputStream()); var output = new java.io.ByteArrayOutputStream()) {
+            book.getSheet("TinDang").getRow(0).createCell(28).setCellValue("Mã nội thất/tiện ích");
+            book.getSheet("TinDang").getRow(1).createCell(28).setCellValue("1,9");
+            book.write(output); bytes = output.toByteArray();
+        }
+        var selected = new org.springframework.mock.web.MockMultipartFile("file", "amenities.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        assertTrue(listingExcel.preview(owner.getUserId(), selected).errors().isEmpty());
+        assertEquals(1, listingExcel.importListings(owner.getUserId(), selected).importedRows());
+        entityManager.flush();
+        assertEquals(2, listings.getMyListings(owner.getUserId()).get(0).getAmenities().size());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(listingExcel.exportListings(owner.getUserId())))) {
+            assertEquals("1,9", book.getSheet("TinDang").getRow(1).getCell(28).getStringCellValue());
+            assertNotNull(book.getSheet("NoiThatTienIch"));
+        }
+        var invalid = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin sai tiện ích")));
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(invalid.getInputStream()); var output = new java.io.ByteArrayOutputStream()) {
+            book.getSheet("TinDang").getRow(0).createCell(28).setCellValue("Mã nội thất/tiện ích");
+            book.getSheet("TinDang").getRow(1).createCell(28).setCellValue("999999");
+            book.write(output); bytes = output.toByteArray();
+        }
+        var bad = new org.springframework.mock.web.MockMultipartFile("file", "bad.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        assertFalse(listingExcel.preview(owner.getUserId(), bad).errors().isEmpty());
+        assertEquals(0, listingExcel.importListings(owner.getUserId(), bad).importedRows());
+        assertEquals(1, listings.getMyListings(owner.getUserId()).size());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(bytes)); var output = new java.io.ByteArrayOutputStream()) {
+            book.getSheet("TinDang").getRow(0).getCell(28).setCellValue("Cột bị đổi tên");
+            book.write(output); bytes = output.toByteArray();
+        }
+        var wrongHeader = new org.springframework.mock.web.MockMultipartFile("file", "header.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listingExcel.preview(owner.getUserId(), wrongHeader)).getStatusCode().value());
+    }
+
     @Test void adminPackageCrudVisibilityVersionsAndPurchasedRightsUseRealData() {
         var request = new com.rental.modules.subscription.dto.SavePackageRequest("Gói thử", BigDecimal.ZERO, 10, 2, 3, "Quyền lợi thử", true, null);
         var item = adminPackages.create(request);
@@ -117,8 +458,15 @@ class ListingPostgisTest {
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> payments.createPaymentUrl(buyer.getEmail(), item.getId(), http));
         java.util.Map<String,String> callback = new java.util.HashMap<>();
         callback.put("vnp_Amount", "5000000"); callback.put("vnp_ResponseCode", "00"); callback.put("vnp_TxnRef", ref);
-        callback.put("vnp_SecureHash", vnPay.hmacSHA512(vnPay.getVnp_HashSecret(), "vnp_Amount=5000000&vnp_ResponseCode=00&vnp_TxnRef=" + ref));
-        assertTrue(payments.processVnPayReturn(callback)); assertTrue(payments.processVnPayReturn(callback));
+        callback.put("vnp_TmnCode", vnPay.getVnp_TmnCode()); callback.put("vnp_TransactionStatus", "00");
+        String data = "vnp_Amount=5000000&vnp_ResponseCode=00&vnp_TmnCode=" + vnPay.getVnp_TmnCode()
+            + "&vnp_TransactionStatus=00&vnp_TxnRef=" + ref;
+        callback.put("vnp_SecureHash", vnPay.hmacSHA512(vnPay.getVnp_HashSecret(), data));
+        assertEquals("00", payments.processIpn(callback).get("RspCode"));
+        assertTrue(payments.processVnPayReturn(callback));
+        assertEquals("02", payments.processIpn(callback).get("RspCode"));
+        assertEquals("SUCCESS", payments.getStatus(buyer.getUserId(), ref).status());
+        assertEquals(1, payments.history(buyer.getUserId()).size());
         var subscription = subscriptions.findByUser(buyer).orElseThrow();
         assertEquals(8, subscription.getRemainingStandardQuota()); assertEquals(2, subscription.getRemainingVipQuota());
         assertEquals("Gói chờ", subscription.getPackageNameSnapshot());
@@ -409,7 +757,7 @@ class ListingPostgisTest {
             var manager = new org.springframework.security.authentication.ProviderManager(provider);
             var jwt = org.mockito.Mockito.mock(com.rental.core.security.JwtService.class);
             org.mockito.Mockito.when(jwt.generateAccessToken(org.mockito.ArgumentMatchers.any())).thenReturn("verified-access");
-            var auth = new com.rental.modules.user.service.AuthService(users, encoder, adminOtp, adminEmail, manager, jwt);
+            var auth = new com.rental.modules.user.service.AuthService(users, encoder, adminOtp, adminEmail, manager, jwt, defaultMembership);
             var login = new com.rental.modules.user.dto.request.LoginRequest(successEmail, "Password123!");
             assertThrows(IllegalStateException.class, () -> auth.login(login));
             auth.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest(successEmail, successCode.getValue()));
@@ -427,7 +775,11 @@ class ListingPostgisTest {
             org.mockito.Mockito.verify(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(failedEmail), failedCode.capture());
             assertFalse(adminOtp.validateOtp(failedEmail, failedCode.getValue()));
         } finally {
-            users.findByEmail(successEmail).ifPresent(users::delete);
+            users.findByEmail(successEmail).ifPresent(user -> {
+                subscriptions.findByUser(user).ifPresent(subscriptions::delete);
+                subscriptions.flush();
+                users.delete(user);
+            });
             users.findByEmail(failedEmail).ifPresent(users::delete);
         }
     }
@@ -607,6 +959,7 @@ class ListingPostgisTest {
     }
 
     @Autowired UserRepository users;
+    @Autowired com.rental.modules.listing.repository.ListingRepository listingRepository;
     @Autowired ListingService listings;
     @Autowired AdminListingService admin;
     @Autowired EntityManager entityManager;
@@ -850,6 +1203,46 @@ class ListingPostgisTest {
                     () -> properties.createProperty(owner.getEmail(), property));
         }
         entityManager.flush();
+    }
+
+    @Test void nearbySearchUsesMetersAndExcludesNonPublicListings() {
+        User owner = user("nearbyowner", Role.MEMBER);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(10);
+        User reviewer = user("nearbyadmin", Role.ADMIN);
+        java.util.ArrayList<Long> ids = new java.util.ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            CreateListingRequest request = new CreateListingRequest();
+            request.setTitle("Phòng gần " + i); request.setListingType("BOARDING_ROOM");
+            request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("25"));
+            request.setAddress("TP.HCM"); request.setAreaId(6L);
+            request.setLatitude(10.78 + i * 0.01); request.setLongitude(106.7);
+            request.setImageUrls(List.of("https://example.com/near.jpg"));
+            Long id = listings.createListing(owner.getUserId(), request).getId();
+            ids.add(id);
+            if (i != 3) admin.approveListing(id, reviewer.getUserId());
+        }
+        listings.updateRentalStatus(ids.get(4), owner.getUserId(), "HIDDEN");
+        listings.updateRentalStatus(ids.get(5), owner.getUserId(), "RENTED");
+        listings.deleteListing(ids.get(6), owner.getUserId());
+        entityManager.flush(); entityManager.clear();
+        assertEquals(List.of(ids.get(0), ids.get(1)), listings.findNearby(10.78, 106.7, 1.5)
+            .stream().map(item -> item.getId()).toList());
+        assertEquals(3, listings.findNearby(10.78, 106.7, 50).size());
+        Number meters = (Number) entityManager.createNativeQuery(
+            "SELECT ST_Distance(CAST(location AS geography), CAST(ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) AS geography), false) FROM listings WHERE listing_id = :id")
+            .setParameter("id", ids.get(1)).getSingleResult();
+        assertEquals(1, listings.findNearby(10.78, 106.7, meters.doubleValue() / 1000 - 0.001).size());
+        assertEquals(2, listings.findNearby(10.78, 106.7, meters.doubleValue() / 1000 + 0.001).size());
+        assertTrue(listings.findNearby(0, 0, 50).isEmpty());
+        entityManager.createNativeQuery("UPDATE listings SET location = ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) WHERE listing_id = :id")
+            .setParameter("id", ids.get(2)).executeUpdate();
+        entityManager.flush(); entityManager.clear();
+        assertEquals(2, listings.findNearby(10.78, 106.7, 0.1).size());
+        entityManager.createNativeQuery("UPDATE listings SET location = NULL WHERE listing_id = :id")
+            .setParameter("id", ids.get(2)).executeUpdate();
+        entityManager.flush(); entityManager.clear();
+        assertEquals(1, listings.findNearby(10.78, 106.7, 0.1).size());
     }
 
     private User user(String name, Role role) {

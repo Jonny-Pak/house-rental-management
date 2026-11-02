@@ -4,6 +4,17 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class ListingResponse {
+    private LocalDateTime vipExpiresAt;
+    private LocalDateTime refreshedAt;
+    public LocalDateTime getVipExpiresAt() { return vipExpiresAt; }
+    public void setVipExpiresAt(LocalDateTime value) { vipExpiresAt = value; }
+    public LocalDateTime getRefreshedAt() { return refreshedAt; }
+    public void setRefreshedAt(LocalDateTime value) { refreshedAt = value; }
+
+    private java.util.List<com.rental.modules.amenity.dto.AmenityResponse> amenities = java.util.List.of();
+    public java.util.List<com.rental.modules.amenity.dto.AmenityResponse> getAmenities() { return amenities; }
+    public void setAmenities(java.util.List<com.rental.modules.amenity.dto.AmenityResponse> value) { amenities = value; }
+
     private Integer currentOccupants;
     private Integer maxOccupants;
     private String genderPreference;

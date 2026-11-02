@@ -6,6 +6,7 @@ import 'package:kite_ui/kite_ui.dart';
 import '../../../../../app/admin/auth/session.dart';
 import '../../../../../app/admin/router/routes.dart';
 import 'auth_scaffold.dart';
+import 'sign_in_layout.dart';
 import '../../../../auth/presentation/pages/password_page.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     final email = _email.text.trim();
     final password = _password.text;
     if (!email.contains('@')) {
@@ -57,40 +59,41 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthScaffold(
-      title: 'Sign in',
+    return SignInLayout(
+      title: 'Đăng nhập quản trị',
       subtitle: 'Đăng nhập vào bảng điều khiển quản trị.',
       fields: [
         AuthField(
-          label: 'Email',
+          label: 'Địa chỉ email',
           controller: _email,
-          hint: 'you@company.com',
           keyboardType: TextInputType.emailAddress,
           error: _error,
         ),
         AuthField(
-          label: 'Password',
+          label: 'Mật khẩu',
           controller: _password,
           obscure: true,
           onSubmitted: (_) => _submit(),
         ),
-        KiteButton(
-          expands: true,
-          enabled: !_busy,
-          onPressed: _submit,
-          child: Text(_busy ? 'Signing in…' : 'Sign in'),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _busy ? null : _submit,
+          child: Text(
+            _busy ? 'Đang đăng nhập…' : 'Đăng nhập',
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: KiteSpace.md),
-        KiteButton.ghost(
-          expands: true,
+        TextButton(
           onPressed: () => context.go(R.forgot),
-          child: const Text('Forgot password?'),
+          child: const Text('Quên mật khẩu?', textAlign: TextAlign.center),
         ),
       ],
-      footer: GestureDetector(
-        onTap: () => context.go(R.signUp),
-        child: const Text('No account? Create one'),
-      ),
     );
   }
 }

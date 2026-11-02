@@ -4,6 +4,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class AdminListingResponse {
+    private java.util.List<com.rental.modules.amenity.dto.AmenityResponse> amenities = java.util.List.of();
+    public java.util.List<com.rental.modules.amenity.dto.AmenityResponse> getAmenities() { return amenities; }
+    public void setAmenities(java.util.List<com.rental.modules.amenity.dto.AmenityResponse> value) { amenities = value; }
+
     private Integer currentOccupants;
     private Integer maxOccupants;
     private String genderPreference;

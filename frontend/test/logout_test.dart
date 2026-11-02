@@ -1,3 +1,5 @@
+import 'home_listings_fixture.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,13 +65,16 @@ void main() {
             value: bloc,
             child: MaterialApp(
               navigatorKey: navigator,
-              home: const Scaffold(body: Text('Previous page')),
+              home: Scaffold(body: Text('Previous page')),
             ),
           ),
         );
         navigator.currentState!.push(
           MaterialPageRoute(
-            builder: (_) => MainPage(userRepository: FakeUserRepository()),
+            builder: (_) => MainPage(
+              listingRepository: HomeListings(),
+              userRepository: FakeUserRepository(),
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -81,6 +86,7 @@ void main() {
             300,
             scrollable: find.byType(Scrollable).last,
           );
+          await tester.pumpAndSettle();
         } else {
           await tester.tap(find.byTooltip('Mở menu'));
           await tester.pumpAndSettle();

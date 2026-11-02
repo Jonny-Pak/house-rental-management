@@ -43,6 +43,15 @@ class PaymentServiceTest {
         when(users.findForAdminUpdate(7L)).thenReturn(Optional.of(user));
         when(subscriptions.findByUser(user)).thenReturn(Optional.empty());
         config.setVnp_HashSecret("test-secret");
+        config.setVnp_TmnCode("TESTCODE");
+    }
+
+    @Test void defaultPackageCannotBePurchasedAgain() {
+        pkg.setDefaultPackage(true);
+        var error = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> service.createPaymentUrl("user@example.com", (short) 1, null));
+        assertEquals(400, error.getStatusCode().value());
+        verifyNoInteractions(transactions, subscriptions);
     }
 
     private void checkQuotas() {
@@ -72,9 +81,20 @@ class PaymentServiceTest {
     private Map<String, String> signed(String amount) {
         Map<String, String> params = new HashMap<>();
         params.put("vnp_Amount", amount); params.put("vnp_ResponseCode", "00"); params.put("vnp_TxnRef", "1_7_123");
-        params.put("vnp_SecureHash", config.hmacSHA512("test-secret", "vnp_Amount=" + amount + "&vnp_ResponseCode=00&vnp_TxnRef=1_7_123"));
+        params.put("vnp_TmnCode", config.getVnp_TmnCode()); params.put("vnp_TransactionStatus", "00");
+        sign(params);
         return params;
     }
+    private void sign(Map<String, String> params) {
+        params.remove("vnp_SecureHash");
+        StringBuilder data = new StringBuilder();
+        for (var entry : new java.util.TreeMap<>(params).entrySet()) {
+            if (!data.isEmpty()) data.append('&');
+            data.append(entry.getKey()).append('=').append(java.net.URLEncoder.encode(entry.getValue(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        params.put("vnp_SecureHash", config.hmacSHA512("test-secret", data.toString()));
+    }
+
     @Test void signedSuccessStillGrantsPaidPackageQuotas() {
         PaymentTransaction payment = paidTransaction();
         assertTrue(service.processVnPayReturn(signed("5000000")));
@@ -121,5 +141,69 @@ class PaymentServiceTest {
         params.put("vnp_SecureHash", "invalid");
         assertFalse(service.processVnPayReturn(params));
         verifyNoInteractions(subscriptions, transactions);
+    }
+
+    @Test void ipnGrantsOnceAndDuplicateNotificationsAreAcknowledged() {
+        paidTransaction();
+        var params = signed("5000000");
+        assertEquals("00", service.processIpn(params).get("RspCode"));
+        assertEquals("02", service.processIpn(params).get("RspCode"));
+        assertTrue(service.processVnPayReturn(params));
+        verify(subscriptions, times(1)).save(any());
+    }
+
+    @Test void cancellationIsStoredAndCanBeReadWithoutGrantingRights() {
+        PaymentTransaction payment = paidTransaction();
+        var params = signed("5000000");
+        params.put("vnp_ResponseCode", "24"); params.put("vnp_TransactionStatus", "02"); sign(params);
+        assertEquals("00", service.processIpn(params).get("RspCode"));
+        assertEquals("FAILED", payment.getStatus()); assertEquals("24", payment.getResponseCode());
+        when(transactions.findByVnpayTransactionRef("1_7_123")).thenReturn(Optional.of(payment));
+        assertEquals("CANCELLED", service.getStatus(7L, "1_7_123").status());
+        assertEquals("02", service.processIpn(params).get("RspCode"));
+        verify(subscriptions, never()).save(any());
+    }
+
+    @Test void invalidMerchantAmountOrIncompleteResultCannotGrantRights() {
+        PaymentTransaction payment = paidTransaction();
+        var params = signed("5000000");
+        params.put("vnp_TmnCode", "OTHER123"); sign(params);
+        assertEquals("97", service.processIpn(params).get("RspCode"));
+        params = signed("1");
+        assertEquals("04", service.processIpn(params).get("RspCode"));
+        params = signed("5000000"); params.remove("vnp_TransactionStatus"); sign(params);
+        assertEquals("99", service.processIpn(params).get("RspCode"));
+        assertEquals("PENDING", payment.getStatus());
+        verify(subscriptions, never()).save(any());
+    }
+
+    @Test void statusAndHistoryBelongToTheCurrentAccountAndExpireOnlyPendingOrders() {
+        PaymentTransaction payment = paidTransaction();
+        payment.setVnpayTransactionRef("1_7_123");
+        payment.setTransactionDate(java.time.LocalDateTime.now().minusMinutes(16));
+        when(transactions.findByVnpayTransactionRef("1_7_123")).thenReturn(Optional.of(payment));
+        assertEquals("EXPIRED", service.getStatus(7L, "1_7_123").status());
+        var forbidden = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> service.getStatus(8L, "1_7_123"));
+        assertEquals(404, forbidden.getStatusCode().value());
+        payment.setStatus("SUCCESS");
+        assertEquals("SUCCESS", service.getStatus(7L, "1_7_123").status());
+        when(transactions.findTop20ByUser_UserIdOrderByTransactionDateDescIdDesc(7L)).thenReturn(java.util.List.of(payment));
+        assertEquals(1, service.history(7L).size());
+        assertTrue(service.history(8L).isEmpty());
+    }
+
+    @Test void paymentUrlUsesThePhoneReachableBackendAddressAndVietnamTime() {
+        pkg.setPrice(new BigDecimal("50000"));
+        config.setVnp_PayUrl("https://sandbox.vnpayment.vn/paymentv2/vpcpay.html");
+        config.setVnp_ReturnUrl("");
+        var request = new org.springframework.mock.web.MockHttpServletRequest();
+        request.setServerName("192.168.1.10"); request.setServerPort(8080);
+        String url = service.createPaymentUrl("user@example.com", (short) 1, request);
+        assertTrue(url.startsWith("https://sandbox.vnpayment.vn/"));
+        assertTrue(url.contains("vnp_Amount=5000000"));
+        assertTrue(url.contains("vnp_ReturnUrl=http%3A%2F%2F192.168.1.10%3A8080%2Fapi%2Fv1%2Fpayments%2Fvnpay-return"));
+        assertTrue(url.contains("vnp_CreateDate=" + java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)));
+        verify(subscriptions, never()).save(any());
     }
 }

@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>FlutterDeepLinkingEnabled</key>
+    <true/>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>house-rental-payment</string>
+        <key>CFBundleURLSchemes</key><array><string>houserental</string></array>
+    </dict></array>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Ứng dụng dùng vị trí của bạn để tìm nhà và phòng trọ trong bán kính đã chọn.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

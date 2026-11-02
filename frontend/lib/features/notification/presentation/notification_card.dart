@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -26,13 +28,13 @@ class NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     key: ValueKey('notice-${notice.id}'),
-    color: notice.read ? Colors.white : const Color(0xFFFFF0DD),
+    color: notice.read ? Colors.white : AppColors.primaryLight,
     elevation: 0,
     margin: const EdgeInsets.only(bottom: 12),
     child: ListTile(
       contentPadding: const EdgeInsets.all(16),
       onTap: busy ? null : onOpen,
-      leading: Icon(_icon(), color: const Color(0xFFD76B28)),
+      leading: Icon(_icon(), color: AppColors.primary),
       title: Text(
         notice.title,
         style: TextStyle(
@@ -55,7 +57,7 @@ class NotificationCard extends StatelessWidget {
             if (!notice.read)
               const Text(
                 'Chưa đọc',
-                style: TextStyle(fontSize: 11, color: Color(0xFFD76B28)),
+                style: TextStyle(fontSize: 11, color: AppColors.primary),
               ),
           ],
         ),

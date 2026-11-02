@@ -1,3 +1,5 @@
+import 'home_listings_fixture.dart';
+
 import 'package:frontend/features/notification/presentation/announcement_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -216,6 +218,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MainPage(
+          listingRepository: HomeListings(),
           userRepository: ProfileRepository(member()),
           notificationRepository: MemoryNotifications(),
         ),

@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../../core/excel/excel_page.dart';
 import '../../../../core/layout/app_layout.dart';
 
@@ -146,13 +148,13 @@ class _MyContractsPageState extends State<MyContractsPage> {
       'ACTIVE' => const Color(0xFF387960),
       'DRAFT' => const Color(0xFFB77B25),
       'CANCELLED' => const Color(0xFFAE5141),
-      _ => const Color(0xFF8A7464),
+      _ => AppColors.muted,
     };
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFEEDFD1)),
+        side: const BorderSide(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -167,13 +169,13 @@ class _MyContractsPageState extends State<MyContractsPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E1),
+                      color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: const Icon(
                       Symbols.description,
                       size: 22,
-                      color: Color(0xFFD76B28),
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -184,14 +186,14 @@ class _MyContractsPageState extends State<MyContractsPage> {
                         fontSize: 10,
                         letterSpacing: 1,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF8A7464),
+                        color: AppColors.muted,
                       ),
                     ),
                   ),
                   const Icon(
                     Symbols.chevron_right,
                     size: 20,
-                    color: Color(0xFFAD8A68),
+                    color: AppColors.muted,
                   ),
                 ],
               ),
@@ -202,7 +204,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
                   fontSize: 17,
                   height: 1.4,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF38291F),
+                  color: AppColors.text,
                 ),
               ),
               const SizedBox(height: 10),
@@ -230,7 +232,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFFD76B28),
+                  color: AppColors.primary,
                 ),
               ),
               const Padding(
@@ -253,7 +255,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
   Widget _cardInfo(IconData icon, String text) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 17, color: const Color(0xFFAD8A68)),
+      Icon(icon, size: 17, color: AppColors.muted),
       const SizedBox(width: 7),
       Expanded(
         child: Text(
@@ -261,7 +263,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
           style: const TextStyle(
             fontSize: 12,
             height: 1.5,
-            color: Color(0xFF8A7464),
+            color: AppColors.muted,
           ),
         ),
       ),
@@ -275,14 +277,14 @@ class _MyContractsPageState extends State<MyContractsPage> {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: const Color(0xFFEEDFD1)),
+      border: Border.all(color: AppColors.border),
     ),
     child: Column(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
           decoration: const BoxDecoration(
-            color: Color(0xFFFFF4E8),
+            color: AppColors.primaryLight,
             shape: BoxShape.circle,
           ),
           child: const HomeFeatureIcon(icon: Symbols.receipt_long, size: 76),
@@ -294,7 +296,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         const SizedBox(height: 10),
@@ -308,7 +310,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
           style: const TextStyle(
             fontSize: 13,
             height: 1.6,
-            color: Color(0xFF8A7464),
+            color: AppColors.muted,
           ),
         ),
         if (_selectedStatus.isNotEmpty) ...[
@@ -361,7 +363,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
     Widget? createButton;
     if (widget.isLandlord) {
       createButton = FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFD76B28),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -371,16 +373,16 @@ class _MyContractsPageState extends State<MyContractsPage> {
       );
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF8F5),
+        backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Hợp đồng thuê',
           style: TextStyle(
             fontSize: 19,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         actions: [
@@ -394,8 +396,8 @@ class _MyContractsPageState extends State<MyContractsPage> {
             onPressed: _loading ? null : _load,
             style: IconButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF8A7464),
-              side: const BorderSide(color: Color(0xFFEEDFD1)),
+              foregroundColor: AppColors.muted,
+              side: const BorderSide(color: AppColors.border),
             ),
             icon: const Icon(Symbols.refresh, size: 21),
           ),
@@ -415,7 +417,7 @@ class _MyContractsPageState extends State<MyContractsPage> {
                   style: const TextStyle(
                     fontSize: 12,
                     height: 1.5,
-                    color: Color(0xFF8A7464),
+                    color: AppColors.muted,
                   ),
                 ),
               ),
@@ -429,20 +431,20 @@ class _MyContractsPageState extends State<MyContractsPage> {
                 itemHeight: null,
                 dropdownColor: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                style: const TextStyle(fontSize: 14, color: Color(0xFF38291F)),
-                icon: const Icon(Symbols.expand_more, color: Color(0xFF8A7464)),
+                style: const TextStyle(fontSize: 14, color: AppColors.text),
+                icon: const Icon(Symbols.expand_more, color: AppColors.muted),
                 decoration: InputDecoration(
                   labelText: 'Trạng thái',
                   labelStyle: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF8A7464),
+                    color: AppColors.muted,
                   ),
                   filled: true,
                   fillColor: Colors.white,
                   prefixIcon: const Icon(
                     Symbols.tune,
                     size: 20,
-                    color: Color(0xFFC88B53),
+                    color: AppColors.placeholder,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -450,15 +452,15 @@ class _MyContractsPageState extends State<MyContractsPage> {
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFD76B28)),
+                    borderSide: const BorderSide(color: AppColors.primary),
                   ),
                 ),
                 items: _statusItems(),

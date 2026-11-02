@@ -1,6 +1,15 @@
 package com.rental.modules.user.dto.response;
 
 public class UserProfileResponse {
+    private Long listingCount;
+    private Long contractCount;
+    private Long savedListingCount;
+    public Long getListingCount() { return listingCount; }
+    public void setListingCount(Long value) { listingCount = value; }
+    public Long getContractCount() { return contractCount; }
+    public void setContractCount(Long value) { contractCount = value; }
+    public Long getSavedListingCount() { return savedListingCount; }
+    public void setSavedListingCount(Long value) { savedListingCount = value; }
     private java.util.List<String> interests = java.util.List.of();
     public java.util.List<String> getInterests() { return interests; }
     public void setInterests(java.util.List<String> interests) { this.interests = interests; }

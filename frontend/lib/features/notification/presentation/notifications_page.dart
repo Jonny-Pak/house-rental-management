@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../incident/data/incident_repository.dart';
 import '../../incident/presentation/incident_detail_page.dart';
 import '../../admin/presentation/pages/admin_dashboard_page.dart';
@@ -213,7 +215,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: store,
     builder: (context, _) => Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Thông báo hệ thống'),
         actions: [
@@ -303,7 +305,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             Icon(
                               Icons.notifications_none,
                               size: 56,
-                              color: Color(0xFFAD8A68),
+                              color: AppColors.muted,
                             ),
                             SizedBox(height: 16),
                             Text('Chưa có thông báo nào.'),

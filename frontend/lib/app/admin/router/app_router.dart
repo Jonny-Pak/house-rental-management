@@ -1,3 +1,4 @@
+import '../../../features/admin/presentation/pages/admin_amenities_page.dart';
 import '../../../features/incident/presentation/incidents_page.dart';
 
 import 'package:flutter/widgets.dart';
@@ -72,6 +73,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const IncidentsPage(admin: true),
           ),
           GoRoute(path: R.users, builder: (_, _) => const AdminUsersPage()),
+          GoRoute(
+            path: R.amenities,
+            builder: (_, _) => const AdminAmenitiesPage(),
+          ),
           GoRoute(path: R.areas, builder: (_, _) => const AdminAreasPage()),
           GoRoute(
             path: R.content,

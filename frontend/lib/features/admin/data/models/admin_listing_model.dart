@@ -1,6 +1,8 @@
+import '../../../amenity/data/amenity_model.dart';
 import '../../../listing/data/models/roommate_info.dart';
 
 class AdminListingModel {
+  final List<Amenity> amenities;
   final RoommateInfo? roommateInfo;
   final List<String> imageUrls;
   final int id;
@@ -19,6 +21,7 @@ class AdminListingModel {
 
   AdminListingModel({
     this.imageUrls = const [],
+    this.amenities = const [],
     this.roommateInfo,
     required this.id,
     required this.title,
@@ -41,6 +44,10 @@ class AdminListingModel {
           ? RoommateInfo.fromJson(json)
           : null,
       imageUrls: (json['imageUrls'] as List?)?.cast<String>() ?? [],
+      amenities: [
+        for (final item in json['amenities'] as List? ?? [])
+          Amenity.fromJson(Map<String, dynamic>.from(item)),
+      ],
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',

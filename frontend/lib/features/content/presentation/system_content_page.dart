@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/layout/app_layout.dart';
@@ -64,7 +66,7 @@ class _SystemContentPageState extends State<SystemContentPage> {
               const Icon(
                 Icons.info_outline_rounded,
                 size: 42,
-                color: Color(0xFFD66A2B),
+                color: AppColors.primary,
               ),
               const SizedBox(height: 16),
               Text(_error!, textAlign: TextAlign.center),
@@ -93,7 +95,7 @@ class _SystemContentPageState extends State<SystemContentPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).brightness == Brightness.light
-        ? const Color(0xFFF8F9FB)
+        ? AppColors.background
         : null,
     appBar: AppBar(
       centerTitle: false,

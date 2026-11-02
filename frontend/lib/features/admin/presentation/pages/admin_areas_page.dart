@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -26,7 +28,7 @@ class _AdminAreasPageState extends State<AdminAreasPage> {
   bool? _active;
   bool _loading = true, _acting = false;
   int _request = 0, _page = 0;
-  static const _accent = Color(0xFF15803D);
+  static const _accent = AppColors.primary;
 
   @override
   void initState() {

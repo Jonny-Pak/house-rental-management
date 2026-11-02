@@ -27,7 +27,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
-            org.springframework.http.converter.HttpMessageNotReadableException.class})
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
     public ResponseEntity<ApiResponse<Void>> handleInvalidInput(Exception ex) {
         return ResponseEntity.badRequest().body(ApiResponse.error("Dữ liệu hoặc bộ lọc không hợp lệ."));
     }

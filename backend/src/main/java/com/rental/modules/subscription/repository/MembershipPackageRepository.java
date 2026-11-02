@@ -9,6 +9,7 @@ public interface MembershipPackageRepository extends JpaRepository<MembershipPac
     java.util.List<MembershipPackage> findByActiveTrueOrderByPriceAscIdAsc();
     boolean existsByPackageNameIgnoreCaseAndIdNot(String name, Short id);
     boolean existsByPackageNameIgnoreCase(String name);
+    java.util.Optional<MembershipPackage> findByDefaultPackageTrue();
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select p from MembershipPackage p where p.id = :id")
     java.util.Optional<MembershipPackage> findForUpdate(@org.springframework.data.repository.query.Param("id") Short id);

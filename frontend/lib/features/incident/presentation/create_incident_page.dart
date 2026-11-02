@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/layout/app_layout.dart';
@@ -56,7 +58,7 @@ class _CreateIncidentPageState extends State<CreateIncidentPage> {
     canPop: !_busy,
     child: Scaffold(
       backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? const Color(0xFFF8F9FB)
+          ? AppColors.background
           : null,
       appBar: AppBar(title: const Text('Gửi báo cáo sự cố')),
       body: AppContent(

@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -37,7 +39,7 @@ class _PasswordPageState extends State<PasswordPage> {
   String? _error, _message;
   int _seconds = 0;
   Timer? _timer;
-  static const _accent = Color(0xFFD76B28);
+  static const _accent = AppColors.primary;
 
   @override
   void dispose() {

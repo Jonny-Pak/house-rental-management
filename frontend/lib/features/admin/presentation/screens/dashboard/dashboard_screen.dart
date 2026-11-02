@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -23,7 +25,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loading = false, _exporting = false;
   String? _error;
   int _page = 0;
-  static const _accent = Color(0xFF15803D);
+  static const _accent = AppColors.primary;
   static const _green = Color(0xFF298774);
   final _number = NumberFormat.decimalPattern('vi_VN');
   String _money(num value) => '${_number.format(value)} ₫';

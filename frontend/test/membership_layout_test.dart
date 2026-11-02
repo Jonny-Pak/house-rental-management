@@ -30,12 +30,45 @@ class Packages extends MembershipRepository {
         id: 1,
         packageName: 'Gói cơ bản',
         price: 0,
+        defaultPackage: true,
         standardPostQuota: 3,
         vipPostQuota: 0,
         refreshQuota: 0,
       ),
     ];
   }
+}
+
+class ThreePackages extends MembershipRepository {
+  ThreePackages() : super(ApiClient());
+  @override
+  Future<List<MembershipPackage>> getPackages() async => [
+    MembershipPackage(
+      id: 1,
+      packageName: 'Gói Cơ Bản',
+      price: 0,
+      defaultPackage: true,
+      standardPostQuota: 3,
+      vipPostQuota: 0,
+      refreshQuota: 0,
+    ),
+    MembershipPackage(
+      id: 2,
+      packageName: 'Gói PLUS',
+      price: 50000,
+      standardPostQuota: 10,
+      vipPostQuota: 0,
+      refreshQuota: 5,
+    ),
+    MembershipPackage(
+      id: 3,
+      packageName: 'Gói PRO',
+      price: 150000,
+      standardPostQuota: 30,
+      vipPostQuota: 5,
+      refreshQuota: 20,
+    ),
+  ];
 }
 
 class Payments extends PaymentRepository {
@@ -50,6 +83,86 @@ class Payments extends PaymentRepository {
 }
 
 void main() {
+  testWidgets(
+    'Package tabs compare real quotas and subscribe with the chosen package ID',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final payments = Payments();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MembershipPage(
+            repository: ThreePackages(),
+            paymentRepository: payments,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Gói PLUS'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('membership-default-plan')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('membership-subscribe-1')),
+        findsNothing,
+      );
+      expect(find.text('Chọn miễn phí'), findsNothing);
+      expect(payments.requested, isNull);
+      expect(find.text('Gói PRO'), findsOneWidget);
+      expect(find.text('150.000 đ'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('membership-tab-comparison')));
+      await tester.pumpAndSettle();
+      expect(find.byType(MembershipComparison), findsOneWidget);
+      expect(find.text('30 tin'), findsOneWidget);
+      expect(find.text('20 lượt'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('membership-tab-packages')));
+      await tester.pumpAndSettle();
+      final button = find.byKey(const ValueKey('membership-subscribe-2'));
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pump();
+      expect(payments.requested, 2);
+      expect(find.text('Đang xử lý yêu cầu…'), findsOneWidget);
+      payments.gate.completeError(Exception('Chưa thể thanh toán'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'Three package cards remain readable and scroll with enlarged text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 850));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: MembershipPage(
+            repository: ThreePackages(),
+            paymentRepository: Payments(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final scroll = find.byKey(const ValueKey('membership-cards-scroll'));
+      await tester.ensureVisible(scroll);
+      await tester.pumpAndSettle();
+      await tester.drag(scroll, const Offset(-280, 0));
+      await tester.pumpAndSettle();
+      final state = tester.state<ScrollableState>(
+        find.descendant(of: scroll, matching: find.byType(Scrollable)),
+      );
+      expect(state.position.pixels, greaterThan(0));
+      expect(find.text('30 tin đăng thường'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'Comparison shows actual package quotas and scrolls on small screens',
     (tester) async {
@@ -74,7 +187,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('20 tin'), findsOneWidget);
         expect(find.text('3 tin'), findsOneWidget);
-        expect(find.text('5 tin'), findsOneWidget);
+        expect(find.text('5 lượt'), findsOneWidget);
         expect(find.text('10 lượt'), findsOneWidget);
         expect(find.text('Không bao gồm'), findsNWidgets(2));
         if (width == 320) {
@@ -109,19 +222,19 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('Chọn gói miễn phí'),
+        find.byKey(const ValueKey('membership-subscribe-2')),
         200,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Chọn gói miễn phí'));
+      await tester.tap(find.byKey(const ValueKey('membership-subscribe-2')));
       await tester.pump();
-      expect(payments.requested, 1);
+      expect(payments.requested, 2);
       expect(find.text('Đang xử lý yêu cầu…'), findsOneWidget);
       expect(
         tester
             .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Chọn gói miễn phí'),
+              find.byKey(const ValueKey('membership-subscribe-2')),
             )
             .onPressed,
         isNull,
@@ -156,12 +269,12 @@ void main() {
         );
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
-          find.text('Đăng ký ngay'),
+          find.text('Đăng ký'),
           250,
           scrollable: find.byType(Scrollable).first,
         );
         await tester.pumpAndSettle();
-        expect(find.text('5 tin đăng VIP'), findsOneWidget);
+        expect(find.text('5 lượt nâng VIP'), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
     },

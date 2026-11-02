@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,16 +10,13 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'register_page.dart';
-import 'otp_page.dart';
 import 'password_page.dart';
 
-// ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark = Color(0xFF2C1D11);
-const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground = Color(0xFFFAF8F5);
-const kBorderColor = Color(0xFFE8DED1);
+const kPrimaryDark = AppColors.text;
+const kPrimaryAccent = AppColors.primary;
+const kBackground = AppColors.background;
+const kBorderColor = AppColors.border;
 const kSubText = Color(0xFF64748B);
-// ──────────────────────────────────────────────────────────────────────
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -39,23 +38,8 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _verifyEmail() {
-    final email = _emailCtrl.text.trim();
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nhập email của bạn trước khi xác thực.')),
-      );
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OtpPage(email: email, initialCooldown: 0),
-      ),
-    );
-  }
-
   void _onLogin(BuildContext context) {
+    if (context.read<AuthBloc>().state is AuthLoading) return;
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
         LoginRequested(
@@ -132,6 +116,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             suffixIcon: isPassword
                 ? IconButton(
+                    tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -208,7 +193,6 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // App Logo or Icon
                         Center(
                           child: Container(
                             padding: const EdgeInsets.all(16),
@@ -267,7 +251,6 @@ class _LoginPageState extends State<LoginPage> {
                               : null,
                         ),
 
-                        // Forgot Password Link
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -299,7 +282,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Login Button
                         ElevatedButton(
                           onPressed: isLoading ? null : () => _onLogin(context),
                           style: ElevatedButton.styleFrom(
@@ -330,7 +312,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Divider
                         Row(
                           children: [
                             Expanded(
@@ -350,10 +331,15 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Google Sign In
                         OutlinedButton.icon(
                           onPressed: () {
-                            // TODO: Implement Google Sign-In
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Đăng nhập Google đang được phát triển.',
+                                ),
+                              ),
+                            );
                           },
                           icon: Image.network(
                             'https://img.icons8.com/color/48/000000/google-logo.png',
@@ -381,16 +367,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        TextButton.icon(
-                          onPressed: isLoading ? null : _verifyEmail,
-                          icon: const Icon(
-                            Icons.mark_email_read_outlined,
-                            size: 20,
-                          ),
-                          label: const Text('Xác thực email'),
-                        ),
-                        const SizedBox(height: 12),
-                        // Register Link
                         Wrap(
                           alignment: WrapAlignment.center,
                           children: [

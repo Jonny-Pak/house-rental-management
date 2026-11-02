@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -97,12 +99,12 @@ class IncidentHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFE8CD),
+            color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Icon(
             Icons.support_agent_rounded,
-            color: Color(0xFFA56A38),
+            color: AppColors.placeholder,
             size: 30,
           ),
         ),

@@ -7,10 +7,14 @@
 - `backend/`: ứng dụng Java 21, cấu hình Maven và migration Flyway.
 - `frontend/`: ứng dụng Flutter và thư viện giao diện cục bộ `packages/kite_ui`.
 - `docs/architecture.md`: quy ước tổ chức mã nguồn và ranh giới module.
+- `docs/nearby-search-workflow.md`: tìm nhà quanh vị trí theo bán kính và khoảng cách.
 - `docs/listing-workflow.md`: hướng dẫn đăng tin, Admin duyệt, bản đồ và quản lý tin.
 - `docs/incidents-workflow.md`: người dùng gửi báo cáo sự cố, Admin xử lý và phản hồi.
 - `docs/admin-contracts-workflow.md`: Admin tra cứu toàn bộ hợp đồng và xem chi tiết.
 - `docs/admin-packages-workflow.md`: Admin quản lý gói và bảo toàn thông tin gói đã mua.
+- `docs/admin-amenities-workflow.md`: Admin quản lý nội thất/tiện ích, kết nối với tin đăng và Excel.
+- `docs/subscription-benefits-workflow.md`: áp dụng lượt đăng tin, nâng VIP và làm mới theo gói dịch vụ.
+- `docs/vnpay-app-workflow.md`: thanh toán VNPAY, IPN, quay lại app và lịch sử giao dịch.
 - `docs/ckeditor-content.md`: soạn thảo nội dung định dạng bằng CKEditor và cấu hình giấy phép.
 - `docker-compose.yml`: môi trường cơ sở dữ liệu PostGIS cục bộ.
 

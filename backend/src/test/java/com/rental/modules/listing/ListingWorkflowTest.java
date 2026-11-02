@@ -46,8 +46,22 @@ class ListingWorkflowTest {
         when(listings.findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc("APPROVED", "AVAILABLE"))
                 .thenAnswer(call -> stored != null && "APPROVED".equals(stored.getApprovalStatus())
                         && "AVAILABLE".equals(stored.getRentalStatus()) ? List.of(stored) : List.of());
-        service = new ListingService(listings, users, areas, mock(com.rental.modules.contract.repository.ContractRepository.class), mock(com.rental.modules.notification.service.NotificationService.class));
+        service = new ListingService(listings, users, areas, mock(com.rental.modules.contract.repository.ContractRepository.class), mock(com.rental.modules.notification.service.NotificationService.class), mock(com.rental.modules.amenity.service.AmenityService.class), mock(com.rental.modules.subscription.service.SubscriptionBenefitService.class));
         admin = new AdminListingService(listings, users, mock(com.rental.modules.notification.service.NotificationService.class));
+    }
+
+    @Test void nearbyRejectsInvalidCoordinatesAndConvertsKilometersToMeters() {
+        double[][] invalid = {{91, 106, 3}, {10, -181, 3}, {Double.NaN, 106, 3},
+            {10, Double.POSITIVE_INFINITY, 3}, {10, 106, 0}, {10, 106, 51}, {10, 106, Double.NaN}};
+        for (double[] values : invalid) {
+            ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.findNearby(values[0], values[1], values[2]));
+            assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
+        }
+        verify(listings, never()).findNearby(anyDouble(), anyDouble(), anyDouble());
+        when(listings.findNearby(10.78, 106.7, 3000)).thenReturn(List.of());
+        assertTrue(service.findNearby(10.78, 106.7, 3).isEmpty());
+        verify(listings).findNearby(10.78, 106.7, 3000);
     }
 
     private CreateListingRequest request() {

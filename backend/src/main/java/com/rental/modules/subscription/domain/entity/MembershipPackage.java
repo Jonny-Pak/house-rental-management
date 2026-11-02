@@ -33,6 +33,10 @@ public class MembershipPackage {
 
     @Column(nullable = false)
     private boolean active = true;
+    @Column(name = "is_default", nullable = false)
+    private boolean defaultPackage;
+    public boolean isDefaultPackage() { return defaultPackage; }
+    public void setDefaultPackage(boolean value) { defaultPackage = value; }
     @Version private Long version;
     public boolean isActive() { return active; }
     public void setActive(boolean value) { active = value; }

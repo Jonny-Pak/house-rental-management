@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../../core/layout/app_layout.dart';
 
 import 'dart:io';
@@ -13,10 +15,10 @@ import '../cubit/create_listing_state.dart';
 import '../widgets/listing_area_selector.dart';
 import '../../../preferences/data/datasources/area_remote_data_source.dart';
 
-const _kAccent = Color(0xFFD76B28);
-const _kDark = Color(0xFF38291F);
-const _kBackground = Color(0xFFFAF8F5);
-const _kBorder = Color(0xFFEEDFD1);
+const _kAccent = AppColors.primary;
+const _kDark = AppColors.text;
+const _kBackground = AppColors.background;
+const _kBorder = AppColors.border;
 
 class ListingPricingStep extends StatefulWidget {
   final VoidCallback onBack;
@@ -113,12 +115,20 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                     padding: const EdgeInsets.all(20),
                     children: [
                       const Text(
+                        'Mỗi tin mới sử dụng 1 lượt đăng tin trong gói dịch vụ.',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
                         'BƯỚC 04 / 04  ·  HOÀN THIỆN TIN ĐĂNG',
                         style: TextStyle(
                           fontSize: 10,
                           letterSpacing: 1.2,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF8A7464),
+                          color: AppColors.muted,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -137,7 +147,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
-                          color: Color(0xFF8A7464),
+                          color: AppColors.muted,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -166,7 +176,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                                 filled: true,
                                 fillColor: const Color(0xFFFCFAF7),
                                 labelStyle: const TextStyle(
-                                  color: Color(0xFF8A7464),
+                                  color: AppColors.muted,
                                   fontSize: 13,
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
@@ -297,7 +307,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                         style: TextStyle(
                           fontSize: 11,
                           height: 1.5,
-                          color: Color(0xFF8A7464),
+                          color: AppColors.muted,
                         ),
                       ),
                     ],
@@ -420,7 +430,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
         style: const TextStyle(
           fontSize: 11,
           height: 1.5,
-          color: Color(0xFF8A7464),
+          color: AppColors.muted,
         ),
       ),
       const SizedBox(height: 12),
@@ -445,7 +455,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => const ColoredBox(
                           color: Color(0xFFF5EFE8),
-                          child: Icon(Symbols.image, color: Color(0xFFAA998A)),
+                          child: Icon(Symbols.image, color: AppColors.muted),
                         ),
                       ),
                     ),
@@ -473,7 +483,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
                 color: const Color(0xFFFFF7EE),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Color(0xFFF1D6BB)),
+                  side: const BorderSide(color: AppColors.border),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -529,7 +539,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
       style: const TextStyle(fontSize: 15, color: _kDark),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFAA998A), fontSize: 13),
+        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
         filled: true,
         fillColor: const Color(0xFFFCFAF7),
         contentPadding: const EdgeInsets.symmetric(
@@ -571,7 +581,7 @@ class _ListingPricingStepState extends State<ListingPricingStep> {
           value: value,
           hint: Text(
             hint,
-            style: const TextStyle(color: Color(0xFF8A7464), fontSize: 13),
+            style: const TextStyle(color: AppColors.muted, fontSize: 13),
           ),
           itemHeight: null,
           dropdownColor: Colors.white,
@@ -627,7 +637,7 @@ class _PricingSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF0E1),
+                color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: _kAccent, size: 22),

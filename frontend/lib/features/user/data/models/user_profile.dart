@@ -1,5 +1,6 @@
 ﻿class UserProfile {
   final int id;
+  final int? listingCount, contractCount, savedListingCount;
   final List<String> interests;
   final String fullName;
   final String email;
@@ -12,6 +13,9 @@
 
   const UserProfile({
     required this.id,
+    this.listingCount,
+    this.contractCount,
+    this.savedListingCount,
     this.interests = const [],
     required this.fullName,
     required this.email,
@@ -29,6 +33,9 @@
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as int,
+      listingCount: (json['listingCount'] as num?)?.toInt(),
+      contractCount: (json['contractCount'] as num?)?.toInt(),
+      savedListingCount: (json['savedListingCount'] as num?)?.toInt(),
       interests: (json['interests'] as List?)?.cast<String>() ?? [],
       fullName: json['fullName'] as String,
       email: json['email'] as String,
@@ -46,6 +53,9 @@
 
   UserProfile withInterests(List<String> selected) => UserProfile(
     id: id,
+    listingCount: listingCount,
+    contractCount: contractCount,
+    savedListingCount: savedListingCount,
     interests: List.of(selected),
     fullName: fullName,
     email: email,

@@ -82,6 +82,9 @@ public class UserService {
         response.setEmail(user.getEmail());
         response.setPhoneNumber(user.getPhoneNumber());
         response.setAvatarUrl(user.getAvatarUrl());
+        response.setListingCount(userRepository.countListingsForUser(user.getUserId()));
+        response.setContractCount(userRepository.countContractsForUser(user.getUserId()));
+        response.setSavedListingCount(userRepository.countSavedListingsForUser(user.getUserId()));
         if (user.getRole() != null) {
             response.setRole(user.getRole().name());
         }
@@ -90,15 +93,17 @@ public class UserService {
         }
         UserSubscription subscription = userSubscriptionRepository.findByUser(user).orElse(null);
         if (subscription != null) {
-            response.setSubscriptionStatus(subscription.getStatus());
+            boolean expired = !"ACTIVE".equals(subscription.getStatus()) || (subscription.getQuotaResetAt() != null
+                    && !subscription.getQuotaResetAt().isAfter(java.time.LocalDateTime.now()));
+            response.setSubscriptionStatus(expired ? "EXPIRED" : "ACTIVE");
             if (subscription.getPackageNameSnapshot() != null) {
                 response.setMembershipPackageName(subscription.getPackageNameSnapshot());
             } else if (subscription.getMembershipPackage() != null) {
                 response.setMembershipPackageName(subscription.getMembershipPackage().getPackageName());
             }
-            response.setRemainingStandardQuota(subscription.getRemainingStandardQuota());
-            response.setRemainingVipQuota(subscription.getRemainingVipQuota());
-            response.setRemainingRefreshQuota(subscription.getRemainingRefreshQuota());
+            response.setRemainingStandardQuota(expired ? 0 : subscription.getRemainingStandardQuota());
+            response.setRemainingVipQuota(expired ? 0 : subscription.getRemainingVipQuota());
+            response.setRemainingRefreshQuota(expired ? 0 : subscription.getRemainingRefreshQuota());
         }
         UserPreference preference = userPreferenceRepository.findByUser_Email(user.getEmail()).orElse(null);
         if (preference != null) response.setInterests(new java.util.ArrayList<>(preference.getInterests()));

@@ -1,3 +1,5 @@
+import 'home_listings_fixture.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -205,7 +207,7 @@ void main() {
         ),
         GoRoute(
           path: '/other',
-          builder: (_, _) => const Scaffold(body: Text('Trang khác')),
+          builder: (_, _) => Scaffold(body: Text('Trang khác')),
         ),
       ],
     );
@@ -423,7 +425,12 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: HomePage(contentRepository: repository)),
+        home: Scaffold(
+          body: HomePage(
+            listingRepository: HomeListings(),
+            contentRepository: repository,
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -456,7 +463,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
               child: ContentArticle(

@@ -1,3 +1,5 @@
+import 'amenity_fixture.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -190,7 +192,11 @@ void main() {
         MaterialApp(
           home: BlocProvider.value(
             value: cubit,
-            child: ListingDetailsStep(onBack: () {}, onNext: () {}),
+            child: ListingDetailsStep(
+              amenityRepository: MemoryAmenities(),
+              onBack: () {},
+              onNext: () {},
+            ),
           ),
         ),
       );
@@ -245,11 +251,18 @@ void main() {
           'maxOccupants': 3,
           'genderPreference': 'ANY',
           'allowPets': true,
+          'amenities': [
+            {'id': 2, 'name': 'Wi-Fi', 'category': 'UTILITY', 'active': true},
+          ],
         },
       );
       await tester.pumpWidget(
         MaterialApp(
-          home: EditListingPage(listing: listing, repository: repository),
+          home: EditListingPage(
+            amenityRepository: MemoryAmenities(),
+            listing: listing,
+            repository: repository,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -272,6 +285,7 @@ void main() {
       expect(repository.edited!['maxOccupants'], 4);
       expect(repository.edited!['allowPets'], isTrue);
       expect(repository.edited!['listingType'], 'SHARED_ROOM');
+      expect(repository.edited!['amenityIds'], [2]);
       expect(tester.takeException(), isNull);
     },
   );

@@ -21,13 +21,54 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
+    @Test void benefitsAndPromotionsRequireAuthenticationAndUseCurrentOwner() throws Exception {
+        mvc.perform(get("/api/v1/memberships/me")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/memberships/me").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/listings/1/vip")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/listings/1/refresh")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/listings/1/vip").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/listings/1/refresh").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        verify(benefits).getBenefits(1L);
+        verify(listings).promoteVip(1L, 1L);
+        verify(listings).refreshListing(1L, 1L);
+    }
+
+    @MockBean com.rental.modules.amenity.service.AmenityService amenities;
+    @Test void amenityCatalogIsPublicButManagementRequiresAdmin() throws Exception {
+        mvc.perform(get("/api/v1/amenities")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/amenities")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/amenities").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/amenities").header("Authorization", "Bearer admin")).andExpect(status().isOk());
+        String body = "{\"name\":\"Wifi\",\"category\":\"UTILITY\",\"description\":\"Internet\",\"active\":true,\"version\":0}";
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(put("/api/v1/admin/amenities/1").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/admin/amenities/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false,\"version\":0}")).andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/admin/amenities/1").header("Authorization", "Bearer admin").param("version", "0")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("UTILITY", "OTHER"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/amenities/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false}")).andExpect(status().isBadRequest());
+        when(amenities.create(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isConflict());
+    }
+
+    @Test void nearbySearchIsPublicAndRequiresNumericParameters() throws Exception {
+        mvc.perform(get("/api/v1/listings/public/nearby").param("latitude", "10.78")
+            .param("longitude", "106.7").param("radiusKm", "3")).andExpect(status().isOk());
+        verify(listings).findNearby(10.78, 106.7, 3);
+        mvc.perform(get("/api/v1/listings/public/nearby").param("latitude", "10.78"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/listings/public/nearby").param("latitude", "abc")
+            .param("longitude", "106.7").param("radiusKm", "3")).andExpect(status().isBadRequest());
+    }
+
     @MockBean com.rental.modules.contract.service.AdminContractService adminContracts;
     @Test void adminContractReadAccessIsSeparateFromMemberActions() throws Exception {
         for (String path : java.util.List.of("/api/v1/admin/contracts", "/api/v1/admin/contracts/1")) {
@@ -47,6 +88,23 @@ class ListingSecurityTest {
 
     @MockBean com.rental.modules.subscription.service.AdminPackageService adminPackages;
     @MockBean com.rental.modules.payment.service.PaymentService payments;
+    @Test void vnpayNotificationsArePublicButPaymentHistoryAndStatusArePrivate() throws Exception {
+        when(payments.processIpn(anyMap())).thenReturn(java.util.Map.of("RspCode", "97", "Message", "Invalid signature"));
+        mvc.perform(get("/api/v1/payments/vnpay-ipn").param("vnp_SecureHash", "fake"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.RspCode").value("97"));
+        mvc.perform(get("/api/v1/payments/me")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/payments/order_1/status")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/payments/me").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(get("/api/v1/payments/order_1/status").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        verify(payments).history(1L); verify(payments).getStatus(1L, "order_1");
+        mvc.perform(get("/api/v1/payments/vnpay-return").param("vnp_TxnRef", "\"><script>alert(1)</script>"))
+            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("<script>"))))
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("houserental://payments/payment-result?reference=")));
+        when(payments.processIpn(anyMap())).thenThrow(new IllegalStateException("database unavailable"));
+        mvc.perform(get("/api/v1/payments/vnpay-ipn")).andExpect(status().isOk()).andExpect(jsonPath("$.RspCode").value("99"));
+    }
     @Test void packageManagementIsAdminOnlyAndValidatesPricesQuotasAndVersions() throws Exception {
         String body = "{\"packageName\":\"Gói mới\",\"price\":50000,\"standardPostQuota\":10,\"vipPostQuota\":2,\"refreshQuota\":3,\"description\":\"Mô tả\",\"active\":true,\"version\":0}";
         mvc.perform(get("/api/v1/admin/memberships")).andExpect(status().isForbidden());
@@ -63,7 +121,7 @@ class ListingSecurityTest {
         mvc.perform(post("/api/v1/admin/memberships").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("\"standardPostQuota\":10", "\"standardPostQuota\":32768"))).andExpect(status().isBadRequest());
         mvc.perform(patch("/api/v1/admin/memberships/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false}")).andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/payments/create").header("Authorization", "Bearer owner").contentType("application/json").content("{\"packageId\":65537}")).andExpect(status().isBadRequest());
-        mvc.perform(get("/api/v1/payments/vnpay-return").param("vnp_SecureHash", "invalid")).andExpect(status().is3xxRedirection());
+        mvc.perform(get("/api/v1/payments/vnpay-return").param("vnp_SecureHash", "invalid")).andExpect(status().isOk());
         verify(payments).processVnPayReturn(anyMap());
     }
 

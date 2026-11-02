@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -25,7 +27,7 @@ class AdminContentPageState extends State<AdminContentPage> {
   SystemContent? _selected;
   bool _busy = false;
   String? _error;
-  static const _accent = Color(0xFF15803D);
+  static const _accent = AppColors.primary;
   bool get _dirty {
     final content = _selected;
     if (content == null) {

@@ -6,6 +6,8 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.rental.core.security.JwtService;
+import com.rental.modules.subscription.service.DefaultMembershipService;
+import org.springframework.transaction.annotation.Transactional;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.domain.enums.Role;
 import com.rental.modules.user.domain.enums.UserStatus;
@@ -33,14 +35,16 @@ public class AuthService {
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final DefaultMembershipService defaultMembership;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, OtpService otpService, EmailService emailService, AuthenticationManager authenticationManager, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, OtpService otpService, EmailService emailService, AuthenticationManager authenticationManager, JwtService jwtService, DefaultMembershipService defaultMembership) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.otpService = otpService;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.defaultMembership = defaultMembership;
     }
 
     @Value("${app.google.client-id}")
@@ -101,6 +105,7 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public String verifyOtp(VerifyOtpRequest request) {
         boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (!valid) {
@@ -115,6 +120,7 @@ public class AuthService {
 
         user.setIsVerified(true);
         userRepository.save(user);
+        defaultMembership.assignIfMissing(user.getUserId());
 
         return "Tài khoản đã xác thực thành công. Vui lòng đăng nhập.";
     }
@@ -127,7 +133,7 @@ public class AuthService {
         User user = userResult.get();
 
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
-            throw new IllegalStateException("Tài khoản chưa xác thực email. Vui lòng chọn Xác thực email trên app.");
+            throw new IllegalStateException("Tài khoản chưa xác thực email. Vui lòng hoàn tất mã OTP của bước đăng ký.");
         }
 
         authenticationManager.authenticate(
@@ -137,6 +143,7 @@ public class AuthService {
         return createAuthResponse(user);
     }
 
+    @Transactional
     public AuthResponse googleLogin(GoogleLoginRequest request) {
 
         GoogleIdToken idToken = verifyGoogleToken(request.getIdToken());
@@ -205,6 +212,7 @@ public class AuthService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new IllegalStateException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.");
         }
+        defaultMembership.assignIfMissing(user.getUserId());
         String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 

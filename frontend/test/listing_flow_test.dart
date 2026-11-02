@@ -1,3 +1,5 @@
+import 'package:frontend/features/amenity/data/amenity_model.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -58,7 +60,12 @@ void main() {
     () async {
       final repository = FakeListingRepository();
       final cubit = draft(repository);
+      cubit.updateAmenities(const [
+        Amenity(id: 1, name: 'Giường', category: 'FURNITURE'),
+        Amenity(id: 9, name: 'Wi-Fi', category: 'UTILITY'),
+      ]);
       expect(await cubit.submit(), isTrue);
+      expect(repository.payload!['amenityIds'], [1, 9]);
       expect(cubit.state.status, CreateListingStatus.success);
       expect(repository.payload!['imageUrls'], [
         'https://example.com/room.jpg',

@@ -1,3 +1,4 @@
+import 'home_listings_fixture.dart';
 import 'notification_test.dart' show MemoryNotifications;
 
 import 'dart:io';
@@ -41,6 +42,17 @@ void main() {
           );
     await symbols.load();
     if (Platform.environment['RENDER_HOME_PREVIEW'] == 'true') {
+      final icons = FontLoader('MaterialIcons')
+        ..addFont(
+          Future.value(
+            ByteData.sublistView(
+              File(
+                r'C:\flutter\bin\cache\artifacts\material_fonts\MaterialIcons-Regular.otf',
+              ).readAsBytesSync(),
+            ),
+          ),
+        );
+      await icons.load();
       final bytes = await File('C:/Windows/Fonts/segoeui.ttf').readAsBytes();
       final loader = FontLoader('HomePreview')
         ..addFont(Future.value(ByteData.sublistView(bytes)));
@@ -52,7 +64,9 @@ void main() {
   ) async {
     for (final width in [320.0, 430.0, 600.0]) {
       await tester.binding.setSurfaceSize(Size(width, 860));
-      await tester.pumpWidget(const MaterialApp(home: HomePage()));
+      await tester.pumpWidget(
+        MaterialApp(home: HomePage(listingRepository: HomeListings())),
+      );
       await tester.pump();
       expect(find.text('Đăng Tin'), findsOneWidget);
       expect(find.text('Bản Đồ'), findsOneWidget);
@@ -70,6 +84,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: HomePage(
+          listingRepository: HomeListings(),
           onMenu: () => menuOpened = true,
           onTabSelected: (value) => tab = value,
         ),
@@ -84,19 +99,122 @@ void main() {
     expect(tab, 2);
   });
 
-  testWidgets('Hero dots switch slides and all functions opens the menu', (
+  testWidgets('Banner dots switch content and all functions opens the menu', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(430, 860));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+    await tester.pumpWidget(
+      MaterialApp(home: HomePage(listingRepository: HomeListings())),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('home-slide-1')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('home-slide-1')));
     await tester.pumpAndSettle();
-    expect(find.text('Nhà đẹp\nTrong tầm tay'), findsOneWidget);
+    expect(find.text('Tìm nơi ở phù hợp'), findsOneWidget);
+    await tester.ensureVisible(find.text('Xem tất cả').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Xem tất cả').first);
     await tester.pumpAndSettle();
     expect(find.text('Tất cả chức năng'), findsOneWidget);
+    expect(find.text('Trợ Lý AI'), findsNothing);
+    expect(find.byIcon(Symbols.smart_toy), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Banner advances every four seconds, wraps and allows manual navigation',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 860));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(home: HomePage(listingRepository: HomeListings())),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Đăng tin cho thuê'), findsOneWidget);
+      for (final title in [
+        'Tìm nơi ở phù hợp',
+        'Khám phá quanh bạn',
+        'Đăng tin cho thuê',
+      ]) {
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+        expect(find.text(title), findsOneWidget);
+      }
+      await tester.ensureVisible(find.byKey(const ValueKey('home-slide-2')));
+      await tester.tap(find.byKey(const ValueKey('home-slide-2')));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('Khám phá quanh bạn'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(find.text('Đăng tin cho thuê'), findsOneWidget);
+      final banner = find.byKey(const ValueKey('home-banner'));
+      await tester.ensureVisible(banner);
+      await tester.pumpAndSettle();
+      await tester.drag(banner, const Offset(-150, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Tìm nơi ở phù hợp'), findsOneWidget);
+      await tester.drag(banner, const Offset(150, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Đăng tin cho thuê'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 8));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Banner pauses on inactive tabs, background and another route', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 860));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final enabled = ValueNotifier(true);
+    addTearDown(enabled.dispose);
+    addTearDown(
+      () => tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ValueListenableBuilder<bool>(
+          valueListenable: enabled,
+          builder: (_, active, child) =>
+              TickerMode(enabled: active, child: child!),
+          child: HomePage(listingRepository: HomeListings()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    enabled.value = false;
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.text('Đăng tin cho thuê'), findsOneWidget);
+    enabled.value = true;
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.text('Đăng tin cho thuê'), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(find.text('Tìm nơi ở phù hợp'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('home-slide-0')));
+    await tester.tap(find.byKey(const ValueKey('home-slide-0')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Đăng tin ngay'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đăng tin ngay'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 8));
+    Navigator.of(tester.element(find.text('Đăng tin mới'))).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Đăng tin cho thuê'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(find.text('Tìm nơi ở phù hợp'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -124,6 +242,7 @@ void main() {
           home: RepaintBoundary(
             key: boundary,
             child: MainPage(
+              listingRepository: HomeListings(),
               userRepository: _ProfileRepository(),
               notificationRepository: MemoryNotifications(),
             ),
@@ -179,31 +298,40 @@ void main() {
     }
   });
 
-  testWidgets('Bottom bar hides in the listing flow and returns after back', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(430, 860));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      MaterialApp(
-        home: MainPage(
-          userRepository: _ProfileRepository(),
-          notificationRepository: MemoryNotifications(),
+  testWidgets(
+    'Bottom bar stays hidden throughout creation and returns after closing',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 860));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MainPage(
+            listingRepository: HomeListings(),
+            userRepository: _ProfileRepository(),
+            notificationRepository: MemoryNotifications(),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byTooltip('Trang chủ'), findsOneWidget);
-    await tester.tap(find.text('Đăng Tin'));
-    await tester.pumpAndSettle();
-    expect(find.text('Đăng tin mới'), findsOneWidget);
-    expect(find.byTooltip('Trang chủ'), findsNothing);
-    final context = tester.element(find.text('Đăng tin mới'));
-    Navigator.of(context).pop();
-    await tester.pumpAndSettle();
-    expect(find.byTooltip('Trang chủ'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Trang chủ'), findsOneWidget);
+      await tester.tap(find.text('Đăng Tin'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đăng tin mới'), findsOneWidget);
+      expect(find.byTooltip('Trang chủ'), findsNothing);
+      await tester.tap(find.text('Nhà nguyên căn'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Trang chủ'), findsNothing);
+      await tester.tap(find.byTooltip('Quay lại'));
+      await tester.pumpAndSettle();
+      expect(find.text('Đăng tin mới'), findsOneWidget);
+      expect(find.byTooltip('Trang chủ'), findsNothing);
+      final context = tester.element(find.text('Đăng tin mới'));
+      Navigator.of(context).pop();
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Trang chủ'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'Google icons render in a home preview with the bottom navigation',
@@ -223,6 +351,7 @@ void main() {
               colorSchemeSeed: const Color(0xFFFF751B),
             ),
             home: MainPage(
+              listingRepository: HomeListings(),
               userRepository: _ProfileRepository(),
               notificationRepository: MemoryNotifications(),
             ),
@@ -246,7 +375,7 @@ void main() {
           );
         });
         await tester.pumpAndSettle();
-        await tester.binding.setSurfaceSize(const Size(430, 1440));
+        await tester.binding.setSurfaceSize(const Size(430, 940));
         await tester.pumpAndSettle();
         await tester.runAsync(() async {
           final boundary =
@@ -280,7 +409,6 @@ void main() {
           ('Hợp đồng', Symbols.receipt_long),
           ('Gói dịch vụ', Symbols.payments),
           ('Bản đồ', Symbols.map),
-          ('Trợ lý AI', Symbols.smart_toy),
           ('Giới thiệu', Symbols.menu_book),
           ('Quy định', Symbols.gavel),
           ('Hướng dẫn', Symbols.help),

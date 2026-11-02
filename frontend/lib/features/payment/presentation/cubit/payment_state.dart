@@ -28,3 +28,10 @@ class PaymentError extends PaymentState {
   @override
   List<Object?> get props => [message];
 }
+
+class PaymentOpened extends PaymentState {
+  const PaymentOpened(this.reference);
+  final String reference;
+  @override
+  List<Object?> get props => [reference];
+}

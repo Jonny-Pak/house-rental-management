@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -107,7 +109,10 @@ class _RentalMapTilesState extends State<RentalMapTiles> {
                     padding: EdgeInsets.all(4),
                     child: Text(
                       '© OpenStreetMap contributors',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF573B28)),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                   ),
                 ),

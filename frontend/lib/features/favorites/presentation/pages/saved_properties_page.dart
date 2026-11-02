@@ -1,6 +1,9 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../property/data/models/property_model.dart';
 import '../../../property/presentation/pages/property_detail_page.dart';
@@ -10,11 +13,11 @@ import '../cubit/favorite_state.dart';
 import '../widgets/favorite_button.dart';
 
 // ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark   = Color(0xFF2C1D11);
-const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground    = Color(0xFFFAF8F5);
-const kBorderColor   = Color(0xFFE8DED1);
-const kSubText       = Color(0xFF64748B);
+const kPrimaryDark = AppColors.text;
+const kPrimaryAccent = AppColors.primary;
+const kBackground = AppColors.background;
+const kBorderColor = AppColors.border;
+const kSubText = Color(0xFF64748B);
 // ──────────────────────────────────────────────────────────────────────
 
 class SavedPropertiesPage extends StatelessWidget {
@@ -23,9 +26,9 @@ class SavedPropertiesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => FavoriteCubit(
-        FavoriteRepository(GetIt.I<ApiClient>()),
-      )..fetchFavorites(),
+      create: (_) =>
+          FavoriteCubit(FavoriteRepository(GetIt.I<ApiClient>()))
+            ..fetchFavorites(),
       child: const _SavedPropertiesView(),
     );
   }
@@ -42,7 +45,11 @@ class _SavedPropertiesView extends StatelessWidget {
         backgroundColor: kBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: kPrimaryDark, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: kPrimaryDark,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -58,7 +65,9 @@ class _SavedPropertiesView extends StatelessWidget {
       body: BlocBuilder<FavoriteCubit, FavoriteState>(
         builder: (context, state) {
           if (state.status == FavoriteStatus.loading) {
-            return const Center(child: CircularProgressIndicator(color: kPrimaryAccent));
+            return const Center(
+              child: CircularProgressIndicator(color: kPrimaryAccent),
+            );
           }
 
           if (state.status == FavoriteStatus.error) {
@@ -66,16 +75,24 @@ class _SavedPropertiesView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.redAccent,
+                  ),
                   const SizedBox(height: 16),
-                  Text('Lỗi: ${state.errorMessage}', style: const TextStyle(color: kSubText)),
+                  Text(
+                    'Lỗi: ${state.errorMessage}',
+                    style: const TextStyle(color: kSubText),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimaryAccent,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: () => context.read<FavoriteCubit>().fetchFavorites(),
+                    onPressed: () =>
+                        context.read<FavoriteCubit>().fetchFavorites(),
                     child: const Text('Thử lại'),
                   ),
                 ],
@@ -83,7 +100,8 @@ class _SavedPropertiesView extends StatelessWidget {
             );
           }
 
-          if (state.status == FavoriteStatus.success && state.properties.isEmpty) {
+          if (state.status == FavoriteStatus.success &&
+              state.properties.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -94,7 +112,11 @@ class _SavedPropertiesView extends StatelessWidget {
                       color: kPrimaryAccent.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.favorite_border_rounded, size: 64, color: kPrimaryAccent),
+                    child: const Icon(
+                      Icons.favorite_border_rounded,
+                      size: 64,
+                      color: kPrimaryAccent,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -108,7 +130,11 @@ class _SavedPropertiesView extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text(
                     'Nhấn vào biểu tượng trái tim\nđể lưu khu trọ yêu thích nhé',
-                    style: TextStyle(color: kSubText, fontSize: 14, height: 1.5),
+                    style: TextStyle(
+                      color: kSubText,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -147,7 +173,10 @@ class _SavedPropertyCard extends StatelessWidget {
   final PropertyModel property;
   final VoidCallback onUnfavorited;
 
-  const _SavedPropertyCard({required this.property, required this.onUnfavorited});
+  const _SavedPropertyCard({
+    required this.property,
+    required this.onUnfavorited,
+  });
 
   String _propertyTypeLabel(String type) {
     switch (type) {
@@ -182,7 +211,9 @@ class _SavedPropertyCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => PropertyDetailPage(propertyId: property.id)),
+          MaterialPageRoute(
+            builder: (_) => PropertyDetailPage(propertyId: property.id),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,12 +228,19 @@ class _SavedPropertyCard extends StatelessWidget {
                       ? Image.network(
                           property.imageUrls.first,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey),
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.broken_image_outlined,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
                         )
                       : Container(
                           color: kBackground,
-                          child: const Icon(Icons.home_work_outlined, size: 48, color: Colors.grey),
+                          child: const Icon(
+                            Icons.home_work_outlined,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
                         ),
                 ),
                 // Gradient for favorite button visibility
@@ -247,7 +285,10 @@ class _SavedPropertyCard extends StatelessWidget {
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: kPrimaryAccent,
                       borderRadius: BorderRadius.circular(6),
@@ -264,7 +305,7 @@ class _SavedPropertyCard extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             // Content Section
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -286,12 +327,20 @@ class _SavedPropertyCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 16, color: kSubText),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: kSubText,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           property.address,
-                          style: const TextStyle(color: kSubText, fontSize: 13, height: 1.4),
+                          style: const TextStyle(
+                            color: kSubText,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

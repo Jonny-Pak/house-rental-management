@@ -17,7 +17,7 @@ class ContentArticle extends StatelessWidget {
   final String slug, title, body;
   final DateTime? publishedAt;
 
-  Color get accent {
+  Color get iconColor {
     if (slug == 'rules') return const Color(0xFFAE7545);
     if (slug == 'guide') return const Color(0xFF318A7C);
     if (slug == 'support') return const Color(0xFFBB6478);
@@ -27,6 +27,7 @@ class ContentArticle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final accent = colors.primary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -51,7 +52,7 @@ class ContentArticle extends StatelessWidget {
                   color: colors.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(contentIcon(slug), color: accent, size: 34),
+                child: Icon(contentIcon(slug), color: iconColor, size: 34),
               ),
               const SizedBox(height: 22),
               Text(

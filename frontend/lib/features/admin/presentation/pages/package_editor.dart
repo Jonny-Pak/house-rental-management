@@ -54,11 +54,13 @@ class _PackageEditorState extends State<PackageEditor> {
     String label,
     String key,
     TextEditingController controller,
-    int maximum,
-  ) => TextFormField(
+    int maximum, {
+    bool readOnly = false,
+  }) => TextFormField(
     key: ValueKey(key),
     controller: controller,
     enabled: !_busy,
+    readOnly: readOnly,
     keyboardType: TextInputType.number,
     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
     decoration: _input(label),
@@ -122,10 +124,17 @@ class _PackageEditorState extends State<PackageEditor> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Thay đổi chỉ áp dụng cho lần mua mới. Gói đã mua và giao dịch đang chờ giữ thông tin cũ.',
+                  'Thay đổi chỉ áp dụng cho lần cấp hoặc mua mới. Quyền lợi đã nhận và giao dịch đang chờ giữ thông tin cũ.',
                   style: TextStyle(fontSize: 12, height: 1.5),
                 ),
                 const SizedBox(height: 20),
+                if (widget.item?.defaultPackage == true)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'Gói mặc định tự cấp khi xác thực tài khoản; giá luôn bằng 0 và không thể ngừng hoạt động.',
+                    ),
+                  ),
                 if (_error != null) ...[
                   Text(
                     _error!,
@@ -151,6 +160,7 @@ class _PackageEditorState extends State<PackageEditor> {
                   'package-price',
                   _price,
                   99999999,
+                  readOnly: widget.item?.defaultPackage == true,
                 ),
                 const SizedBox(height: 20),
                 _number(
@@ -160,7 +170,7 @@ class _PackageEditorState extends State<PackageEditor> {
                   32767,
                 ),
                 const SizedBox(height: 20),
-                _number('Lượt đăng VIP', 'package-vip', _vip, 32767),
+                _number('Lượt nâng VIP', 'package-vip', _vip, 32767),
                 const SizedBox(height: 20),
                 _number('Lượt làm mới', 'package-refresh', _refresh, 32767),
                 const SizedBox(height: 20),
@@ -180,7 +190,7 @@ class _PackageEditorState extends State<PackageEditor> {
                     'Hiển thị trong danh sách gói của người dùng.',
                   ),
                   value: _active,
-                  onChanged: _busy
+                  onChanged: _busy || widget.item?.defaultPackage == true
                       ? null
                       : (value) => setState(() => _active = value),
                 ),

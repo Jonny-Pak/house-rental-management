@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -69,9 +71,9 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
 
   Widget _photo(Listing listing) {
     const placeholder = ColoredBox(
-      color: Color(0xFFFFF0E1),
+      color: AppColors.primaryLight,
       child: Center(
-        child: Icon(Symbols.home_work, size: 48, color: Color(0xFFC99D74)),
+        child: Icon(Symbols.home_work, size: 48, color: AppColors.placeholder),
       ),
     );
     if (listing.imageUrl == null || listing.imageUrl!.isEmpty) {
@@ -88,7 +90,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
     color: Colors.white,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(24),
-      side: const BorderSide(color: Color(0xFFEEDFD1)),
+      side: const BorderSide(color: AppColors.border),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -132,7 +134,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                     fontSize: 16,
                     height: 1.4,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF38291F),
+                    color: AppColors.text,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -141,7 +143,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFD76B28),
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -151,7 +153,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                     const Icon(
                       Symbols.location_on,
                       size: 16,
-                      color: Color(0xFFAD8A68),
+                      color: AppColors.muted,
                     ),
                     const SizedBox(width: 5),
                     Expanded(
@@ -162,7 +164,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                         style: const TextStyle(
                           fontSize: 12,
                           height: 1.5,
-                          color: Color(0xFF8A7464),
+                          color: AppColors.muted,
                         ),
                       ),
                     ),
@@ -177,7 +179,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                     const Icon(
                       Symbols.square_foot,
                       size: 17,
-                      color: Color(0xFFAD8A68),
+                      color: AppColors.muted,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -185,14 +187,14 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                         '${NumberFormat.decimalPattern('vi_VN').format(listing.areaSqm)} m²',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF8A7464),
+                          color: AppColors.muted,
                         ),
                       ),
                     ),
                     const Icon(
                       Symbols.arrow_forward,
                       size: 18,
-                      color: Color(0xFFC3976C),
+                      color: AppColors.placeholder,
                     ),
                   ],
                 ),
@@ -209,7 +211,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: const Color(0xFFEEDFD1)),
+      border: Border.all(color: AppColors.border),
     ),
     child: const Column(
       children: [
@@ -226,14 +228,14 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
             fontSize: 18,
             height: 1.4,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         SizedBox(height: 10),
         Text(
           'Chưa có tin yêu thích đang cho thuê. Hãy mở một tin và nhấn biểu tượng trái tim.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, height: 1.6, color: Color(0xFF8A7464)),
+          style: TextStyle(fontSize: 13, height: 1.6, color: AppColors.muted),
         ),
       ],
     ),
@@ -241,16 +243,16 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAF8F5),
+    backgroundColor: AppColors.background,
     appBar: AppBar(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
       title: const Text(
         'Tin yêu thích',
         style: TextStyle(
           fontSize: 19,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF38291F),
+          color: AppColors.text,
         ),
       ),
       actions: [
@@ -259,8 +261,8 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
           onPressed: _loading ? null : _load,
           style: IconButton.styleFrom(
             backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF8A7464),
-            side: const BorderSide(color: Color(0xFFEEDFD1)),
+            foregroundColor: AppColors.muted,
+            side: const BorderSide(color: AppColors.border),
           ),
           icon: const Icon(Symbols.refresh, size: 21),
         ),
@@ -270,7 +272,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
       maxWidth: AppLayout.contentWidth,
       child: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFD76B28)),
+              child: CircularProgressIndicator(color: AppColors.primary),
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -284,13 +286,13 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                       style: const TextStyle(
                         fontSize: 12,
                         height: 1.5,
-                        color: Color(0xFF8A7464),
+                        color: AppColors.muted,
                       ),
                     ),
                     const SizedBox(height: 18),
                   ],
                   Material(
-                    color: const Color(0xFFFFF0E1),
+                    color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(18),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -307,7 +309,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                             Icon(
                               Symbols.home_work,
                               size: 26,
-                              color: Color(0xFFC08852),
+                              color: AppColors.placeholder,
                             ),
                             SizedBox(width: 12),
                             Expanded(
@@ -316,14 +318,14 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF573B28),
+                                  color: AppColors.primaryDark,
                                 ),
                               ),
                             ),
                             Icon(
                               Symbols.chevron_right,
                               size: 20,
-                              color: Color(0xFFAD8A68),
+                              color: AppColors.muted,
                             ),
                           ],
                         ),
@@ -339,7 +341,7 @@ class _SavedListingsPageState extends State<SavedListingsPage> {
                           const Icon(
                             Symbols.cloud_off,
                             size: 40,
-                            color: Color(0xFFAD8A68),
+                            color: AppColors.muted,
                           ),
                           const SizedBox(height: 12),
                           Text(_error!, textAlign: TextAlign.center),

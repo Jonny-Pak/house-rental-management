@@ -1,6 +1,7 @@
 class MembershipPackage {
   final int id;
   final bool active;
+  final bool defaultPackage;
   final int version;
   final String packageName;
   final double price;
@@ -18,6 +19,7 @@ class MembershipPackage {
     required this.refreshQuota,
     this.description,
     this.active = true,
+    this.defaultPackage = false,
     this.version = 0,
   });
 
@@ -31,6 +33,7 @@ class MembershipPackage {
       refreshQuota: json['refreshQuota'] as int,
       description: json['description'] as String?,
       active: json['active'] != false,
+      defaultPackage: json['defaultPackage'] == true,
       version: (json['version'] as num?)?.toInt() ?? 0,
     );
   }

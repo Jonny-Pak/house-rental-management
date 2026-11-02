@@ -1,3 +1,8 @@
+import '../../../membership/presentation/pages/subscription_benefits_page.dart';
+import '../widgets/listing_vip_badge.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../../core/excel/excel_page.dart';
 import '../../../../core/layout/app_layout.dart';
 
@@ -74,6 +79,10 @@ class _MyListingsPageState extends State<MyListingsPage> {
 
   Future<void> _action(Listing listing, String action) async {
     if (_busy) return;
+    if (action == 'VIP' || action == 'REFRESH') {
+      await _benefit(listing, action);
+      return;
+    }
     if (action == 'EDIT') {
       final saved = await Navigator.push<bool>(
         context,
@@ -131,6 +140,58 @@ class _MyListingsPageState extends State<MyListingsPage> {
     }
   }
 
+  Future<void> _benefit(Listing listing, String action) async {
+    final vip = action == 'VIP';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(vip ? 'Nâng tin VIP?' : 'Làm mới tin?'),
+        content: Text(
+          vip
+              ? 'Dùng 1 lượt VIP để ưu tiên hiển thị tối đa 30 ngày, không vượt hạn gói.'
+              : 'Dùng 1 lượt làm mới để đưa tin lên đầu nhóm tương ứng. Mỗi tin một lần trong 24 giờ.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sử dụng 1 lượt'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _busy) return;
+    setState(() => _busy = true);
+    try {
+      if (vip) {
+        await _repository.promoteVip(listing.id);
+      } else {
+        await _repository.refreshListing(listing.id);
+      }
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(content: Text(vip ? 'Đã nâng tin VIP.' : 'Đã làm mới tin.')),
+        );
+      }
+      await _load();
+    } catch (error) {
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(content: Text(ListingRepository.errorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   String _approval(String status) => switch (status) {
     'APPROVED' => 'Đã duyệt',
     'REJECTED' => 'Bị từ chối',
@@ -156,9 +217,9 @@ class _MyListingsPageState extends State<MyListingsPage> {
 
   Widget _cover(Listing listing) {
     const placeholder = ColoredBox(
-      color: Color(0xFFFFF0E1),
+      color: AppColors.primaryLight,
       child: Center(
-        child: Icon(Symbols.home_work, size: 48, color: Color(0xFFC99D74)),
+        child: Icon(Symbols.home_work, size: 48, color: AppColors.placeholder),
       ),
     );
     if (listing.imageUrl == null || listing.imageUrl!.isEmpty) {
@@ -182,7 +243,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFEEDFD1)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -207,7 +268,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                             fontSize: 16,
                             height: 1.4,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF38291F),
+                            color: AppColors.text,
                           ),
                         ),
                       ),
@@ -221,10 +282,22 @@ class _MyListingsPageState extends State<MyListingsPage> {
                       ),
                       icon: const Icon(
                         Symbols.more_horiz,
-                        color: Color(0xFF8A7464),
+                        color: AppColors.muted,
                       ),
                       onSelected: (action) => _action(l, action),
                       itemBuilder: (_) => [
+                        if (l.approvalStatus == 'APPROVED' &&
+                            l.rentalStatus == 'AVAILABLE') ...[
+                          if (!l.isVip)
+                            const PopupMenuItem(
+                              value: 'VIP',
+                              child: Text('Nâng VIP · 1 lượt'),
+                            ),
+                          const PopupMenuItem(
+                            value: 'REFRESH',
+                            child: Text('Làm mới tin · 1 lượt'),
+                          ),
+                        ],
                         const PopupMenuItem(
                           value: 'EDIT',
                           child: Text('Sửa và gửi duyệt lại'),
@@ -263,14 +336,14 @@ class _MyListingsPageState extends State<MyListingsPage> {
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFD76B28),
+                        color: AppColors.primary,
                       ),
                     ),
                     Text(
                       '· ${NumberFormat.decimalPattern('vi_VN').format(l.areaSqm)} m²',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8A7464),
+                        color: AppColors.muted,
                       ),
                     ),
                   ],
@@ -283,7 +356,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                       const Icon(
                         Symbols.location_on,
                         size: 16,
-                        color: Color(0xFFAA998A),
+                        color: AppColors.muted,
                       ),
                       const SizedBox(width: 5),
                       Expanded(
@@ -294,7 +367,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                           style: const TextStyle(
                             fontSize: 12,
                             height: 1.5,
-                            color: Color(0xFF8A7464),
+                            color: AppColors.muted,
                           ),
                         ),
                       ),
@@ -309,12 +382,13 @@ class _MyListingsPageState extends State<MyListingsPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    if (l.isVip) const ListingVipBadge(),
                     _status(_approval(l.approvalStatus), approvalColor),
                     _status(
                       _rental(l.rentalStatus),
                       l.rentalStatus == 'AVAILABLE'
                           ? const Color(0xFF387960)
-                          : const Color(0xFF8A7464),
+                          : AppColors.muted,
                     ),
                   ],
                 ),
@@ -352,20 +426,20 @@ class _MyListingsPageState extends State<MyListingsPage> {
         Container(
           padding: const EdgeInsets.all(22),
           decoration: const BoxDecoration(
-            color: Color(0xFFFFEEDC),
+            color: AppColors.primaryLight,
             shape: BoxShape.circle,
           ),
           child: const Icon(
             Symbols.assignment,
             size: 38,
-            color: Color(0xFFC88B53),
+            color: AppColors.placeholder,
           ),
         ),
         const SizedBox(height: 18),
         const Text(
           'Chưa có tin đăng trong danh sách này.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, height: 1.5, color: Color(0xFF8A7464)),
+          style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.muted),
         ),
       ],
     ),
@@ -377,19 +451,30 @@ class _MyListingsPageState extends State<MyListingsPage> {
         .where((l) => _filter == 'ALL' || l.approvalStatus == _filter)
         .toList();
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF8F5),
+        backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Quản lý tin đăng',
           style: TextStyle(
             fontSize: 19,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Quyền lợi của tôi',
+            icon: const Icon(Symbols.workspace_premium),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    SubscriptionBenefitsPage(repository: _repository),
+              ),
+            ),
+          ),
           IconButton(
             onPressed: _loading ? null : _excel,
             tooltip: 'Import / Export Excel',
@@ -400,15 +485,15 @@ class _MyListingsPageState extends State<MyListingsPage> {
             tooltip: 'Làm mới tin đăng',
             style: IconButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF8A7464),
-              side: const BorderSide(color: Color(0xFFEEDFD1)),
+              foregroundColor: AppColors.muted,
+              side: const BorderSide(color: AppColors.border),
             ),
             icon: const Icon(Symbols.refresh, size: 21),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFD76B28),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -426,10 +511,7 @@ class _MyListingsPageState extends State<MyListingsPage> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Không gian của bạn · ${_listings.length} tin đăng',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A7464),
-                  ),
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
             ),
@@ -452,19 +534,19 @@ class _MyListingsPageState extends State<MyListingsPage> {
                         ),
                         selected: _filter == status,
                         showCheckmark: false,
-                        selectedColor: const Color(0xFF573B28),
+                        selectedColor: AppColors.primaryDark,
                         backgroundColor: Colors.white,
                         side: BorderSide(
                           color: _filter == status
-                              ? const Color(0xFF573B28)
-                              : const Color(0xFFEEDFD1),
+                              ? AppColors.primaryDark
+                              : AppColors.border,
                         ),
                         labelStyle: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: _filter == status
                               ? Colors.white
-                              : const Color(0xFF8A7464),
+                              : AppColors.muted,
                         ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,

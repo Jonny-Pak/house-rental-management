@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../widgets/rental_map_tiles.dart';
 
 import 'dart:ui' as ui;
@@ -16,9 +18,9 @@ import '../cubit/map_state.dart';
 // ─────────────────────────────────────────────
 // Design tokens (match the rest of the app)
 // ─────────────────────────────────────────────
-const _kAccent = Color(0xFFD85D15);
-const _kDark = Color(0xFF2C1D11);
-const _kBackground = Color(0xFFFAF8F5);
+const _kAccent = AppColors.primary;
+const _kDark = AppColors.text;
+const _kBackground = AppColors.background;
 
 /// Entry-point: wraps the page in its own BlocProvider so it can be pushed
 /// from any Navigator.push() without needing a parent BlocProvider.

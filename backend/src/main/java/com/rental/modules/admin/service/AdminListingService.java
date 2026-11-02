@@ -118,6 +118,9 @@ public class AdminListingService {
         response.setDoorDirection(listing.getDoorDirection());
         response.setLegalDocuments(listing.getLegalDocuments());
         response.setFurnitureStatus(listing.getFurnitureStatus());
+        java.util.List<com.rental.modules.amenity.dto.AmenityResponse> selectedAmenities = new java.util.ArrayList<>();
+        for (var item : listing.getAmenities()) selectedAmenities.add(com.rental.modules.amenity.dto.AmenityResponse.from(item, null));
+        response.setAmenities(selectedAmenities);
         response.setDepositAmount(listing.getDepositAmount());
         response.setPosterType(listing.getPosterType());
         response.setCurrentOccupants(listing.getCurrentOccupants());

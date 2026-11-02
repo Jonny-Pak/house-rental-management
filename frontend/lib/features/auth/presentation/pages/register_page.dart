@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,10 +10,10 @@ import '../../data/models/auth_models.dart';
 import 'otp_page.dart';
 
 // ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark = Color(0xFF2C1D11);
-const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground = Color(0xFFFAF8F5);
-const kBorderColor = Color(0xFFE8DED1);
+const kPrimaryDark = AppColors.text;
+const kPrimaryAccent = AppColors.primary;
+const kBackground = AppColors.background;
+const kBorderColor = AppColors.border;
 const kSubText = Color(0xFF64748B);
 // ──────────────────────────────────────────────────────────────────────
 

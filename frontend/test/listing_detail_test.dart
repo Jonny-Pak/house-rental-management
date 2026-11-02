@@ -31,6 +31,9 @@ class DetailRepository extends ListingRepository {
       'bedrooms': 2,
       'bathrooms': 1,
       'furnitureStatus': 'BASIC',
+      'amenities': [
+        {'id': 9, 'name': 'Wi-Fi', 'category': 'UTILITY', 'active': true},
+      ],
       'ownerName': 'Chủ nhà Thuan',
       'ownerPhone': phone,
       'latitude': 10.78,
@@ -146,6 +149,13 @@ void main() {
       await tester.tap(find.byTooltip('Bỏ lưu tin'));
       await tester.pumpAndSettle();
       expect(repository.saved, isFalse);
+      await tester.scrollUntilVisible(
+        find.text('Nội thất & tiện ích'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Wi-Fi'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Liên hệ chủ nhà'),
         300,

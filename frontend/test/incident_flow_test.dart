@@ -1,3 +1,5 @@
+import 'home_listings_fixture.dart';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -295,7 +297,12 @@ void main() {
       final repo = MemoryIncidents();
       await open(
         tester,
-        Scaffold(body: HomePage(incidentRepository: repo)),
+        Scaffold(
+          body: HomePage(
+            listingRepository: HomeListings(),
+            incidentRepository: repo,
+          ),
+        ),
         width: 320,
         scale: 1.5,
       );

@@ -1,3 +1,5 @@
+import '../../../amenity/data/amenity_model.dart';
+
 import 'package:equatable/equatable.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -8,6 +10,7 @@ enum CreateListingStatus { draft, submitting, success, error }
 
 /// Holds all draft data across all steps of the multi-step listing form.
 class CreateListingState extends Equatable {
+  final List<Amenity> amenities;
   final int? areaId;
   final RoommateInfo roommateInfo;
   // ── Step 1: Listing Type ────────────────────────────────────────────────────
@@ -70,6 +73,7 @@ class CreateListingState extends Equatable {
 
   const CreateListingState({
     this.areaId,
+    this.amenities = const [],
     this.roommateInfo = const RoommateInfo(),
     this.propertyType = 'WHOLE_HOUSE',
     this.polygonPoints = const [],
@@ -98,6 +102,7 @@ class CreateListingState extends Equatable {
 
   CreateListingState copyWith({
     int? areaId,
+    List<Amenity>? amenities,
     RoommateInfo? roommateInfo,
     bool clearAreaId = false,
     String? propertyType,
@@ -132,6 +137,7 @@ class CreateListingState extends Equatable {
     bool clearError = false,
   }) {
     return CreateListingState(
+      amenities: amenities ?? this.amenities,
       roommateInfo: roommateInfo ?? this.roommateInfo,
       areaId: clearAreaId ? null : (areaId ?? this.areaId),
       propertyType: propertyType ?? this.propertyType,
@@ -171,6 +177,7 @@ class CreateListingState extends Equatable {
 
   @override
   List<Object?> get props => [
+    amenities,
     areaId,
     roommateInfo,
     propertyType,

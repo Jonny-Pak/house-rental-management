@@ -22,7 +22,8 @@ class AuthServiceTest {
     PasswordEncoder encoder=mock(PasswordEncoder.class);
     OtpService otp=mock(OtpService.class);
     EmailService mail=mock(EmailService.class);
-    AuthService service = new AuthService(users, encoder, otp, mail, authentication, jwt);
+    com.rental.modules.subscription.service.DefaultMembershipService membership = mock(com.rental.modules.subscription.service.DefaultMembershipService.class);
+    AuthService service = new AuthService(users, encoder, otp, mail, authentication, jwt, membership);
 
     @Test void verifiedUserStillReceivesTokensAndRole() {
         User user = new User();
@@ -37,6 +38,7 @@ class AuthServiceTest {
         assertEquals("MEMBER", response.getRole());
         assertEquals(7L, response.getUserId());
         verify(authentication).authenticate(any());
+        verify(membership).assignIfMissing(7L);
     }
 
     @Test void lockedUserCannotReceiveTokens() {
@@ -84,6 +86,22 @@ class AuthServiceTest {
         when(users.findByEmail("tenant@example.com")).thenReturn(Optional.of(user));
         assertThrows(IllegalArgumentException.class,()->service.resendOtp("tenant@example.com"));
         verifyNoInteractions(mail,otp);
+    }
+
+    @Test void validOtpActivatesUserAndAssignsDefaultMembership() {
+        User user = new User(); user.setUserId(8L); user.setIsVerified(false);
+        when(otp.validateOtp("new@example.com", "123456")).thenReturn(true);
+        when(users.findByEmail("new@example.com")).thenReturn(Optional.of(user));
+        service.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest("new@example.com", "123456"));
+        assertTrue(user.getIsVerified());
+        verify(users).save(user);
+        verify(membership).assignIfMissing(8L);
+    }
+
+    @Test void invalidOtpDoesNotActivateOrGrantMembership() {
+        assertThrows(IllegalArgumentException.class, () -> service.verifyOtp(
+            new com.rental.modules.user.dto.request.VerifyOtpRequest("new@example.com", "wrong")));
+        verifyNoInteractions(users, membership);
     }
 
 }

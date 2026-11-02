@@ -7,6 +7,8 @@ import '../storage/token_storage.dart';
 /// - Android Emulator requires `10.0.2.2` to access host machine's localhost (8080).
 /// - Web & iOS Simulator use `localhost`.
 String get _baseUrl {
+  const configuredUrl = String.fromEnvironment('API_BASE_URL');
+  if (configuredUrl.isNotEmpty) return configuredUrl;
   if (kIsWeb) {
     return 'http://localhost:8080/api/v1';
   }

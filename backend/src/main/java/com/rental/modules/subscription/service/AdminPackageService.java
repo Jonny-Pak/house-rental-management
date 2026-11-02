@@ -41,11 +41,17 @@ public class AdminPackageService {
     }
     public MembershipPackage changeStatus(Short id, boolean active, Long version) {
         MembershipPackage item = find(id, version);
+        if (item.isDefaultPackage() && !active) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể ngừng gói Cơ bản mặc định.");
+        }
         item.setActive(active);
         return packages.saveAndFlush(item);
     }
     public void delete(Short id, Long version) {
         MembershipPackage item = find(id, version);
+        if (item.isDefaultPackage()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể xóa gói Cơ bản mặc định.");
+        }
         if (subscriptions.existsByMembershipPackageId(id) || payments.existsByPurchasedPackageId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Gói đã có người mua hoặc giao dịch. Hãy ngừng bán để giữ lịch sử.");
         }
@@ -59,6 +65,9 @@ public class AdminPackageService {
         return found.get();
     }
     private void apply(MembershipPackage item, SavePackageRequest request) {
+        if (item.isDefaultPackage() && (request.price().signum() != 0 || !request.active())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gói Cơ bản mặc định phải miễn phí và luôn hoạt động.");
+        }
         if (request.standardPostQuota() + request.vipPostQuota() + request.refreshQuota() == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gói cần có ít nhất một lượt đăng tin hoặc làm mới.");
         }

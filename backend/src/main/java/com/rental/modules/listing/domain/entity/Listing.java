@@ -13,6 +13,12 @@ import java.util.List;
 @Entity
 @Table(name = "listings")
 public class Listing {
+    @ManyToMany
+    @JoinTable(name = "listing_amenities", joinColumns = @JoinColumn(name = "listing_id"), inverseJoinColumns = @JoinColumn(name = "amenity_id"))
+    @OrderBy("category ASC, name ASC")
+    private List<com.rental.modules.amenity.domain.entity.Amenity> amenities = new ArrayList<>();
+    public List<com.rental.modules.amenity.domain.entity.Amenity> getAmenities() { return amenities; }
+
     @Column(name = "current_occupants")
     private Integer currentOccupants;
     @Column(name = "max_occupants")

@@ -143,6 +143,52 @@ Future<void> action(WidgetTester tester, String tooltip) async {
 }
 
 void main() {
+  testWidgets('Default package is free, always active and cannot be deleted', (
+    tester,
+  ) async {
+    final repo = MemoryPackages();
+    repo.rows[1]!['defaultPackage'] = true;
+    repo.rows[1]!['price'] = 0;
+    await open(tester, repo);
+    expect(find.text('Gói mặc định'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton && widget.tooltip == 'Xóa Gói thử 1',
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton &&
+                  widget.tooltip == 'Ngừng bán Gói thử 1',
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    await action(tester, 'Sửa Gói thử 1');
+    final price = find.descendant(
+      of: find.byKey(const ValueKey('package-price')),
+      matching: find.byType(EditableText),
+    );
+    expect(tester.widget<EditableText>(price).readOnly, isTrue);
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+      isNull,
+    );
+    expect(repo.statuses, 0);
+    expect(repo.deletes, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Admin creates valid package and edits catalog values', (
     tester,
   ) async {
