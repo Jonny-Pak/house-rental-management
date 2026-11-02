@@ -1,3 +1,5 @@
+import '../../../membership/presentation/widgets/membership_rank_tag.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -91,8 +93,11 @@ class UserNavigationDrawer extends StatelessWidget {
                       ),
                       if (profile?.phoneNumber?.isNotEmpty == true)
                         _contact(Symbols.call, profile!.phoneNumber!),
-                      if (profile != null)
+                      if (profile != null) ...[
                         _contact(Symbols.mail, profile!.email),
+                        const SizedBox(height: 8),
+                        MembershipRankTag(rank: profile!.membershipRank),
+                      ],
                     ],
                   ),
                 ),
@@ -228,6 +233,12 @@ class UserNavigationDrawer extends StatelessWidget {
                 _item('favorites', 'Yêu thích', Symbols.favorite),
                 _item('notifications', 'Thông báo', Symbols.notifications),
                 _item('profile', 'Tài khoản', Symbols.person),
+                if (profile?.role == 'ADMIN')
+                  _item(
+                    'qr-login',
+                    'Quét QR đăng nhập Admin',
+                    Symbols.qr_code_scanner,
+                  ),
                 _item('help', 'Trợ giúp', Symbols.help),
               ],
             ),

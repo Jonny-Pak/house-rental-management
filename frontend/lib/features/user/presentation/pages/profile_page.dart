@@ -1,3 +1,6 @@
+import '../../../auth/presentation/pages/qr_login_scanner_page.dart';
+import '../../../membership/presentation/widgets/membership_rank_tag.dart';
+
 import 'package:frontend/core/theme/app_colors.dart';
 
 import '../../../incident/presentation/incidents_page.dart';
@@ -211,6 +214,12 @@ class ProfileView extends StatelessWidget {
                       'Thông tin cá nhân',
                       () => _personalInfo(context, profile),
                     ),
+                    if (profile.role == 'ADMIN')
+                      _menu(
+                        Symbols.qr_code_scanner,
+                        'Quét QR đăng nhập Admin',
+                        () => _openPage(context, const QrLoginScannerPage()),
+                      ),
                     _menu(
                       Symbols.notifications,
                       'Thông báo',
@@ -284,18 +293,6 @@ class ProfileView extends StatelessWidget {
 
   Widget _profileHeader(BuildContext context, ProfileLoaded state) {
     final profile = state.profile;
-    final active = profile.subscriptionStatus == 'ACTIVE';
-    final package = profile.membershipPackageName?.toUpperCase() ?? '';
-    String rank = 'FREE';
-    if (active &&
-        package.isNotEmpty &&
-        !package.contains('CƠ BẢN') &&
-        !package.contains('FREE')) {
-      rank = package.replaceFirst('GÓI ', '');
-    }
-    if (active && package.contains('PRO')) rank = 'PRO';
-    if (active && package.contains('PLUS')) rank = 'PLUS';
-    final rankColor = rank == 'PRO' ? const Color(0xFF7350AA) : kPrimaryAccent;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -357,24 +354,9 @@ class ProfileView extends StatelessWidget {
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: rankColor.withValues(alpha: .1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Hạng $rank',
-                  key: const ValueKey('profile-rank'),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: rankColor,
-                  ),
-                ),
+              MembershipRankTag(
+                key: const ValueKey('profile-rank'),
+                rank: profile.membershipRank,
               ),
               TextButton.icon(
                 onPressed: () => _editInterests(context),

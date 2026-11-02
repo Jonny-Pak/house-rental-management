@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.user.qr.QrLoginService.class, com.rental.core.security.JwtService.class,com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -94,6 +94,80 @@ class ListingPostgisTest {
     }
 
     @Autowired com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
+    @Autowired com.rental.modules.user.qr.QrLoginService qrLogin;
+    @Autowired com.rental.modules.user.qr.QrLoginRepository qrSessions;
+    @Autowired com.rental.core.security.JwtService qrJwt;
+
+    private String qrToken(com.rental.modules.user.qr.QrLoginService.Started session) {
+        return session.qrData().split("token=")[1];
+    }
+
+    @Test void qrLoginUsesRealStorageAndOnlyIssuesAdminTokensAfterExplicitApproval() {
+        User member = user("qrMember", Role.MEMBER), admin = user("qrAdmin", Role.ADMIN);
+        var session = qrLogin.start("http://localhost:8081", "Chrome Windows", "qr-test");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.preview(session.id(), qrToken(session), member.getUserId()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.consume(session.id(), session.browserSecret()));
+        qrLogin.preview(session.id(), qrToken(session), admin.getUserId());
+        assertEquals("SCANNED", qrLogin.status(session.id(), session.browserSecret()).status());
+        qrLogin.decide(session.id(), qrToken(session), admin.getUserId(), true);
+        var auth = qrLogin.consume(session.id(), session.browserSecret());
+        assertEquals("ADMIN", auth.getRole());
+        assertEquals(admin.getEmail(), qrJwt.extractEmail(auth.getAccessToken()));
+        entityManager.flush(); entityManager.clear();
+        assertEquals("CONSUMED", qrSessions.findById(session.id()).orElseThrow().getStatus());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.consume(session.id(), session.browserSecret()));
+    }
+
+    @Test void qrExpiryAndPasswordChangePreventIssuingFreshTokens() {
+        User admin = user("qrChangedAdmin", Role.ADMIN);
+        var session = qrLogin.start("http://localhost:8081", "Firefox", "qr-test");
+        qrLogin.preview(session.id(), qrToken(session), admin.getUserId());
+        qrLogin.decide(session.id(), qrToken(session), admin.getUserId(), true);
+        admin.setPasswordVersion(admin.getPasswordVersion() + 1); users.saveAndFlush(admin);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.consume(session.id(), session.browserSecret()));
+        var expired = qrLogin.start("http://localhost:8081", "Firefox", "qr-test");
+        qrSessions.findById(expired.id()).orElseThrow().setExpiresAt(java.time.Instant.now().minusSeconds(1));
+        assertEquals("EXPIRED", qrLogin.status(expired.id(), expired.browserSecret()).status());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.preview(expired.id(), qrToken(expired), admin.getUserId()));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void concurrentQrExchangesCanOnlyIssueOneBrowserSession() throws Exception {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        Long adminId = transaction.execute(status -> user("qrConcurrent", Role.ADMIN).getUserId());
+        var session = qrLogin.start("http://localhost:8081", "Chrome Windows", "qr-concurrent");
+        qrLogin.preview(session.id(), qrToken(session), adminId);
+        qrLogin.decide(session.id(), qrToken(session), adminId, true);
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Integer> exchange = () -> {
+            start.await();
+            try {
+                assertEquals("ADMIN", qrLogin.consume(session.id(), session.browserSecret()).getRole());
+                return 200;
+            } catch (org.springframework.web.server.ResponseStatusException error) {
+                return error.getStatusCode().value();
+            }
+        };
+        try {
+            var first = executor.submit(exchange); var second = executor.submit(exchange);
+            start.countDown();
+            var results = new java.util.ArrayList<>(List.of(first.get(30, java.util.concurrent.TimeUnit.SECONDS), second.get(30, java.util.concurrent.TimeUnit.SECONDS)));
+            java.util.Collections.sort(results);
+            assertEquals(List.of(200, 409), results);
+            assertEquals("CONSUMED", qrSessions.findById(session.id()).orElseThrow().getStatus());
+        } finally {
+            executor.shutdownNow();
+            jdbc.update("DELETE FROM admin_qr_logins WHERE id=?", session.id());
+            jdbc.update("DELETE FROM users WHERE user_id=?", adminId);
+        }
+    }
     @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     private CreateListingRequest benefitRequest(String title) {
@@ -135,7 +209,7 @@ class ListingPostgisTest {
             List.of(ListingExcelTest.listingRow("Quota row A"), ListingExcelTest.listingRow("Quota row B")));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listingExcel.importListings(ownerId, file));
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, ownerId));
-        assertEquals(1, transaction.execute(status -> benefits.getBenefits(ownerId).standard()));
+        assertEquals(1, transaction.execute(status -> benefits.getBenefits(ownerId).standard()).intValue());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE user_id=?", Integer.class, ownerId));
     }
 
@@ -234,7 +308,7 @@ class ListingPostgisTest {
             java.util.Collections.sort(results);
             assertEquals(List.of(201, 409), results);
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, ownerId));
-            assertEquals(0, transaction.execute(status -> benefits.getBenefits(ownerId).standard()));
+            assertEquals(0, transaction.execute(status -> benefits.getBenefits(ownerId).standard()).intValue());
         } finally {
             executor.shutdownNow();
         }

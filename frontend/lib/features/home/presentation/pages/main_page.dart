@@ -1,3 +1,4 @@
+import '../../../auth/presentation/pages/qr_login_scanner_page.dart';
 import '../../../listing/data/repositories/listing_repository.dart';
 import '../../../listing/presentation/pages/create_listing_page.dart';
 import '../widgets/user_bottom_navigation.dart';
@@ -327,6 +328,9 @@ class _MainPageState extends State<MainPage> {
         break;
       case 'contracts':
         _openDrawerPage(const MyContractsPage(isLandlord: true));
+        break;
+      case 'qr-login':
+        _openDrawerPage(const QrLoginScannerPage());
         break;
       case 'membership':
         _openDrawerPage(const MembershipPage());

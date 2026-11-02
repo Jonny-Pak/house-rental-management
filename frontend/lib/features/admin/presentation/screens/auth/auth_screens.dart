@@ -1,3 +1,6 @@
+import '../../../../auth/data/qr_login_repository.dart';
+import '../../../../auth/presentation/widgets/qr_login_panel.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +13,8 @@ import 'sign_in_layout.dart';
 import '../../../../auth/presentation/pages/password_page.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+  const SignInScreen({super.key, this.qrRepository});
+  final QrLoginRepository? qrRepository;
   @override
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
@@ -19,6 +23,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _showQr = false;
   String? _error;
 
   @override
@@ -60,40 +65,63 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return SignInLayout(
-      title: 'Đăng nhập quản trị',
+      title: _showQr ? 'Đăng nhập bằng QR' : 'Đăng nhập quản trị',
       subtitle: 'Đăng nhập vào bảng điều khiển quản trị.',
-      fields: [
-        AuthField(
-          label: 'Địa chỉ email',
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          error: _error,
-        ),
-        AuthField(
-          label: 'Mật khẩu',
-          controller: _password,
-          obscure: true,
-          onSubmitted: (_) => _submit(),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: _busy ? null : _submit,
-          child: Text(
-            _busy ? 'Đang đăng nhập…' : 'Đăng nhập',
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: KiteSpace.md),
-        TextButton(
-          onPressed: () => context.go(R.forgot),
-          child: const Text('Quên mật khẩu?', textAlign: TextAlign.center),
-        ),
-      ],
+      fields: _showQr
+          ? [
+              QrLoginPanel(
+                repository: widget.qrRepository,
+                onAuthenticated: (auth) =>
+                    ref.read(sessionProvider.notifier).signInWithQr(auth),
+                onCancel: () => setState(() => _showQr = false),
+              ),
+            ]
+          : [
+              AuthField(
+                label: 'Địa chỉ email',
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                error: _error,
+              ),
+              AuthField(
+                label: 'Mật khẩu',
+                controller: _password,
+                obscure: true,
+                onSubmitted: (_) => _submit(),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _busy ? null : _submit,
+                child: Text(
+                  _busy ? 'Đang đăng nhập…' : 'Đăng nhập',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => setState(() {
+                        _showQr = true;
+                        _error = null;
+                      }),
+                icon: const Icon(Icons.qr_code_2),
+                label: const Text('Đăng nhập bằng QR'),
+              ),
+              const SizedBox(height: KiteSpace.md),
+              TextButton(
+                onPressed: () => context.go(R.forgot),
+                child: const Text(
+                  'Quên mật khẩu?',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
     );
   }
 }

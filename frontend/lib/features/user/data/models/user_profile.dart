@@ -1,4 +1,15 @@
-﻿class UserProfile {
+class UserProfile {
+  String get membershipRank {
+    if (subscriptionStatus != 'ACTIVE') return 'FREE';
+    final name = membershipPackageName?.toUpperCase() ?? '';
+    if (name.isEmpty || name.contains('CƠ BẢN') || name.contains('FREE')) {
+      return 'FREE';
+    }
+    if (name.contains('PRO')) return 'PRO';
+    if (name.contains('PLUS')) return 'PLUS';
+    return name.replaceFirst('GÓI ', '');
+  }
+
   final int id;
   final int? listingCount, contractCount, savedListingCount;
   final List<String> interests;

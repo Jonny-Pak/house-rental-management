@@ -15,6 +15,7 @@
 - `docs/admin-amenities-workflow.md`: Admin quản lý nội thất/tiện ích, kết nối với tin đăng và Excel.
 - `docs/subscription-benefits-workflow.md`: áp dụng lượt đăng tin, nâng VIP và làm mới theo gói dịch vụ.
 - `docs/vnpay-app-workflow.md`: thanh toán VNPAY, IPN, quay lại app và lịch sử giao dịch.
+- `docs/admin-qr-login-workflow.md`: đăng nhập website Admin bằng QR, xác nhận qua app.
 - `docs/ckeditor-content.md`: soạn thảo nội dung định dạng bằng CKEditor và cấu hình giấy phép.
 - `docker-compose.yml`: môi trường cơ sở dữ liệu PostGIS cục bộ.
 

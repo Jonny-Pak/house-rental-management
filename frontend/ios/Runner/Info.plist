@@ -9,6 +9,8 @@
         <key>CFBundleURLName</key><string>house-rental-payment</string>
         <key>CFBundleURLSchemes</key><array><string>houserental</string></array>
     </dict></array>
+    <key>NSCameraUsageDescription</key>
+    <string>Ứng dụng dùng camera để Admin quét mã QR và xác nhận đăng nhập website.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Ứng dụng dùng vị trí của bạn để tìm nhà và phòng trọ trong bán kính đã chọn.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

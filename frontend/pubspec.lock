@@ -34,7 +34,7 @@ packages:
     source: hosted
     version: "2.13.1"
   barcode:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: barcode
       sha256: "7b6729c37e3b7f34233e2318d866e8c48ddb46c1f7ad01ff7bb2a8de1da2b9f4"
@@ -876,6 +876,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
+  mobile_scanner:
+    dependency: "direct main"
+    description:
+      name: mobile_scanner
+      sha256: "175c62fc813c2bd762757359a2088f8cbdb72020cf85d4cd27fc4d3fe59be058"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.5.0"
   nested:
     dependency: transitive
     description:

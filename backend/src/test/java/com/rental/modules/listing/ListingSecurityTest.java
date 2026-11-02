@@ -21,13 +21,44 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.user.qr.QrLoginController.class,com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.user.qr.QrLoginService qrLogin;
+    @Test void qrPreviewAndDecisionAreAdminOnlyAndBrowserExchangeDoesNotLeakTokens() throws Exception {
+        String id = "11111111-1111-4111-8111-111111111111";
+        String secret = "b".repeat(43);
+        String browserBody = "{\"browserSecret\":\"" + secret + "\"}";
+        String scanBody = "{\"scanToken\":\"" + "s".repeat(43) + "\"}";
+        when(qrLogin.start(any(), any(), any())).thenReturn(new com.rental.modules.user.qr.QrLoginService.Started(
+            id, secret, "houserental://admin-login/" + id + "?token=" + "s".repeat(43), "123456", java.time.Instant.now().plusSeconds(120)));
+        when(qrLogin.status(id, secret)).thenReturn(new com.rental.modules.user.qr.QrLoginService.Status("APPROVED"));
+        mvc.perform(post("/api/v1/auth/qr/start").header("Origin", "http://localhost:8081"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(post("/api/v1/auth/qr/" + id + "/status").contentType("application/json").content(browserBody))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APPROVED"))
+            .andExpect(jsonPath("$.accessToken").doesNotExist()).andExpect(header().string("Cache-Control", "no-store"));
+        for (String endpoint : java.util.List.of("preview", "decision")) {
+            String body = endpoint.equals("preview") ? scanBody : "{\"scanToken\":\"" + "s".repeat(43) + "\",\"approve\":true}";
+            mvc.perform(post("/api/v1/admin/qr-login/" + id + "/" + endpoint).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+            mvc.perform(post("/api/v1/admin/qr-login/" + id + "/" + endpoint).header("Authorization", "Bearer owner")
+                .contentType("application/json").content(body)).andExpect(status().isForbidden());
+            mvc.perform(post("/api/v1/admin/qr-login/" + id + "/" + endpoint).header("Authorization", "Bearer admin")
+                .contentType("application/json").content(body)).andExpect(status().isOk());
+        }
+        when(qrLogin.consume(id, secret)).thenReturn(new com.rental.modules.user.dto.response.AuthResponse("web-token", "refresh", 2L, "ADMIN"));
+        mvc.perform(post("/api/v1/auth/qr/" + id + "/consume").contentType("application/json").content(browserBody))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.role").value("ADMIN"))
+            .andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(post("/api/v1/auth/qr/" + id + "/status").contentType("application/json").content("{\"browserSecret\":\"bad\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
     @MockBean com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
     @Test void benefitsAndPromotionsRequireAuthenticationAndUseCurrentOwner() throws Exception {
         mvc.perform(get("/api/v1/memberships/me")).andExpect(status().isForbidden());
