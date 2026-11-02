@@ -57,3 +57,5 @@ flutter test
 ```
 
 Các chức năng chưa hoàn thành được đánh giá riêng với cấu trúc mã nguồn; xem tài liệu kiến trúc để biết các giới hạn còn lại.
+
+- [Đăng nhập / đăng ký Google và cấu hình OAuth](docs/google-login-workflow.md)

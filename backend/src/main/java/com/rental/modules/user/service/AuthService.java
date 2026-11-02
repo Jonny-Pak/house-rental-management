@@ -1,29 +1,21 @@
 package com.rental.modules.user.service;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 import com.rental.core.security.JwtService;
 import com.rental.modules.subscription.service.DefaultMembershipService;
 import org.springframework.transaction.annotation.Transactional;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.domain.enums.Role;
 import com.rental.modules.user.domain.enums.UserStatus;
-import com.rental.modules.user.dto.request.GoogleLoginRequest;
 import com.rental.modules.user.dto.request.LoginRequest;
 import com.rental.modules.user.dto.request.RegisterRequest;
 import com.rental.modules.user.dto.request.VerifyOtpRequest;
 import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.Optional;
 
 @Service
@@ -46,9 +38,6 @@ public class AuthService {
         this.jwtService = jwtService;
         this.defaultMembership = defaultMembership;
     }
-
-    @Value("${app.google.client-id}")
-    private String googleClientId;
 
     public String register(RegisterRequest request) {
         if (request.getRole() == Role.ADMIN) {
@@ -141,71 +130,6 @@ public class AuthService {
         );
 
         return createAuthResponse(user);
-    }
-
-    @Transactional
-    public AuthResponse googleLogin(GoogleLoginRequest request) {
-
-        GoogleIdToken idToken = verifyGoogleToken(request.getIdToken());
-        User user = findOrCreateGoogleUser(idToken.getPayload());
-        return createAuthResponse(user);
-    }
-
-    private GoogleIdToken verifyGoogleToken(String token) {
-        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
-                new NetHttpTransport(), GsonFactory.getDefaultInstance())
-                .setAudience(Collections.singletonList(googleClientId))
-                .build();
-
-        GoogleIdToken idToken;
-        try {
-            idToken = verifier.verify(token);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Tháº¥t báº¡i khi xÃ¡c minh Google ID Token: " + e.getMessage());
-        }
-
-        if (idToken == null) {
-            throw new IllegalArgumentException("Token Google ID khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng thá»­ láº¡i.");
-        }
-
-        return idToken;
-    }
-
-    private User findOrCreateGoogleUser(Payload payload) {
-        String email      = payload.getEmail();
-        String name       = (String) payload.get("name");
-        String googleId   = payload.getSubject();
-        String avatarUrl  = (String) payload.get("picture");
-
-        Optional<User> existingUser = userRepository.findByEmail(email);
-        User user;
-
-        if (existingUser.isPresent()) {
-
-            user = existingUser.get();
-            if (user.getGoogleId() == null) {
-                user.setGoogleId(googleId);
-            }
-            if (user.getAvatarUrl() == null) {
-                user.setAvatarUrl(avatarUrl);
-            }
-            user.setIsVerified(true);
-            userRepository.save(user);
-        } else {
-
-            user = new User();
-            user.setEmail(email);
-            user.setFullName(name);
-            user.setGoogleId(googleId);
-            user.setAvatarUrl(avatarUrl);
-            user.setPasswordHash(null);
-            user.setRole(Role.MEMBER);
-            user.setStatus(UserStatus.ACTIVE);
-            user.setIsVerified(true);
-            userRepository.save(user);
-        }
-
-        return user;
     }
 
     private AuthResponse createAuthResponse(User user) {

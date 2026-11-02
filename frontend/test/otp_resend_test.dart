@@ -15,6 +15,10 @@ class OtpRepository implements AuthRepository {
   bool fail = false;
   String? verifiedEmail;
   @override
+  Future<AuthResponse> googleLogin(String idToken) async =>
+      throw UnimplementedError();
+
+  @override
   Future<void> resendOtp(String email) async {
     if (fail) {
       throw DioException(

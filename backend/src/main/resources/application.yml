@@ -57,7 +57,7 @@ app:
     access-expiration: 86400000   # 1 day in ms
     refresh-expiration: 604800000 # 7 days in ms
   google:
-    client-id: 123456789-example.apps.googleusercontent.com
+    client-id: ${GOOGLE_WEB_CLIENT_ID:163320326790-qpth0te5vfpp3b386lrmbdh1mucqhle8.apps.googleusercontent.com}
 
 # Cloudinary Config
 cloudinary:

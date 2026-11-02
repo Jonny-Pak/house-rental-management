@@ -21,13 +21,29 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.user.qr.QrLoginController.class,com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.user.controller.GoogleAuthController.class,com.rental.modules.user.qr.QrLoginController.class,com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.user.service.GoogleAuthService googleAuth;
+    @Test void googleLoginIsPublicValidatesInputAndDoesNotCacheTokens() throws Exception {
+        when(googleAuth.login("google-id-token")).thenReturn(new com.rental.modules.user.dto.response.AuthResponse("access", "refresh", 1L, "MEMBER"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"google-id-token\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.accessToken").value("access"))
+            .andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"\"}"))
+            .andExpect(status().isBadRequest());
+        when(googleAuth.login("bad")).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Invalid Google token"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"bad\"}"))
+            .andExpect(status().isUnauthorized());
+        when(googleAuth.login("racing")).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"racing\"}"))
+            .andExpect(status().isConflict());
+    }
+
     @MockBean com.rental.modules.user.qr.QrLoginService qrLogin;
     @Test void qrPreviewAndDecisionAreAdminOnlyAndBrowserExchangeDoesNotLeakTokens() throws Exception {
         String id = "11111111-1111-4111-8111-111111111111";

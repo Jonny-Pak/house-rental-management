@@ -15,6 +15,10 @@ class LoginRepository implements AuthRepository {
   int calls = 0;
   LoginRequest? request;
   @override
+  Future<AuthResponse> googleLogin(String idToken) async =>
+      throw UnimplementedError();
+
+  @override
   Future<AuthResponse> login(LoginRequest request) {
     calls++;
     this.request = request;

@@ -18,6 +18,10 @@ import 'package:frontend/features/user/data/repositories/user_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   @override
+  Future<AuthResponse> googleLogin(String idToken) async =>
+      throw UnimplementedError();
+
+  @override
   Future<AuthResponse> login(LoginRequest request) async => const AuthResponse(
     accessToken: 'test-token',
     refreshToken: '',

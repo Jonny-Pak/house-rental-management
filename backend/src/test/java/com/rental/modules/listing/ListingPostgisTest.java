@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.user.qr.QrLoginService.class, com.rental.core.security.JwtService.class,com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.user.service.GoogleAuthService.class,com.rental.modules.user.qr.QrLoginService.class, com.rental.core.security.JwtService.class,com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -74,6 +74,35 @@ class ListingPostgisTest {
              var statement = connection.createStatement()) {
             statement.execute("DROP SCHEMA " + SCHEMA + " CASCADE");
         }
+    }
+
+    @org.springframework.boot.test.mock.mockito.MockBean com.rental.modules.user.service.GoogleTokenService googleTokens;
+    @Autowired com.rental.modules.user.service.GoogleAuthService googleAuth;
+
+    @Test void googleLoginCreatesOneMemberWithOneBasicSubscriptionAndReusesSameAccount() {
+        var profile = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload()
+                .setSubject("google-integration-123").setEmail("googleintegration@gmail.com").setEmailVerified(true);
+        profile.set("name", "Google Member");
+        org.mockito.Mockito.when(googleTokens.verify("integration-token")).thenReturn(profile);
+        var first = googleAuth.login("integration-token");
+        var second = googleAuth.login("integration-token");
+        assertEquals(first.getUserId(), second.getUserId());
+        assertEquals("MEMBER", first.getRole());
+        User saved = users.findById(first.getUserId()).orElseThrow();
+        assertTrue(saved.getIsVerified()); assertNull(saved.getPasswordHash());
+        assertEquals("google-integration-123", saved.getGoogleId());
+        assertEquals("googleintegration@gmail.com", qrJwt.extractEmail(first.getAccessToken()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM user_subscriptions WHERE user_id = ?", Integer.class, first.getUserId()));
+    }
+
+    @Test void googleLoginLinksCaseInsensitiveEmailWithoutChangingRoleOrExistingPassword() {
+        User saved = user("GoogleCase", Role.MEMBER);
+        saved.setEmail("GoogleCase@Gmail.com"); saved.setIsVerified(true); saved.setPasswordHash("keep-password"); users.saveAndFlush(saved);
+        var profile = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload()
+                .setSubject("google-case-123").setEmail("googlecase@gmail.com").setEmailVerified(true);
+        org.mockito.Mockito.when(googleTokens.verify("case-token")).thenReturn(profile);
+        assertEquals(saved.getUserId(), googleAuth.login("case-token").getUserId());
+        assertEquals("keep-password", users.findById(saved.getUserId()).orElseThrow().getPasswordHash());
     }
 
     @Autowired com.rental.modules.subscription.service.AdminPackageService adminPackages;

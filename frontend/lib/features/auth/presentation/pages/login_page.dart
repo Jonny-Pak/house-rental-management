@@ -3,9 +3,9 @@ import 'package:frontend/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/storage/token_storage.dart';
 import '../../../home/presentation/pages/main_page.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/google_login_button.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
@@ -144,7 +144,7 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: kBackground,
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
-          listener: (context, state) async {
+          listener: (context, state) {
             if (ModalRoute.of(context)?.isCurrent == false) return;
             if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -168,11 +168,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               );
-              await TokenStorage.saveToken(state.data.accessToken);
               if (context.mounted) {
-                Navigator.pushReplacement(
+                Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const MainPage()),
+                  (_) => false,
                 );
               }
             }
@@ -331,40 +331,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Đăng nhập Google đang được phát triển.',
-                                ),
-                              ),
-                            );
-                          },
-                          icon: Image.network(
-                            'https://img.icons8.com/color/48/000000/google-logo.png',
-                            height: 24,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.error_outline, size: 24),
-                          ),
-                          label: const Text(
-                            'Tiếp tục với Google',
-                            style: TextStyle(
-                              color: kPrimaryDark,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: const BorderSide(color: kBorderColor),
-                            elevation: 0,
-                          ),
-                        ),
+                        GoogleLoginButton(loading: isLoading),
                         const SizedBox(height: 32),
 
                         Wrap(

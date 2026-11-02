@@ -53,4 +53,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+    Optional<User> findByGoogleId(String googleId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from User u where lower(u.email) = lower(:email)")
+    java.util.List<User> findGoogleEmailMatches(@org.springframework.data.repository.query.Param("email") String email);
 }
