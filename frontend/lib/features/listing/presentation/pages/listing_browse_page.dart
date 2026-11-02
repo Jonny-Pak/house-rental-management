@@ -1,3 +1,7 @@
+import '../widgets/listing_vip_badge.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../../core/layout/app_layout.dart';
 import '../../../map/presentation/pages/listing_map_page.dart';
 import '../../data/models/listing_filter.dart';
@@ -36,6 +40,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
   List<Listing> _items = [];
   String? _error;
   bool _loading = true;
+  int _request = 0;
   @override
   void initState() {
     super.initState();
@@ -46,17 +51,27 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
   }
 
   Future<void> _load() async {
+    final request = ++_request;
+    final filter = _filter;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final items = await _repository.fetchApprovedListings();
-      if (mounted) setState(() => _items = items);
+      final items = filter.hasRadius
+          ? await _repository.fetchNearby(
+              filter.center!.latitude,
+              filter.center!.longitude,
+              filter.radiusKm!,
+            )
+          : await _repository.fetchApprovedListings();
+      if (mounted && request == _request) setState(() => _items = items);
     } catch (e) {
-      if (mounted) setState(() => _error = ListingRepository.errorMessage(e));
+      if (mounted && request == _request) {
+        setState(() => _error = ListingRepository.errorMessage(e));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && request == _request) setState(() => _loading = false);
     }
   }
 
@@ -76,7 +91,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
     color: Colors.white,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(24),
-      side: const BorderSide(color: Color(0xFFEEDFD1)),
+      side: const BorderSide(color: AppColors.border),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -90,6 +105,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (listing.isVip) const ListingVipBadge(),
                 Text(
                   listing.title,
                   maxLines: 3,
@@ -98,7 +114,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                     fontSize: 16,
                     height: 1.4,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF38291F),
+                    color: AppColors.text,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -107,7 +123,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                   style: const TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFD76B28),
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -117,7 +133,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                     const Icon(
                       Symbols.location_on,
                       size: 17,
-                      color: Color(0xFFAA998A),
+                      color: AppColors.muted,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -128,7 +144,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                         style: const TextStyle(
                           fontSize: 12,
                           height: 1.5,
-                          color: Color(0xFF8A7464),
+                          color: AppColors.muted,
                         ),
                       ),
                     ),
@@ -146,6 +162,8 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                       Symbols.square_foot,
                       '${NumberFormat.decimalPattern('vi_VN').format(listing.areaSqm)} m²',
                     ),
+                    if (_filter.distanceKm(listing) != null)
+                      _info(Symbols.near_me, _filter.distanceLabel(listing)),
                     if (listing.listingType != null)
                       _info(
                         Symbols.home_work,
@@ -163,9 +181,9 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
 
   Widget _photo(Listing listing) {
     const fallback = ColoredBox(
-      color: Color(0xFFFFF0E1),
+      color: AppColors.primaryLight,
       child: Center(
-        child: Icon(Symbols.home_work, size: 52, color: Color(0xFFC99D74)),
+        child: Icon(Symbols.home_work, size: 52, color: AppColors.placeholder),
       ),
     );
     if (listing.imageUrl == null || listing.imageUrl!.isEmpty) {
@@ -181,12 +199,12 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
   Widget _info(IconData icon, String label) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 17, color: const Color(0xFFAD8A68)),
+      Icon(icon, size: 17, color: AppColors.muted),
       const SizedBox(width: 5),
       Flexible(
         child: Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF8A7464)),
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
         ),
       ),
     ],
@@ -197,16 +215,16 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
     final items = _filter.apply(_items);
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF8F5),
+        backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         title: Text(
           widget.title,
           style: const TextStyle(
             fontSize: 19,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         actions: [
@@ -216,8 +234,8 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
               tooltip: 'Xem trên bản đồ',
               style: IconButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF8A7464),
-                side: const BorderSide(color: Color(0xFFEEDFD1)),
+                foregroundColor: AppColors.muted,
+                side: const BorderSide(color: AppColors.border),
               ),
               icon: const Icon(Symbols.map, size: 22),
               onPressed: () => Navigator.push(
@@ -236,35 +254,35 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
           children: [
             Theme(
               data: theme.copyWith(
-                scaffoldBackgroundColor: const Color(0xFFFAF8F5),
+                scaffoldBackgroundColor: AppColors.background,
                 colorScheme: theme.colorScheme.copyWith(
-                  primary: const Color(0xFFD76B28),
-                  secondaryContainer: const Color(0xFFFFEBD9),
-                  onSecondaryContainer: const Color(0xFFAF541E),
+                  primary: AppColors.primary,
+                  secondaryContainer: AppColors.primaryLight,
+                  onSecondaryContainer: AppColors.primaryDark,
                 ),
                 inputDecorationTheme: InputDecorationTheme(
                   filled: true,
                   fillColor: Colors.white,
                   hintStyle: const TextStyle(
                     fontSize: 13,
-                    color: Color(0xFFAA998A),
+                    color: AppColors.muted,
                   ),
-                  prefixIconColor: const Color(0xFF8A7464),
+                  prefixIconColor: AppColors.muted,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFD76B28)),
+                    borderSide: const BorderSide(color: AppColors.primary),
                   ),
                 ),
                 iconButtonTheme: IconButtonThemeData(
@@ -279,7 +297,13 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
               child: ListingFilterBar(
                 filter: _filter,
                 autofocus: widget.autofocus,
-                onChanged: (filter) => setState(() => _filter = filter),
+                onChanged: (filter) {
+                  final changed =
+                      _filter.center != filter.center ||
+                      _filter.radiusKm != filter.radiusKm;
+                  setState(() => _filter = filter);
+                  if (changed) _load();
+                },
               ),
             ),
             if (!_loading && _error == null)
@@ -290,7 +314,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                     const Icon(
                       Symbols.home_work,
                       size: 18,
-                      color: Color(0xFFC88B53),
+                      color: AppColors.placeholder,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -299,7 +323,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF573B28),
+                          color: AppColors.primaryDark,
                         ),
                       ),
                     ),
@@ -310,7 +334,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
               child: _loading
                   ? const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFFD76B28),
+                        color: AppColors.primary,
                       ),
                     )
                   : _error != null
@@ -323,7 +347,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                             const Icon(
                               Symbols.cloud_off,
                               size: 38,
-                              color: Color(0xFFAD8A68),
+                              color: AppColors.muted,
                             ),
                             const SizedBox(height: 12),
                             Text(_error!, textAlign: TextAlign.center),
@@ -352,7 +376,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                                   Icon(
                                     Symbols.search_off,
                                     size: 48,
-                                    color: Color(0xFFC99D74),
+                                    color: AppColors.placeholder,
                                   ),
                                   SizedBox(height: 16),
                                   Text(
@@ -361,7 +385,7 @@ class _ListingBrowsePageState extends State<ListingBrowsePage> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       height: 1.5,
-                                      color: Color(0xFF8A7464),
+                                      color: AppColors.muted,
                                     ),
                                   ),
                                 ],

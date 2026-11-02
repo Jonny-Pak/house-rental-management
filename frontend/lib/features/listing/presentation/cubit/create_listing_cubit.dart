@@ -1,3 +1,5 @@
+import '../../../amenity/data/amenity_model.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -141,6 +143,7 @@ class CreateListingCubit extends Cubit<CreateListingState> {
         'doorDirection': draft.doorDirection,
         'legalDocuments': draft.legalDocuments,
         'furnitureStatus': draft.furnitureStatus,
+        'amenityIds': [for (final item in draft.amenities) item.id],
         'depositAmount': draft.depositAmount,
         'posterType': draft.posterType,
         'imageUrls': urls,
@@ -344,6 +347,9 @@ class CreateListingCubit extends Cubit<CreateListingState> {
   void updateLegalDocuments(String? doc) => doc == null
       ? emit(state.copyWith(clearLegalDocuments: true))
       : emit(state.copyWith(legalDocuments: doc));
+
+  void updateAmenities(List<Amenity> items) =>
+      emit(state.copyWith(amenities: items));
 
   void updateFurnitureStatus(String? status) =>
       emit(state.copyWith(furnitureStatus: status));

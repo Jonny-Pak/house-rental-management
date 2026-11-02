@@ -1,3 +1,8 @@
+import '../../../amenity/data/amenity_repository.dart';
+import '../../../amenity/presentation/amenity_selector.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -7,24 +12,26 @@ import '../cubit/create_listing_cubit.dart';
 import '../cubit/create_listing_state.dart';
 import '../widgets/roommate_form.dart';
 
-const _accent = Color(0xFFD76B28);
-const _ink = Color(0xFF38291F);
-const _muted = Color(0xFF8A7464);
-const _border = Color(0xFFEEDFD1);
+const _accent = AppColors.primary;
+const _ink = AppColors.text;
+const _muted = AppColors.muted;
+const _border = AppColors.border;
 
 class ListingDetailsStep extends StatelessWidget {
   const ListingDetailsStep({
     super.key,
+    this.amenityRepository,
     required this.onNext,
     required this.onBack,
   });
+  final AmenityRepository? amenityRepository;
   final VoidCallback onNext, onBack;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAF8F5),
+    backgroundColor: AppColors.background,
     appBar: AppBar(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
       centerTitle: true,
       leading: IconButton(
@@ -188,6 +195,12 @@ class ListingDetailsStep extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    AmenitySelector(
+                      repository: amenityRepository,
+                      selected: state.amenities,
+                      onChanged: cubit.updateAmenities,
+                    ),
+                    const SizedBox(height: 16),
                     const Text(
                       '* Thông tin bắt buộc',
                       style: TextStyle(fontSize: 11, color: _muted),
@@ -211,7 +224,7 @@ class ListingDetailsStep extends StatelessWidget {
                         backgroundColor: _accent,
                         foregroundColor: Colors.white,
                         disabledBackgroundColor: const Color(0xFFF0EBE5),
-                        disabledForegroundColor: const Color(0xFFAD9D8E),
+                        disabledForegroundColor: AppColors.muted,
                         minimumSize: const Size.fromHeight(52),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -283,7 +296,7 @@ class _DetailSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF0E1),
+                color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, size: 22, color: _accent),
@@ -451,7 +464,7 @@ class _CounterField extends StatelessWidget {
               tooltip: 'Tăng $label',
               onPressed: () => onChanged(value + 1),
               style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFFFFEBD9),
+                backgroundColor: AppColors.primaryLight,
                 foregroundColor: _accent,
               ),
               icon: const Icon(Symbols.add, size: 20),

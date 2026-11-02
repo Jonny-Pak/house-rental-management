@@ -26,7 +26,7 @@ public class ListingExcelTest {
         var ward = new AdministrativeArea(); ward.setAreaId(6L); ward.setAreaName("Phường kiểm thử"); ward.setAreaType("WARD");
         when(areas.findAll()).thenReturn(List.of(ward));
         factory = Validation.buildDefaultValidatorFactory();
-        excel = new ListingExcelService(listings, areas, factory.getValidator());
+        excel = new ListingExcelService(listings, areas, factory.getValidator(), mock(com.rental.modules.amenity.service.AmenityService.class));
     }
     @AfterEach void close() { factory.close(); }
 

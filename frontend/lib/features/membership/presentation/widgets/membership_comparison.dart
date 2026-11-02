@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -30,7 +32,7 @@ class _MembershipComparisonState extends State<MembershipComparison> {
         fontSize: 13,
         height: 1.5,
         fontWeight: heading ? FontWeight.w600 : FontWeight.w400,
-        color: heading ? const Color(0xFF38291F) : const Color(0xFF8A7464),
+        color: heading ? AppColors.text : AppColors.muted,
       ),
     ),
   );
@@ -53,7 +55,7 @@ class _MembershipComparisonState extends State<MembershipComparison> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEEDFD1)),
+        border: Border.all(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: LayoutBuilder(
@@ -81,7 +83,9 @@ class _MembershipComparisonState extends State<MembershipComparison> {
                   ),
                   children: [
                     TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFFFF5E9)),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryLight,
+                      ),
                       children: [
                         _cell('Quyền lợi', heading: true),
                         for (final package in packages)
@@ -104,7 +108,7 @@ class _MembershipComparisonState extends State<MembershipComparison> {
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF38291F),
+                                    color: AppColors.text,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -115,7 +119,7 @@ class _MembershipComparisonState extends State<MembershipComparison> {
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFFD76B28),
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ],
@@ -123,14 +127,20 @@ class _MembershipComparisonState extends State<MembershipComparison> {
                           ),
                       ],
                     ),
+                    _row('Cách sử dụng', [
+                      for (final p in packages)
+                        p.defaultPackage
+                            ? 'Tự động khi đăng ký tài khoản'
+                            : 'Đăng ký gói',
+                    ], shaded: true),
                     _row('Tin đăng thường', [
                       for (final p in packages) '${p.standardPostQuota} tin',
                     ]),
-                    _row('Tin đăng VIP', [
+                    _row('Lượt nâng VIP', [
                       for (final p in packages)
                         p.vipPostQuota == 0
                             ? 'Không bao gồm'
-                            : '${p.vipPostQuota} tin',
+                            : '${p.vipPostQuota} lượt',
                     ], shaded: true),
                     _row('Làm mới tin', [
                       for (final p in packages)

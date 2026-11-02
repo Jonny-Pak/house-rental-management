@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public class GoogleLoginRequest {
 
     @NotBlank(message = "ID Token không được để trống")
+    @jakarta.validation.constraints.Size(max = 8192, message = "ID Token không hợp lệ")
     private String idToken;
 
     public GoogleLoginRequest() {}

@@ -1,3 +1,4 @@
+import '../../../membership/data/models/subscription_benefits.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/listing_model.dart';
 
@@ -8,6 +9,24 @@ class ListingRepository {
   ListingRepository(this._apiClient);
 
   final ApiClient _apiClient;
+
+  Future<List<Listing>> fetchNearby(
+    double latitude,
+    double longitude,
+    double radiusKm,
+  ) async {
+    final response = await _apiClient.get(
+      '/listings/public/nearby',
+      queryParams: {
+        'latitude': latitude,
+        'longitude': longitude,
+        'radiusKm': radiusKm,
+      },
+    );
+    return (response.data as List)
+        .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
 
   Future<Listing> fetchDetail(int id) async {
     final response = await _apiClient.get('/listings/public/$id');
@@ -69,6 +88,21 @@ class ListingRepository {
       '/listings/$id/rental-status',
       data: {'rentalStatus': status},
     );
+  }
+
+  Future<SubscriptionBenefits> fetchBenefits() async {
+    final response = await _apiClient.get('/memberships/me');
+    return SubscriptionBenefits.fromJson(
+      Map<String, dynamic>.from(response.data),
+    );
+  }
+
+  Future<void> promoteVip(int id) async {
+    await _apiClient.post('/listings/$id/vip', {});
+  }
+
+  Future<void> refreshListing(int id) async {
+    await _apiClient.post('/listings/$id/refresh', {});
   }
 
   Future<void> deleteListing(int id) async {

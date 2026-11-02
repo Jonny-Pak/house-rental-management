@@ -1,3 +1,5 @@
+import 'amenity_fixture.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +19,11 @@ void main() {
         MaterialApp(
           home: BlocProvider.value(
             value: cubit,
-            child: ListingDetailsStep(onNext: () => next = true, onBack: () {}),
+            child: ListingDetailsStep(
+              amenityRepository: MemoryAmenities(),
+              onNext: () => next = true,
+              onBack: () {},
+            ),
           ),
         ),
       );
@@ -75,7 +81,11 @@ void main() {
           ),
           home: BlocProvider.value(
             value: cubit,
-            child: ListingDetailsStep(onNext: () {}, onBack: () {}),
+            child: ListingDetailsStep(
+              amenityRepository: MemoryAmenities(),
+              onNext: () {},
+              onBack: () {},
+            ),
           ),
         ),
       );

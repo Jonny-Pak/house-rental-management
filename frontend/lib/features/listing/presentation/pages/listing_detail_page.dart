@@ -1,3 +1,8 @@
+import '../widgets/listing_vip_badge.dart';
+import '../../../amenity/presentation/amenity_chips.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../widgets/roommate_form.dart';
 import '../../../../core/layout/app_layout.dart';
 
@@ -14,7 +19,7 @@ import '../../../map/presentation/widgets/rental_map_tiles.dart';
 import '../../data/models/listing_model.dart';
 import '../../data/repositories/listing_repository.dart';
 
-const _accent = Color(0xFFD85D15);
+const _accent = AppColors.primary;
 
 class ListingDetailPage extends StatefulWidget {
   const ListingDetailPage({
@@ -237,7 +242,7 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
     final phone = listing?.details['ownerPhone']?.toString().trim() ?? '';
     final dial = phone.replaceAll(RegExp(r'[^0-9+]'), '');
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Chi tiết tin cho thuê'),
         actions: [
@@ -379,6 +384,8 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
         ),
       ),
       const SizedBox(height: 20),
+      if (listing.isVip)
+        const Align(alignment: Alignment.centerLeft, child: ListingVipBadge()),
       Text(
         listing.title,
         style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
@@ -434,6 +441,8 @@ class _ListingDetailPageState extends State<ListingDetailPage> {
           'Thông tin ở ghép',
           RoommateSummary(value: listing.roommateInfo),
         ),
+      if (listing.amenities.isNotEmpty)
+        _section('Nội thất & tiện ích', AmenityChips(items: listing.amenities)),
       _section(
         'Mô tả',
         SelectableText(

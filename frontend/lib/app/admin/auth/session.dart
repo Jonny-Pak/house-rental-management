@@ -38,6 +38,7 @@ class SessionController extends Notifier<SessionUser?> {
     if (token != null && token.isNotEmpty) {
       try {
         final response = await ApiClient().get('/users/me');
+        if (await TokenStorage.getToken() != token) return;
         final profile = response.data['data'] as Map;
         if (profile['role'] != 'ADMIN') {
           await TokenStorage.clearToken();
@@ -49,7 +50,9 @@ class SessionController extends Notifier<SessionUser?> {
           role: 'ADMIN',
         );
       } catch (_) {
-        await TokenStorage.clearToken();
+        if (await TokenStorage.getToken() == token) {
+          await TokenStorage.clearToken();
+        }
       }
     }
   }
@@ -102,6 +105,31 @@ class SessionController extends Notifier<SessionUser?> {
       throw Exception(msg);
     } catch (e) {
       throw Exception(e.toString());
+    }
+  }
+
+  Future<void> signInWithQr(AuthResponse auth, {ApiClient? client}) async {
+    if (auth.role != 'ADMIN') {
+      throw Exception('Tài khoản này không có quyền quản trị.');
+    }
+    await TokenStorage.saveToken(auth.accessToken);
+    try {
+      final response = await (client ?? ApiClient()).get('/users/me');
+      final profile = response.data['data'] as Map;
+      if (profile['role'] != 'ADMIN' || profile['id'] != auth.userId) {
+        throw Exception('Tài khoản Admin không còn hợp lệ.');
+      }
+      if (await TokenStorage.getToken() != auth.accessToken) return;
+      state = SessionUser(
+        name: profile['fullName'] as String,
+        email: profile['email'] as String,
+      );
+    } catch (_) {
+      if (await TokenStorage.getToken() == auth.accessToken) {
+        await TokenStorage.clearToken();
+        state = null;
+      }
+      rethrow;
     }
   }
 

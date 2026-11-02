@@ -27,9 +27,24 @@ public class AdministrativeArea {
     @JoinColumn(name = "parent_id")
     private AdministrativeArea parent;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+
+    public boolean isAvailable() {
+        AdministrativeArea current = this;
+        while (current != null) {
+            if (!current.isActive()) return false;
+            current = current.getParent();
+        }
+        return true;
+    }
 
     public Long getAreaId() {
         return areaId;

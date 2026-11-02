@@ -40,10 +40,12 @@ class MemberRoleMigrationTest {
                         + "(102, 'Owner', 'owner@example.com', 'OWNER'), "
                         + "(103, 'Admin', 'admin@example.com', 'ADMIN')");
                     testStatement.execute("INSERT INTO user_preferences (user_id) VALUES (101), (102)");
+                    testStatement.execute("UPDATE users SET is_verified=TRUE");
+                    testStatement.execute("INSERT INTO user_subscriptions (user_id, package_id, remaining_standard_quota, remaining_vip_quota, remaining_refresh_quota) VALUES (102, 3, 7, 2, 4)");
                 }
                 var flyway = Flyway.configure().dataSource(testUrl, username, password)
                     .schemas(schema).defaultSchema(schema).load();
-                assertEquals(1, flyway.migrate().migrationsExecuted);
+                assertEquals(11, flyway.migrate().migrationsExecuted);
                 flyway.validate();
                 assertEquals(0, flyway.migrate().migrationsExecuted);
                 try (var testConnection = DriverManager.getConnection(testUrl, username, password);
@@ -56,6 +58,12 @@ class MemberRoleMigrationTest {
                     }
                     try (var rows = testStatement.executeQuery("SELECT count(*) FROM user_preferences p JOIN users u USING (user_id) WHERE u.role = 'MEMBER'")) {
                         assertTrue(rows.next()); assertEquals(2, rows.getInt(1));
+                    }
+                    try (var rows = testStatement.executeQuery("SELECT user_id, package_id, remaining_standard_quota, remaining_vip_quota, remaining_refresh_quota FROM user_subscriptions ORDER BY user_id")) {
+                        assertTrue(rows.next()); assertEquals(101, rows.getLong(1)); assertEquals(1, rows.getInt(2)); assertEquals(3, rows.getInt(3));
+                        assertTrue(rows.next()); assertEquals(102, rows.getLong(1)); assertEquals(3, rows.getInt(2));
+                        assertEquals(7, rows.getInt(3)); assertEquals(2, rows.getInt(4)); assertEquals(4, rows.getInt(5));
+                        assertFalse(rows.next());
                     }
                     assertThrows(SQLException.class, () -> testStatement.execute("UPDATE users SET role = 'USER' WHERE user_id = 101"));
                     assertThrows(SQLException.class, () -> testStatement.execute("UPDATE users SET role = 'OWNER' WHERE user_id = 102"));

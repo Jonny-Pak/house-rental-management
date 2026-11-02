@@ -190,21 +190,6 @@ void main() {
       );
       await tester.tap(find.text('Mở lọc'));
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Giá từ'),
-        '5000000',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Giá đến'),
-        '3000000',
-      );
-      await tester.tap(find.text('Áp dụng'));
-      await tester.pumpAndSettle();
-      expect(result, isNull);
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Giá đến'),
-        '6000000',
-      );
       await tester.tap(find.text('Tất cả phường / xã / đặc khu'));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -214,6 +199,36 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Xã Bình Chánh'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Giá từ'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Giá từ'),
+        '5000000',
+      );
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Giá đến'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Giá đến'),
+        '3000000',
+      );
+      await tester.tap(find.text('Áp dụng'));
+      await tester.pumpAndSettle();
+      expect(result, isNull);
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Giá đến'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Giá đến'),
+        '6000000',
+      );
       await tester.tap(find.text('Áp dụng'));
       await tester.pumpAndSettle();
       expect(result?.areaId, 11);

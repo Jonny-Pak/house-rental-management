@@ -1,3 +1,6 @@
+import '../../../amenity/data/amenity_repository.dart';
+import '../../../amenity/data/amenity_model.dart';
+import '../../../amenity/presentation/amenity_selector.dart';
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -12,9 +15,11 @@ import '../../data/models/roommate_info.dart';
 class EditListingPage extends StatefulWidget {
   const EditListingPage({
     super.key,
+    this.amenityRepository,
     required this.listing,
     required this.repository,
   });
+  final AmenityRepository? amenityRepository;
   final Listing listing;
   final ListingRepository repository;
 
@@ -30,6 +35,7 @@ class _EditListingPageState extends State<EditListingPage> {
   late RoommateInfo _roommateInfo;
   bool _changeArea = false;
   late final List<String> _images;
+  late List<Amenity> _amenities;
   final List<XFile> _newImages = [];
 
   @override
@@ -39,6 +45,7 @@ class _EditListingPageState extends State<EditListingPage> {
     _roommateInfo = l.roommateInfo;
     _areaId = l.areaId;
     _images = [...l.imageUrls];
+    _amenities = l.amenities;
     _fields = {
       'title': TextEditingController(text: l.title),
       'description': TextEditingController(text: l.description),
@@ -99,6 +106,7 @@ class _EditListingPageState extends State<EditListingPage> {
         key: l.details[key],
       if (l.listingType == 'SHARED_ROOM') ..._roommateInfo.toJson(),
       'listingType': l.listingType,
+      'amenityIds': [for (final item in _amenities) item.id],
       'areaId': _areaId,
       'imageUrls': [..._images],
     };
@@ -240,6 +248,13 @@ class _EditListingPageState extends State<EditListingPage> {
                   value: _roommateInfo,
                   onChanged: (value) => setState(() => _roommateInfo = value),
                 ),
+              AmenitySelector(
+                repository: widget.amenityRepository,
+                selected: _amenities,
+                enabled: !_busy,
+                onChanged: (items) => setState(() => _amenities = items),
+              ),
+              const SizedBox(height: 16),
               SwitchListTile(
                 title: const Text('Thay đổi khu vực hành chính'),
                 value: _changeArea,

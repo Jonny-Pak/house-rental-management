@@ -1,3 +1,7 @@
+import '../../../amenity/presentation/amenity_chips.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../data/models/listing_model.dart';
 import '../widgets/roommate_form.dart';
 import '../../../../core/layout/app_layout.dart';
@@ -6,10 +10,10 @@ import 'package:flutter/material.dart';
 
 import '../cubit/create_listing_state.dart';
 
-const _kAccent = Color(0xFFD85D15);
-const _kDark = Color(0xFF2C1D11);
-const _kBackground = Color(0xFFFAF8F5);
-const _kBorder = Color(0xFFE8DED1);
+const _kAccent = AppColors.primary;
+const _kDark = AppColors.text;
+const _kBackground = AppColors.background;
+const _kBorder = AppColors.border;
 
 class ListingPreviewPage extends StatelessWidget {
   final CreateListingState state;
@@ -139,6 +143,10 @@ class ListingPreviewPage extends StatelessWidget {
                     'Nội thất',
                     state.furnitureStatus ?? 'Chưa xác định',
                   ),
+                  if (state.amenities.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    AmenityChips(items: state.amenities),
+                  ],
                   _buildInfoRow('Cọc', '${state.depositAmount ?? 0} VND'),
                   const Divider(height: 32),
                   const Text(

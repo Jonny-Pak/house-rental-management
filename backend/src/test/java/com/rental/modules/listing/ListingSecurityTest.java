@@ -21,13 +21,273 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.user.controller.GoogleAuthController.class,com.rental.modules.user.qr.QrLoginController.class,com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.user.service.GoogleAuthService googleAuth;
+    @Test void googleLoginIsPublicValidatesInputAndDoesNotCacheTokens() throws Exception {
+        when(googleAuth.login("google-id-token")).thenReturn(new com.rental.modules.user.dto.response.AuthResponse("access", "refresh", 1L, "MEMBER"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"google-id-token\"}"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.accessToken").value("access"))
+            .andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"\"}"))
+            .andExpect(status().isBadRequest());
+        when(googleAuth.login("bad")).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Invalid Google token"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"bad\"}"))
+            .andExpect(status().isUnauthorized());
+        when(googleAuth.login("racing")).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+        mvc.perform(post("/api/v1/auth/google-login").contentType("application/json").content("{\"idToken\":\"racing\"}"))
+            .andExpect(status().isConflict());
+    }
+
+    @MockBean com.rental.modules.user.qr.QrLoginService qrLogin;
+    @Test void qrPreviewAndDecisionAreAdminOnlyAndBrowserExchangeDoesNotLeakTokens() throws Exception {
+        String id = "11111111-1111-4111-8111-111111111111";
+        String secret = "b".repeat(43);
+        String browserBody = "{\"browserSecret\":\"" + secret + "\"}";
+        String scanBody = "{\"scanToken\":\"" + "s".repeat(43) + "\"}";
+        when(qrLogin.start(any(), any(), any())).thenReturn(new com.rental.modules.user.qr.QrLoginService.Started(
+            id, secret, "houserental://admin-login/" + id + "?token=" + "s".repeat(43), "123456", java.time.Instant.now().plusSeconds(120)));
+        when(qrLogin.status(id, secret)).thenReturn(new com.rental.modules.user.qr.QrLoginService.Status("APPROVED"));
+        mvc.perform(post("/api/v1/auth/qr/start").header("Origin", "http://localhost:8081"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(post("/api/v1/auth/qr/" + id + "/status").contentType("application/json").content(browserBody))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APPROVED"))
+            .andExpect(jsonPath("$.accessToken").doesNotExist()).andExpect(header().string("Cache-Control", "no-store"));
+        for (String endpoint : java.util.List.of("preview", "decision")) {
+            String body = endpoint.equals("preview") ? scanBody : "{\"scanToken\":\"" + "s".repeat(43) + "\",\"approve\":true}";
+            mvc.perform(post("/api/v1/admin/qr-login/" + id + "/" + endpoint).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+            mvc.perform(post("/api/v1/admin/qr-login/" + id + "/" + endpoint).header("Authorization", "Bearer owner")
+                .contentType("application/json").content(body)).andExpect(status().isForbidden());
+            mvc.perform(post("/api/v1/admin/qr-login/" + id + "/" + endpoint).header("Authorization", "Bearer admin")
+                .contentType("application/json").content(body)).andExpect(status().isOk());
+        }
+        when(qrLogin.consume(id, secret)).thenReturn(new com.rental.modules.user.dto.response.AuthResponse("web-token", "refresh", 2L, "ADMIN"));
+        mvc.perform(post("/api/v1/auth/qr/" + id + "/consume").contentType("application/json").content(browserBody))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.role").value("ADMIN"))
+            .andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(post("/api/v1/auth/qr/" + id + "/status").contentType("application/json").content("{\"browserSecret\":\"bad\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @MockBean com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
+    @Test void benefitsAndPromotionsRequireAuthenticationAndUseCurrentOwner() throws Exception {
+        mvc.perform(get("/api/v1/memberships/me")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/memberships/me").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/listings/1/vip")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/listings/1/refresh")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/listings/1/vip").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/listings/1/refresh").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        verify(benefits).getBenefits(1L);
+        verify(listings).promoteVip(1L, 1L);
+        verify(listings).refreshListing(1L, 1L);
+    }
+
+    @MockBean com.rental.modules.amenity.service.AmenityService amenities;
+    @Test void amenityCatalogIsPublicButManagementRequiresAdmin() throws Exception {
+        mvc.perform(get("/api/v1/amenities")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/amenities")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/amenities").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/amenities").header("Authorization", "Bearer admin")).andExpect(status().isOk());
+        String body = "{\"name\":\"Wifi\",\"category\":\"UTILITY\",\"description\":\"Internet\",\"active\":true,\"version\":0}";
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(put("/api/v1/admin/amenities/1").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/admin/amenities/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false,\"version\":0}")).andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/admin/amenities/1").header("Authorization", "Bearer admin").param("version", "0")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("UTILITY", "OTHER"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/amenities/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false}")).andExpect(status().isBadRequest());
+        when(amenities.create(any())).thenThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate"));
+        mvc.perform(post("/api/v1/admin/amenities").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isConflict());
+    }
+
+    @Test void nearbySearchIsPublicAndRequiresNumericParameters() throws Exception {
+        mvc.perform(get("/api/v1/listings/public/nearby").param("latitude", "10.78")
+            .param("longitude", "106.7").param("radiusKm", "3")).andExpect(status().isOk());
+        verify(listings).findNearby(10.78, 106.7, 3);
+        mvc.perform(get("/api/v1/listings/public/nearby").param("latitude", "10.78"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/listings/public/nearby").param("latitude", "abc")
+            .param("longitude", "106.7").param("radiusKm", "3")).andExpect(status().isBadRequest());
+    }
+
+    @MockBean com.rental.modules.contract.service.AdminContractService adminContracts;
+    @Test void adminContractReadAccessIsSeparateFromMemberActions() throws Exception {
+        for (String path : java.util.List.of("/api/v1/admin/contracts", "/api/v1/admin/contracts/1")) {
+            mvc.perform(get(path)).andExpect(status().isForbidden());
+            mvc.perform(get(path).header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+            mvc.perform(get(path).header("Authorization", "Bearer admin")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"));
+        }
+        verify(adminContracts).search("", "", "", 0);
+        verify(adminContracts).detail(1L);
+        mvc.perform(post("/api/v1/admin/contracts").header("Authorization", "Bearer admin")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(put("/api/v1/admin/contracts/1").header("Authorization", "Bearer admin")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(delete("/api/v1/admin/contracts/1").header("Authorization", "Bearer admin")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(patch("/api/v1/admin/contracts/1/status").header("Authorization", "Bearer admin")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/admin/contracts").header("Authorization", "Bearer admin").param("page", "bad")).andExpect(status().isBadRequest());
+    }
+
+    @MockBean com.rental.modules.subscription.service.AdminPackageService adminPackages;
+    @MockBean com.rental.modules.payment.service.PaymentService payments;
+    @Test void vnpayNotificationsArePublicButPaymentHistoryAndStatusArePrivate() throws Exception {
+        when(payments.processIpn(anyMap())).thenReturn(java.util.Map.of("RspCode", "97", "Message", "Invalid signature"));
+        mvc.perform(get("/api/v1/payments/vnpay-ipn").param("vnp_SecureHash", "fake"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.RspCode").value("97"));
+        mvc.perform(get("/api/v1/payments/me")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/payments/order_1/status")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/payments/me").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        mvc.perform(get("/api/v1/payments/order_1/status").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        verify(payments).history(1L); verify(payments).getStatus(1L, "order_1");
+        mvc.perform(get("/api/v1/payments/vnpay-return").param("vnp_TxnRef", "\"><script>alert(1)</script>"))
+            .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("<script>"))))
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("houserental://payments/payment-result?reference=")));
+        when(payments.processIpn(anyMap())).thenThrow(new IllegalStateException("database unavailable"));
+        mvc.perform(get("/api/v1/payments/vnpay-ipn")).andExpect(status().isOk()).andExpect(jsonPath("$.RspCode").value("99"));
+    }
+    @Test void packageManagementIsAdminOnlyAndValidatesPricesQuotasAndVersions() throws Exception {
+        String body = "{\"packageName\":\"Gói mới\",\"price\":50000,\"standardPostQuota\":10,\"vipPostQuota\":2,\"refreshQuota\":3,\"description\":\"Mô tả\",\"active\":true,\"version\":0}";
+        mvc.perform(get("/api/v1/admin/memberships")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/memberships").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/memberships").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/memberships/1").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/admin/memberships/1").header("Authorization", "Bearer owner").param("version", "0")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/memberships").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isCreated());
+        mvc.perform(put("/api/v1/admin/memberships/1").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/admin/memberships/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false,\"version\":0}")).andExpect(status().isOk());
+        mvc.perform(delete("/api/v1/admin/memberships/1").header("Authorization", "Bearer admin").param("version", "0")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/admin/memberships").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("50000", "-1"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/memberships").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("50000", "1.5"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/memberships").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("\"standardPostQuota\":10", "\"standardPostQuota\":32768"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/memberships/1/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false}")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/payments/create").header("Authorization", "Bearer owner").contentType("application/json").content("{\"packageId\":65537}")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/payments/vnpay-return").param("vnp_SecureHash", "invalid")).andExpect(status().isOk());
+        verify(payments).processVnPayReturn(anyMap());
+    }
+
+    @MockBean com.rental.modules.incident.service.IncidentService incidents;
+    @Test void incidentsRequireLoginOwnerScopeAndAdminProcessingPermission() throws Exception {
+        String create = "{\"requestKey\":\"request-1\",\"title\":\"Lỗi ứng dụng\",\"category\":\"TECHNICAL\",\"description\":\"Không mở được bản đồ\",\"reporterId\":999}";
+        mvc.perform(post("/api/v1/incidents").contentType("application/json").content(create)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/incidents/me")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/incidents/1")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/incidents").header("Authorization", "Bearer owner").contentType("application/json").content(create)).andExpect(status().isCreated());
+        verify(incidents).create(eq(1L), any());
+        mvc.perform(get("/api/v1/incidents/me").header("Authorization", "Bearer owner").param("reporterId", "999")).andExpect(status().isOk());
+        verify(incidents).search(eq(1L), eq(""), isNull(), isNull(), eq(0));
+        mvc.perform(get("/api/v1/incidents/9").header("Authorization", "Bearer owner")).andExpect(status().isOk());
+        verify(incidents).detail(9L, 1L);
+        String update = "{\"status\":\"RESOLVED\",\"message\":\"Đã xử lý\",\"version\":0}";
+        mvc.perform(get("/api/v1/admin/incidents").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/incidents/9").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/admin/incidents/9").header("Authorization", "Bearer owner").contentType("application/json").content(update)).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/admin/incidents/9").header("Authorization", "Bearer admin").contentType("application/json").content(update)).andExpect(status().isOk());
+        verify(incidents).update(eq(9L), eq(2L), any());
+        mvc.perform(post("/api/v1/incidents").header("Authorization", "Bearer owner").contentType("application/json").content(create.replace("Lỗi ứng dụng", " "))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/incidents").header("Authorization", "Bearer owner").contentType("application/json").content(create.replace("TECHNICAL", "BAD"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/incidents/9").header("Authorization", "Bearer admin").contentType("application/json").content(update.replace("Đã xử lý", " "))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/incidents/9").header("Authorization", "Bearer admin").contentType("application/json").content(update.replace("RESOLVED", "OPEN"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/incidents/9").header("Authorization", "Bearer admin").contentType("application/json").content(update.replace("0", "-1"))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/admin/incidents").header("Authorization", "Bearer admin").param("page", "bad")).andExpect(status().isBadRequest());
+    }
+
+    @MockBean com.rental.modules.user.service.PasswordService passwords;
+    @Test void passwordResetIsPublicAndChangeUsesAuthenticatedIdentity() throws Exception {
+        mvc.perform(post("/api/v1/auth/forgot-password").contentType("application/json").content("{\"email\":\"member@example.com\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/reset-password").contentType("application/json").content("{\"email\":\"member@example.com\",\"otp\":\"123456\",\"newPassword\":\"NewPassword123\"}")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/reset-password").contentType("application/json").content("{\"email\":\"member@example.com\",\"otp\":\"12\",\"newPassword\":\"short\"}")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/auth/forgot-password").contentType("application/json").content("{\"email\":\"invalid\"}")).andExpect(status().isBadRequest());
+        String body = "{\"currentPassword\":\"OldPassword123\",\"newPassword\":\"NewPassword123\",\"email\":\"victim@example.com\"}";
+        mvc.perform(post("/api/v1/users/me/change-password").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/users/me/change-password").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(passwords).change(eq("owner"), any());
+        mvc.perform(post("/api/v1/users/me/change-password").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(passwords).change(eq("admin"), any());
+    }
+
+    @MockBean com.rental.modules.report.ReportService reports;
+    @MockBean com.rental.modules.report.ReportExcel reportExcel;
+
+    @Test void reportsAndExcelRequireAdmin() throws Exception {
+        for (String path : java.util.List.of("/api/v1/admin/reports", "/api/v1/admin/reports/export")) {
+            mvc.perform(get(path).param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isForbidden());
+            mvc.perform(get(path).header("Authorization", "Bearer owner").param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(reports, reportExcel);
+        mvc.perform(get("/api/v1/admin/reports").header("Authorization", "Bearer admin").param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isOk());
+        verify(reports).report(java.time.LocalDate.of(2026, 1, 1), java.time.LocalDate.of(2026, 1, 31));
+        when(reportExcel.write(any())).thenReturn(new byte[]{1,2});
+        mvc.perform(get("/api/v1/admin/reports/export").header("Authorization", "Bearer admin").param("from", "2026-01-01").param("to", "2026-01-31"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        mvc.perform(get("/api/v1/admin/reports").header("Authorization", "Bearer admin").param("from", "bad").param("to", "2026-01-31")).andExpect(status().isBadRequest());
+    }
+
+    @MockBean com.rental.modules.content.service.SystemContentService contentService;
+
+    @Test void contentReadersOnlyReceivePublishedFieldsAndOnlyAdminsCanEdit() throws Exception {
+        var published = new com.rental.modules.content.dto.PublishedContentResponse("about", "Public title", "Public body", java.time.LocalDateTime.now());
+        when(contentService.published("about")).thenReturn(published);
+        mvc.perform(get("/api/v1/content/about")).andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.data.body").value("Public body"))
+            .andExpect(jsonPath("$.data.version").doesNotExist()).andExpect(jsonPath("$.data.hasDraft").doesNotExist());
+        verify(contentService, never()).detail(anyString());
+        String body = """
+            {"title":"Draft title","body":"Draft body","version":6}
+            """;
+        mvc.perform(get("/api/v1/admin/content")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/content/about").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/content/about/publish").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/content/about/unpublish").header("Authorization", "Bearer owner").contentType("application/json").content("{\"version\":6}")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(contentService).saveDraft(eq("about"), argThat(r -> r.version() == 6 && r.body().equals("Draft body")));
+        mvc.perform(post("/api/v1/admin/content/about/publish").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(contentService).publish(eq("about"), any());
+        mvc.perform(post("/api/v1/admin/content/about/unpublish").header("Authorization", "Bearer admin").contentType("application/json").content("{\"version\":6}")).andExpect(status().isOk());
+        verify(contentService).unpublish("about", 6L);
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content("{}" )).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("Draft body", " "))).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/admin/content/about").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("Draft body", "a".repeat(20001)))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/content/about/unpublish").header("Authorization", "Bearer admin").contentType("application/json").content("{\"version\":-1}")).andExpect(status().isBadRequest());
+        when(contentService.published("contact")).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Nội dung chưa công bố."));
+        mvc.perform(get("/api/v1/content/contact")).andExpect(status().isNotFound());
+    }
+
+    @MockBean com.rental.modules.admin.service.AdminAreaService adminAreas;
+
+    @Test void administrativeAreaManagementRequiresAdminAndValidInputs() throws Exception {
+        String body = """
+            {"name":"Phường kiểm thử","code":"TEST-AREA","type":"WARD","parentId":1}
+            """;
+        mvc.perform(get("/api/v1/admin/areas")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/areas").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/admin/areas/6").header("Authorization", "Bearer owner").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/admin/areas/6/status").header("Authorization", "Bearer owner").contentType("application/json").content("{\"active\":false}")).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/admin/areas/6").header("Authorization", "Bearer owner")).andExpect(status().isForbidden());
+        verifyNoInteractions(adminAreas);
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer admin").contentType("application/json").content(body)).andExpect(status().isCreated());
+        verify(adminAreas).create(argThat(r -> r.parentId() == 1 && r.type().equals("WARD")));
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("WARD", "INVALID"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/areas").header("Authorization", "Bearer admin").contentType("application/json").content(body.replace("TEST-AREA", "bad code"))).andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/admin/areas/6/status").header("Authorization", "Bearer admin").contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/admin/areas").header("Authorization", "Bearer admin").param("parentId", "abc")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/admin/areas/parents").header("Authorization", "Bearer admin")).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/admin/areas/6/status").header("Authorization", "Bearer admin").contentType("application/json").content("{\"active\":false}")).andExpect(status().isOk());
+        verify(adminAreas).changeStatus(6L, false);
+        mvc.perform(delete("/api/v1/admin/areas/6").header("Authorization", "Bearer admin")).andExpect(status().isOk());
+        verify(adminAreas).delete(6L);
+    }
+
     @Autowired MockMvc mvc;
     @MockBean com.rental.modules.admin.service.AdminUserService adminUsers;
     @MockBean com.rental.modules.admin.service.AdminCreateUserService adminCreation;

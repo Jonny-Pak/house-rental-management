@@ -1,3 +1,4 @@
+import 'home_listings_fixture.dart';
 import 'notification_test.dart' show MemoryNotifications;
 
 import 'package:flutter/material.dart';
@@ -45,6 +46,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: MainPage(
+            listingRepository: HomeListings(),
             userRepository: repository,
             notificationRepository: MemoryNotifications(),
           ),
@@ -69,7 +71,7 @@ void main() {
         }
         expect(tester.takeException(), isNull, reason: "Width: $width");
       }
-      expect(repository.loads, 1);
+      expect(repository.loads, 2);
     },
     variant: TargetPlatformVariant({
       TargetPlatform.android,
@@ -89,6 +91,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MainPage(
+          listingRepository: HomeListings(),
           userRepository: TestProfileRepository(),
           notificationRepository: MemoryNotifications(),
         ),
@@ -160,7 +163,7 @@ void main() {
             size: Size(320, 720),
             textScaler: TextScaler.linear(1.5),
           ),
-          child: const HomePage(),
+          child: HomePage(listingRepository: HomeListings()),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Profile("dev")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/v1/auth/test-payment")
 public class TestPaymentController {
 

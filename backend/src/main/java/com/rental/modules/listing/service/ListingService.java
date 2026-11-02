@@ -28,14 +28,18 @@ import java.util.ArrayList;
 @Transactional(readOnly = true)
 public class ListingService {
 
+    private final com.rental.modules.amenity.service.AmenityService amenities;
     private final ListingRepository listingRepository;
+    private final com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
     private final UserRepository userRepository;
     private final AdministrativeAreaRepository areaRepository;
     private final com.rental.modules.contract.repository.ContractRepository contracts;
 
     private final com.rental.modules.notification.service.NotificationService notifications;
 
-    public ListingService(ListingRepository listingRepository, UserRepository userRepository, AdministrativeAreaRepository areaRepository, com.rental.modules.contract.repository.ContractRepository contracts, com.rental.modules.notification.service.NotificationService notifications) {
+    public ListingService(ListingRepository listingRepository, UserRepository userRepository, AdministrativeAreaRepository areaRepository, com.rental.modules.contract.repository.ContractRepository contracts, com.rental.modules.notification.service.NotificationService notifications, com.rental.modules.amenity.service.AmenityService amenities, com.rental.modules.subscription.service.SubscriptionBenefitService benefits) {
+        this.benefits = benefits;
+        this.amenities = amenities;
         this.notifications = notifications;
         this.listingRepository = listingRepository;
         this.userRepository = userRepository;
@@ -75,8 +79,33 @@ public class ListingService {
     }
 
     public List<ListingResponse> getApprovedListings() {
-        List<Listing> listings = listingRepository.findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc("APPROVED", "AVAILABLE");
+        List<Listing> listings = new ArrayList<>(listingRepository.findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc("APPROVED", "AVAILABLE"));
+        listings.sort(this::comparePriority);
         return toListingResponses(listings);
+    }
+
+    private int comparePriority(Listing a, Listing b) {
+        int vipOrder = Boolean.compare(isVipActive(b), isVipActive(a));
+        if (vipOrder != 0) return vipOrder;
+        LocalDateTime aTime = a.getRefreshedAt() == null ? a.getCreatedAt() : a.getRefreshedAt();
+        LocalDateTime bTime = b.getRefreshedAt() == null ? b.getCreatedAt() : b.getRefreshedAt();
+        int timeOrder = bTime.compareTo(aTime);
+        return timeOrder != 0 ? timeOrder : b.getId().compareTo(a.getId());
+    }
+
+    private boolean isVipActive(Listing listing) {
+        return Boolean.TRUE.equals(listing.getIsVip()) && listing.getVipExpiresAt() != null
+                && listing.getVipExpiresAt().isAfter(LocalDateTime.now());
+    }
+
+    public List<ListingResponse> findNearby(double latitude, double longitude, double radiusKm) {
+        if (!Double.isFinite(latitude) || latitude < -90 || latitude > 90
+                || !Double.isFinite(longitude) || longitude < -180 || longitude > 180
+                || !Double.isFinite(radiusKm) || radiusKm < 0.1 || radiusKm > 50) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Vị trí không hợp lệ hoặc bán kính phải từ 0,1 đến 50 km.");
+        }
+        return toListingResponses(listingRepository.findNearby(latitude, longitude, radiusKm * 1000));
     }
 
     public ListingResponse getPublicListing(Long id) {
@@ -118,6 +147,7 @@ public class ListingService {
         Listing listing = new Listing();
         listing.setOwner(owner);
         applyRequest(listing, request);
+        benefits.use(ownerId, "STANDARD");
         listing.setApprovalStatus("PENDING");
         listing.setRentalStatus("AVAILABLE");
         listing.setCreatedAt(LocalDateTime.now());
@@ -165,6 +195,42 @@ public class ListingService {
         listingRepository.save(listing);
     }
 
+    @Transactional
+    public ListingResponse promoteVip(Long id, Long ownerId) {
+        Listing listing = publicOwnedListing(id, ownerId);
+        if (isVipActive(listing)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tin đang có VIP, không trừ thêm lượt.");
+        }
+        LocalDateTime packageExpiry = benefits.use(ownerId, "VIP");
+        LocalDateTime vipExpiry = LocalDateTime.now().plusDays(30);
+        if (packageExpiry != null && packageExpiry.isBefore(vipExpiry)) vipExpiry = packageExpiry;
+        listing.setIsVip(true);
+        listing.setVipExpiresAt(vipExpiry);
+        listing.setUpdatedAt(LocalDateTime.now());
+        return toListingResponse(listingRepository.save(listing));
+    }
+
+    @Transactional
+    public ListingResponse refreshListing(Long id, Long ownerId) {
+        Listing listing = publicOwnedListing(id, ownerId);
+        LocalDateTime now = LocalDateTime.now();
+        if (listing.getRefreshedAt() != null && listing.getRefreshedAt().plusHours(24).isAfter(now)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Mỗi tin chỉ được làm mới một lần trong 24 giờ.");
+        }
+        benefits.use(ownerId, "REFRESH");
+        listing.setRefreshedAt(now);
+        listing.setUpdatedAt(now);
+        return toListingResponse(listingRepository.save(listing));
+    }
+
+    private Listing publicOwnedListing(Long id, Long ownerId) {
+        Listing listing = ownedListing(id, ownerId);
+        if (!"APPROVED".equals(listing.getApprovalStatus()) || !"AVAILABLE".equals(listing.getRentalStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Chỉ áp dụng cho tin đã duyệt và còn trống.");
+        }
+        return listing;
+    }
+
     private Listing ownedListing(Long id, Long ownerId) {
         java.util.Optional<Listing> listingResult = listingRepository.findLockedById(id);
         if (listingResult.isEmpty()) {
@@ -192,10 +258,18 @@ public class ListingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực không hợp lệ.");
         }
         AdministrativeArea area = areaResult.get();
+        if (!area.isAvailable()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khu vực đã ngừng sử dụng. Vui lòng chọn khu vực khác.");
+        }
         if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn phường/xã/đặc khu.");
         }
         Point location = geometryFactory.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
+        if (request.getAmenityIds() != null) {
+            var selected = amenities.selectForListing(request.getAmenityIds(), listing.getAmenities());
+            listing.getAmenities().clear();
+            listing.getAmenities().addAll(selected);
+        }
         listing.setArea(area);
         listing.setTitle(request.getTitle());
         listing.setDescription(request.getDescription());
@@ -256,7 +330,9 @@ public class ListingService {
         if (listing.getArea() != null) response.setAreaId(listing.getArea().getAreaId());
         response.setApprovalStatus(listing.getApprovalStatus());
         response.setRentalStatus(listing.getRentalStatus());
-        response.setIsVip(listing.getIsVip());
+        response.setIsVip(isVipActive(listing));
+        response.setVipExpiresAt(listing.getVipExpiresAt());
+        response.setRefreshedAt(listing.getRefreshedAt());
         response.setViewCount(listing.getViewCount());
         response.setCreatedAt(listing.getCreatedAt());
         response.setHouseType(listing.getHouseType());
@@ -266,6 +342,9 @@ public class ListingService {
         response.setDoorDirection(listing.getDoorDirection());
         response.setLegalDocuments(listing.getLegalDocuments());
         response.setFurnitureStatus(listing.getFurnitureStatus());
+        java.util.List<com.rental.modules.amenity.dto.AmenityResponse> selectedAmenities = new java.util.ArrayList<>();
+        for (var item : listing.getAmenities()) selectedAmenities.add(com.rental.modules.amenity.dto.AmenityResponse.from(item, null));
+        response.setAmenities(selectedAmenities);
         response.setDepositAmount(listing.getDepositAmount());
         response.setPosterType(listing.getPosterType());
         response.setCurrentOccupants(listing.getCurrentOccupants());

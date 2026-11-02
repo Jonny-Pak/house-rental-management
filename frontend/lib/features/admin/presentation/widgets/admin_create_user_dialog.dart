@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -210,7 +212,7 @@ class _AdminCreateUserDialogState extends State<AdminCreateUserDialog> {
         FilledButton(
           onPressed: _saving ? null : _create,
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFD66A2B),
+            backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
           ),
           child: Text(_saving ? 'Đang tạo và gửi OTP...' : 'Tạo và gửi OTP'),

@@ -22,6 +22,20 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
            "AND l.rentalStatus = 'AVAILABLE'")
     List<Listing> findListingsWithinBoundingBox(@Param("bbox") Polygon bbox);
 
+    @Query(value = """
+        SELECT l.* FROM listings l
+        WHERE l.location IS NOT NULL
+          AND l.approval_status = 'APPROVED'
+          AND l.rental_status = 'AVAILABLE'
+          AND ST_DWithin(CAST(l.location AS geography),
+              CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography),
+              :radiusMeters, false)
+        ORDER BY ST_Distance(CAST(l.location AS geography),
+            CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography), false), l.listing_id
+        """, nativeQuery = true)
+    List<Listing> findNearby(@Param("latitude") double latitude,
+            @Param("longitude") double longitude, @Param("radiusMeters") double radiusMeters);
+
     List<Listing> findByApprovalStatus(String approvalStatus);
     List<Listing> findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc(String approvalStatus, String rentalStatus);
     List<Listing> findByOwner_UserIdAndRentalStatusNotOrderByCreatedAtDesc(Long ownerId, String excludedStatus);

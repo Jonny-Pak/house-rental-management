@@ -1,3 +1,7 @@
+import '../../../amenity/presentation/amenity_chips.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../listing/presentation/widgets/roommate_form.dart';
 import '../../../listing/data/models/listing_model.dart';
 
@@ -241,6 +245,12 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     if (listing.roommateInfo != null) ...[
                       RoommateSummary(value: listing.roommateInfo!),
                       const SizedBox(height: KiteSpace.lg),
+                    ],
+                    if (listing.amenities.isNotEmpty) ...[
+                      const Text('Nội thất & tiện ích'),
+                      const SizedBox(height: 8),
+                      AmenityChips(items: listing.amenities),
+                      const SizedBox(height: 16),
                     ],
                     // Description
                     Text(
@@ -657,6 +667,10 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
         }
 
         final filtered = _filterListings(rawListings);
+        int roommateListings = 0;
+        for (final listing in rawListings) {
+          if (listing.listingType == 'SHARED_ROOM') roommateListings++;
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(KiteSpace.xl),
@@ -715,14 +729,14 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                     value: rawListings.isEmpty
                         ? '0 m²'
                         : '${(rawListings.fold<double>(0, (s, e) => s + e.areaSqm) / rawListings.length).toStringAsFixed(1)} m²',
-                    delta: 'Phòng trọ chuẩn',
+                    delta: 'Trong hàng đợi',
                     deltaTone: KiteTone.neutral,
                   ),
-                  const KiteStat(
-                    label: 'Tỷ lệ duyệt chuẩn',
-                    value: '95.4%',
-                    delta: '+1.2% tháng này',
-                    deltaTone: KiteTone.success,
+                  KiteStat(
+                    label: 'Tin tìm người ở ghép',
+                    value: '$roommateListings',
+                    delta: 'Trong hàng đợi',
+                    deltaTone: KiteTone.info,
                   ),
                 ],
               ),
@@ -855,13 +869,13 @@ class _AdminDashboardViewState extends State<_AdminDashboardView> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD85D15).withValues(alpha: 0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.lock_person_outlined,
                       size: 40,
-                      color: Color(0xFFD85D15),
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(height: KiteSpace.lg),

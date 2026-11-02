@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'package:kite_ui/kite_ui.dart';
 
 import '../../../app/admin/auth/session.dart';
-import '../../../app/admin/l10n/locale_controller.dart';
 import '../../../app/admin/router/routes.dart';
 import '../../../app/admin/theme/app_theme.dart';
 import '../../../features/admin/presentation/screens/search/command_palette.dart';
@@ -333,8 +332,6 @@ class _TopBar extends ConsumerWidget {
                   ref.read(themeProvider.notifier).toggleBrightness(context),
             ),
           ),
-          const SizedBox(width: KiteSpace.sm),
-          const _AccountMenu(),
         ],
       ),
     );
@@ -427,111 +424,6 @@ class _NotificationsButtonState extends State<_NotificationsButton> {
       ),
     ),
   );
-}
-
-class _AccountMenu extends ConsumerWidget {
-  const _AccountMenu();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(sessionProvider);
-    final locale = ref.watch(localeProvider);
-    final theme = ref.watch(themeProvider);
-    final c = KiteColors.of(context);
-    final t = KiteText.of(context);
-    final l = L.of(context);
-
-    return KiteMenu(
-      width: 248,
-      header: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: KiteSpace.sm),
-        child: Row(
-          children: [
-            KiteAvatar(name: user?.name ?? 'Admin', size: 34),
-            const SizedBox(width: KiteSpace.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user?.name ?? 'Admin',
-                    overflow: TextOverflow.ellipsis,
-                    style: t.small.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    user?.email ?? '',
-                    overflow: TextOverflow.ellipsis,
-                    style: t.muted.copyWith(fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      items: [
-        KiteMenuItem(
-          label: l.navProfile,
-          icon: Icons.person_outline,
-          onPressed: () => context.go(R.profile),
-        ),
-        KiteMenuItem(
-          label: l.navSettings,
-          icon: Icons.settings_outlined,
-          onPressed: () => context.go(R.settings),
-        ),
-        KiteMenuItem(
-          label: l.theme,
-          icon: Icons.palette_outlined,
-          trailing: theme.accent.label,
-          onPressed: () => context.go(R.settings),
-        ),
-        KiteMenuItem(
-          label: l.language,
-          icon: Icons.translate,
-          trailing: locale.nativeName,
-          onPressed: () => context.go(R.settings),
-        ),
-        const KiteMenuItem.separator(),
-        KiteMenuItem(
-          label: 'Keyboard shortcuts',
-          icon: Icons.keyboard_outlined,
-          trailing: '⌘/',
-          onPressed: () => KiteToast.show(
-            context,
-            title: 'Shortcuts',
-            description: 'Add your own bindings in app_shell.dart.',
-          ),
-        ),
-        const KiteMenuItem.separator(),
-        KiteMenuItem(
-          label: l.actionSignOut,
-          icon: Icons.logout,
-          destructive: true,
-          onPressed: () => ref.read(sessionProvider.notifier).signOut(),
-        ),
-      ],
-      trigger: (context, open) => InkWell(
-        borderRadius: KiteRadius.allSm,
-        onTap: open,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              KiteAvatar(name: user?.name ?? 'Admin', size: 28),
-              const SizedBox(width: KiteSpace.xs),
-              Icon(
-                Icons.keyboard_arrow_down,
-                size: 16,
-                color: c.mutedForeground,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _BottomBar extends StatelessWidget {

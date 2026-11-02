@@ -1,6 +1,11 @@
+import '../../../features/admin/presentation/pages/admin_amenities_page.dart';
+import '../../../features/incident/presentation/incidents_page.dart';
+
 import 'package:flutter/widgets.dart';
 
 import '../../../features/admin/presentation/pages/admin_users_page.dart';
+import '../../../features/admin/presentation/pages/admin_areas_page.dart';
+import '../../../features/admin/presentation/pages/admin_content_page.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,8 +17,8 @@ import '../../../features/admin/presentation/screens/system/profile_screen.dart'
 import '../../../features/admin/presentation/screens/system/settings_screen.dart';
 import '../../../shared/admin/layout/app_shell.dart';
 import '../../../features/admin/presentation/pages/admin_dashboard_page.dart';
-import '../../../features/contract/presentation/pages/my_contracts_page.dart';
-import '../../../features/membership/presentation/pages/membership_page.dart';
+import '../../../features/admin/presentation/pages/admin_contracts_page.dart';
+import '../../../features/admin/presentation/pages/admin_packages_page.dart';
 import '../auth/session.dart';
 import 'routes.dart';
 
@@ -27,6 +32,7 @@ class _SessionRefresh extends ChangeNotifier {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final contentKey = GlobalKey<AdminContentPageState>();
   final refresh = _SessionRefresh(ref);
   ref.onDispose(refresh.dispose);
 
@@ -62,14 +68,31 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: R.listings,
             builder: (_, _) => const AdminDashboardPage(),
           ),
+          GoRoute(
+            path: R.incidents,
+            builder: (_, _) => const IncidentsPage(admin: true),
+          ),
           GoRoute(path: R.users, builder: (_, _) => const AdminUsersPage()),
           GoRoute(
+            path: R.amenities,
+            builder: (_, _) => const AdminAmenitiesPage(),
+          ),
+          GoRoute(path: R.areas, builder: (_, _) => const AdminAreasPage()),
+          GoRoute(
+            path: R.content,
+            builder: (_, _) => AdminContentPage(key: contentKey),
+            onExit: (context, state) async {
+              if (ref.read(sessionProvider) == null) return true;
+              return await contentKey.currentState?.confirmLeave() ?? true;
+            },
+          ),
+          GoRoute(
             path: R.contracts,
-            builder: (_, _) => const MyContractsPage(isLandlord: true),
+            builder: (_, _) => const AdminContractsPage(),
           ),
           GoRoute(
             path: R.memberships,
-            builder: (_, _) => const MembershipPage(),
+            builder: (_, _) => const AdminPackagesPage(),
           ),
           GoRoute(path: R.settings, builder: (_, _) => const SettingsScreen()),
           GoRoute(path: R.profile, builder: (_, _) => const ProfileScreen()),

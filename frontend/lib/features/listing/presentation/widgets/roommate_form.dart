@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../data/models/roommate_info.dart';
@@ -31,7 +33,7 @@ class RoommateForm extends StatelessWidget {
           tooltip: 'Tăng $label',
           onPressed: count < maximum ? () => update(count + 1) : null,
           icon: const Icon(Icons.add, size: 19),
-          color: const Color(0xFFD76B28),
+          color: AppColors.primary,
         ),
       ],
     ),

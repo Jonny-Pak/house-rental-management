@@ -19,22 +19,29 @@ class UserProfileMembershipTest {
     @Test
     void profileIncludesPurchasedPackageAndRemainingQuotas() {
         User user = new User();
+        user.setUserId(7L);
         user.setEmail("member@example.com");
+        when(users.countListingsForUser(7L)).thenReturn(3L);
+        when(users.countContractsForUser(7L)).thenReturn(2L);
+        when(users.countSavedListingsForUser(7L)).thenReturn(12L);
         when(users.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
         MembershipPackage membership = new MembershipPackage();
         membership.setPackageName("Gói PRO");
         UserSubscription subscription = new UserSubscription();
         subscription.setMembershipPackage(membership);
-        subscription.setRemainingStandardQuota((short) 18);
-        subscription.setRemainingVipQuota((short) 3);
-        subscription.setRemainingRefreshQuota((short) 8);
+        subscription.setRemainingStandardQuota(18);
+        subscription.setRemainingVipQuota(3);
+        subscription.setRemainingRefreshQuota(8);
         when(subscriptions.findByUser(user)).thenReturn(Optional.of(subscription));
         var profile = service.getMyProfile(user.getEmail());
+        assertEquals(3L, profile.getListingCount());
+        assertEquals(2L, profile.getContractCount());
+        assertEquals(12L, profile.getSavedListingCount());
         assertEquals("Gói PRO", profile.getMembershipPackageName());
         assertEquals("ACTIVE", profile.getSubscriptionStatus());
-        assertEquals((short) 18, profile.getRemainingStandardQuota());
-        assertEquals((short) 3, profile.getRemainingVipQuota());
-        assertEquals((short) 8, profile.getRemainingRefreshQuota());
+        assertEquals(18, profile.getRemainingStandardQuota());
+        assertEquals(3, profile.getRemainingVipQuota());
+        assertEquals(8, profile.getRemainingRefreshQuota());
     }
 
     @Test

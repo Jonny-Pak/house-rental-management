@@ -15,6 +15,10 @@ class OtpRepository implements AuthRepository {
   bool fail = false;
   String? verifiedEmail;
   @override
+  Future<AuthResponse> googleLogin(String idToken) async =>
+      throw UnimplementedError();
+
+  @override
   Future<void> resendOtp(String email) async {
     if (fail) {
       throw DioException(
@@ -43,7 +47,7 @@ class OtpRepository implements AuthRepository {
 
 void main() {
   testWidgets(
-    'Admin-created user can open verification from login and verify OTP',
+    'Registration opens OTP while login has no standalone email verification link',
     (tester) async {
       final repository = OtpRepository();
       final bloc = AuthBloc(repository);
@@ -54,25 +58,35 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byType(TextFormField).first,
+      expect(find.text('Xác thực email'), findsNothing);
+      await tester.ensureVisible(find.text('Đăng ký'));
+      await tester.tap(find.text('Đăng ký'));
+      await tester.pumpAndSettle();
+      final values = [
+        'Nguyen Van A',
+        '0912345678',
         'new@example.com',
-      );
-      await tester.ensureVisible(find.text('Xác thực email'));
-      await tester.tap(find.text('Xác thực email'));
+        'password123',
+      ];
+      for (int i = 0; i < values.length; i++) {
+        await tester.ensureVisible(find.byType(TextFormField).at(i));
+        await tester.enterText(find.byType(TextFormField).at(i), values[i]);
+      }
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      final submit = find.widgetWithText(ElevatedButton, 'Đăng ký');
+      await tester.ensureVisible(submit);
+      await tester.pumpAndSettle();
+      await tester.tap(submit);
       await tester.pumpAndSettle();
       expect(
         tester.widget<OtpPage>(find.byType(OtpPage)).email,
         'new@example.com',
       );
-      expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Gửi lại mã'))
-            .onPressed,
-        isNotNull,
-      );
+      expect(find.text('Gửi lại mã sau 60 giây'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField).first, '123456');
       await tester.ensureVisible(find.text('Xác thực ngay'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Xác thực ngay'));
       await tester.pumpAndSettle();
       expect(repository.verifiedEmail, 'new@example.com');

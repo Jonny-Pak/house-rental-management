@@ -30,11 +30,14 @@ public class ListingExcelService {
         "title", "listingType", "rentPrice", "areaSqm", "address", "areaId", "latitude", "longitude",
         "imageUrls", "description", "depositAmount", "houseType", "bedrooms", "bathrooms", "totalFloors", "doorDirection",
         "legalDocuments", "furnitureStatus", "posterType", "currentOccupants", "maxOccupants", "genderPreference", "allowPets", "allowSmoking", "roommateRequirements");
+    private static final String AMENITY_COLUMN = "Mã nội thất/tiện ích";
+    private final com.rental.modules.amenity.service.AmenityService amenities;
     private final ListingService listings;
     private final AdministrativeAreaRepository areas;
     private final Validator validator;
 
-    public ListingExcelService(ListingService listings, AdministrativeAreaRepository areas, Validator validator) {
+    public ListingExcelService(ListingService listings, AdministrativeAreaRepository areas, Validator validator, com.rental.modules.amenity.service.AmenityService amenities) {
+        this.amenities = amenities;
         this.listings = listings;
         this.areas = areas;
         this.validator = validator;
@@ -66,11 +69,15 @@ public class ListingExcelService {
         try (var book = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
             var sheet = book.createSheet("TinDang");
             var headers = new ArrayList<>(HEADERS);
-            headers.addAll(List.of("Mã tin (chỉ xem)", "Kiểm duyệt (chỉ xem)", "Cho thuê (chỉ xem)"));
+            headers.addAll(List.of("Mã tin (chỉ xem)", "Kiểm duyệt (chỉ xem)", "Cho thuê (chỉ xem)", AMENITY_COLUMN));
             writeRow(sheet.createRow(0), headers);
             for (ListingResponse row : rows) writeRow(sheet.createRow(sheet.getLastRowNum() + 1), values(row));
             style(book, sheet, headers.size());
             if (template) addAreas(book);
+            var catalog = book.createSheet("NoiThatTienIch");
+            writeRow(catalog.createRow(0), List.of("Mã", "Tên", "Nhóm"));
+            for (var item : amenities.activeItems()) writeRow(catalog.createRow(catalog.getLastRowNum() + 1), List.of(item.id(), item.name(), item.category()));
+            style(book, catalog, 3);
             var help = book.createSheet("HuongDan");
             List<String> notes = List.of(
                 "Chỉ sửa dữ liệu trong sheet TinDang. Không thay đổi hàng tiêu đề. Mỗi dòng tạo một tin mới, không cập nhật tin cũ.",
@@ -84,7 +91,8 @@ public class ListingExcelService {
                 "Tin ở ghép bắt buộc có Đang ở, Tối đa (lớn hơn Đang ở, tối đa 20), Giới tính (ANY/MALE/FEMALE).",
                 "Nuôi thú cưng/Hút thuốc: TRUE hoặc FALSE (có thể để trống). Các cột còn lại không bắt buộc.",
                 "Mã tin, Kiểm duyệt, Cho thuê là thông tin xuất để xem; không được dùng để đổi quyền sở hữu hay trạng thái khi nhập.",
-                "Không nhập công thức Excel. Các dòng trùng tiêu đề và địa chỉ trong file hoặc với tin đang quản lý sẽ bị báo lỗi.");
+                "Không nhập công thức Excel. Các dòng trùng tiêu đề và địa chỉ trong file hoặc với tin đang quản lý sẽ bị báo lỗi.",
+                "Cột Mã nội thất/tiện ích không bắt buộc, dùng mã trong sheet NoiThatTienIch, cách nhau bằng dấu phẩy. Tối đa 30 mã, không lặp. File mẫu cũ vẫn nhập được.");
             for (int i = 0; i < notes.size(); i++) help.createRow(i).createCell(0).setCellValue(notes.get(i));
             help.setColumnWidth(0, 120 * 256);
             book.write(output);
@@ -95,12 +103,16 @@ public class ListingExcelService {
     }
 
     private List<Object> values(ListingResponse l) {
-        return Arrays.asList(l.getTitle(), l.getListingType(), l.getRentPrice(), l.getAreaSqm(), l.getAddress(),
+        var result = new ArrayList<Object>(Arrays.asList(l.getTitle(), l.getListingType(), l.getRentPrice(), l.getAreaSqm(), l.getAddress(),
             l.getAreaId(), l.getLatitude(), l.getLongitude(), String.join("|", l.getImageUrls() == null ? List.of() : l.getImageUrls()),
             l.getDescription(), l.getDepositAmount(), l.getHouseType(), l.getBedrooms(), l.getBathrooms(), l.getTotalFloors(),
             l.getDoorDirection(), l.getLegalDocuments(), l.getFurnitureStatus(), l.getPosterType(), l.getCurrentOccupants(),
             l.getMaxOccupants(), l.getGenderPreference(), l.getAllowPets(), l.getAllowSmoking(), l.getRoommateRequirements(),
-            l.getId(), l.getApprovalStatus(), l.getRentalStatus());
+            l.getId(), l.getApprovalStatus(), l.getRentalStatus()));
+        List<String> ids = new ArrayList<>();
+        for (var item : l.getAmenities()) ids.add(item.id().toString());
+        result.add(String.join(",", ids));
+        return result;
     }
 
 
@@ -114,7 +126,7 @@ public class ListingExcelService {
         Map<Long, String> names = new HashMap<>();
         for (var area : all) names.put(area.getAreaId(), area.getAreaName());
         for (var area : all) {
-            if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) continue;
+            if (!area.isAvailable() || !List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) continue;
             String parent = area.getParent() == null ? "" : names.getOrDefault(area.getParent().getAreaId(), "");
             writeRow(sheet.createRow(sheet.getLastRowNum() + 1), List.of(area.getAreaId(), area.getAreaName(), parent));
         }
@@ -131,8 +143,10 @@ public class ListingExcelService {
         for (var existing : listings.getMyListings(ownerId)) known.add(key(existing.getTitle(), existing.getAddress()));
         Set<Long> validAreas = new HashSet<>();
         for (var area : areas.findAll()) {
-            if (List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) validAreas.add(area.getAreaId());
+            if (area.isAvailable() && List.of("WARD", "COMMUNE", "SPECIAL").contains(area.getAreaType() == null ? "" : area.getAreaType())) validAreas.add(area.getAreaId());
         }
+        Set<Long> validAmenities = new HashSet<>();
+        for (var item : amenities.activeItems()) validAmenities.add(item.id());
         try (var input = file.getInputStream(); var book = new XSSFWorkbook(input)) {
             Sheet sheet = book.getSheet("TinDang");
             if (sheet == null || sheet.getRow(0) == null) throw bad("Thiếu sheet TinDang hoặc hàng tiêu đề. Hãy tải lại file mẫu.");
@@ -140,13 +154,15 @@ public class ListingExcelService {
             for (int c = 0; c < HEADERS.size(); c++) {
                 if (!HEADERS.get(c).equals(text(sheet.getRow(0), c))) throw bad("Sai cột " + (c + 1) + ": cần là “" + HEADERS.get(c) + "”.");
             }
+            String amenityHeader = text(sheet.getRow(0), 28);
+            if (amenityHeader != null && !AMENITY_COLUMN.equals(amenityHeader)) throw bad("Sai cột 29: cần là “" + AMENITY_COLUMN + "”.");
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (empty(row)) continue;
                 parsed.total++;
                 try {
                     CreateListingRequest request = request(row);
-                    List<String> errors = validate(request, validAreas, known);
+                    List<String> errors = validate(request, validAreas, known, validAmenities);
                     if (!errors.isEmpty()) {
                         parsed.errors.add(new ExcelImportResult.RowError(i + 1, String.join("; ", errors)));
                         continue;
@@ -167,13 +183,19 @@ public class ListingExcelService {
         }
     }
 
-    private List<String> validate(CreateListingRequest request, Set<Long> validAreas, Set<String> known) {
+    private List<String> validate(CreateListingRequest request, Set<Long> validAreas, Set<String> known, Set<Long> validAmenities) {
         Set<String> errors = new TreeSet<>();
         for (var error : validator.validate(request)) {
-            int column = FIELDS.indexOf(error.getPropertyPath().toString().split("\\[")[0]);
-            errors.add(column < 0 ? "Thông tin ở ghép không hợp lệ." : HEADERS.get(column) + ": thiếu hoặc không hợp lệ.");
+            String field = error.getPropertyPath().toString().split("\\[")[0];
+            int column = FIELDS.indexOf(field);
+            if ("amenityIds".equals(field)) errors.add("Nội thất/tiện ích: tối đa 30 mã số nguyên dương.");
+            else errors.add(column < 0 ? "Thông tin ở ghép không hợp lệ." : HEADERS.get(column) + ": thiếu hoặc không hợp lệ.");
         }
         if (!validAreas.contains(request.getAreaId())) errors.add("Mã khu vực không hợp lệ. Tra sheet KhuVuc trong file mẫu.");
+        if (request.getAmenityIds() != null) {
+            if (new HashSet<>(request.getAmenityIds()).size() != request.getAmenityIds().size()) errors.add("Mã nội thất/tiện ích không được trùng.");
+            for (Long id : request.getAmenityIds()) if (!validAmenities.contains(id)) errors.add("Nội thất/tiện ích không tồn tại hoặc đã ngừng sử dụng: " + id);
+        }
         if (known.contains(key(request.getTitle(), request.getAddress()))) errors.add("Trùng tiêu đề và địa chỉ với tin đã có hoặc dòng phía trên.");
         return new ArrayList<>(errors);
     }
@@ -193,13 +215,25 @@ public class ListingExcelService {
         r.setDoorDirection(text(row, 15)); r.setLegalDocuments(text(row, 16)); r.setFurnitureStatus(text(row, 17));
         r.setPosterType(text(row, 18)); r.setCurrentOccupants(integer(row, 19)); r.setMaxOccupants(integer(row, 20));
         r.setGenderPreference(text(row, 21)); r.setAllowPets(bool(row, 22)); r.setAllowSmoking(bool(row, 23)); r.setRoommateRequirements(text(row, 24));
+        String header = text(row.getSheet().getRow(0), 28);
+        if (AMENITY_COLUMN.equals(header)) {
+            List<Long> ids = new ArrayList<>();
+            String value = text(row, 28);
+            if (value != null) {
+                for (String part : value.split(",", -1)) {
+                    try { ids.add(Long.valueOf(part.trim())); }
+                    catch (NumberFormatException ex) { throw new IllegalArgumentException("Mã nội thất/tiện ích phải là số nguyên, cách nhau bằng dấu phẩy."); }
+                }
+            }
+            r.setAmenityIds(ids);
+        }
         return r;
     }
 
     private String text(Row row, int column) {
         Cell cell = row.getCell(column);
         if (cell == null || cell.getCellType() == CellType.BLANK) return null;
-        if (cell.getCellType() == CellType.FORMULA || cell.getCellType() == CellType.ERROR) throw new IllegalArgumentException("Cột " + HEADERS.get(column) + " không được chứa công thức hoặc lỗi Excel.");
+        if (cell.getCellType() == CellType.FORMULA || cell.getCellType() == CellType.ERROR) throw new IllegalArgumentException("Cột " + (column < HEADERS.size() ? HEADERS.get(column) : AMENITY_COLUMN) + " không được chứa công thức hoặc lỗi Excel.");
         String value = new DataFormatter(Locale.ROOT).formatCellValue(cell).trim();
         if (cell.getCellType() == CellType.NUMERIC) value = BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros().toPlainString();
         return value.isEmpty() ? null : value;

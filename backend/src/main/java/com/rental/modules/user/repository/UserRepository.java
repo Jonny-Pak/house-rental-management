@@ -8,6 +8,15 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM listings WHERE owner_id=:userId AND rental_status <> 'DELETED'", nativeQuery = true)
+    long countListingsForUser(@org.springframework.data.repository.query.Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM contracts WHERE landlord_id=:userId OR tenant_id=:userId", nativeQuery = true)
+    long countContractsForUser(@org.springframework.data.repository.query.Param("userId") Long userId);
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM user_favorites f JOIN listings l ON l.listing_id=f.listing_id WHERE f.user_id=:userId AND l.approval_status='APPROVED' AND l.rental_status='AVAILABLE'", nativeQuery = true)
+    long countSavedListingsForUser(@org.springframework.data.repository.query.Param("userId") Long userId);
+
     @org.springframework.data.jpa.repository.Query("""
         select u from User u where
         (locate(lower(:query), lower(u.fullName)) > 0 or locate(lower(:query), lower(u.email)) > 0
@@ -33,6 +42,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from User u where lower(u.email) = lower(:email)")
+    Optional<User> findForPasswordUpdate(@org.springframework.data.repository.query.Param("email") String email);
+
     Optional<User> findByPhoneNumber(String phoneNumber);
 
     java.util.List<User> findByPhoneNumberIn(java.util.List<String> phoneNumbers);
@@ -40,4 +53,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+    Optional<User> findByGoogleId(String googleId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select u from User u where lower(u.email) = lower(:email)")
+    java.util.List<User> findGoogleEmailMatches(@org.springframework.data.repository.query.Param("email") String email);
 }

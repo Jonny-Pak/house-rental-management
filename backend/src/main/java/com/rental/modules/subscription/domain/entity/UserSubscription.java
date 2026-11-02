@@ -26,13 +26,13 @@ public class UserSubscription {
     private LocalDateTime purchasedAt = LocalDateTime.now();
 
     @Column(name = "remaining_standard_quota")
-    private Short remainingStandardQuota;
+    private Integer remainingStandardQuota;
 
     @Column(name = "remaining_vip_quota")
-    private Short remainingVipQuota;
+    private Integer remainingVipQuota;
 
     @Column(name = "remaining_refresh_quota")
-    private Short remainingRefreshQuota;
+    private Integer remainingRefreshQuota;
 
     @Column(name = "quota_reset_at")
     private LocalDateTime quotaResetAt;
@@ -40,15 +40,20 @@ public class UserSubscription {
     @Column(nullable = false, length = 10)
     private String status = "ACTIVE";
 
+    @Column(name = "package_name_snapshot", length = 20)
+    private String packageNameSnapshot;
+    public String getPackageNameSnapshot() { return packageNameSnapshot; }
+    public void setPackageNameSnapshot(String value) { packageNameSnapshot = value; }
+
     public UserSubscription() {}
 
     public UserSubscription(User user, MembershipPackage membershipPackage, LocalDateTime purchasedAt, Short remainingStandardQuota, Short remainingVipQuota, Short remainingRefreshQuota, LocalDateTime quotaResetAt, String status) {
         this.user = user;
         this.membershipPackage = membershipPackage;
         if (purchasedAt != null) this.purchasedAt = purchasedAt;
-        this.remainingStandardQuota = remainingStandardQuota;
-        this.remainingVipQuota = remainingVipQuota;
-        this.remainingRefreshQuota = remainingRefreshQuota;
+        this.remainingStandardQuota = remainingStandardQuota == null ? null : remainingStandardQuota.intValue();
+        this.remainingVipQuota = remainingVipQuota == null ? null : remainingVipQuota.intValue();
+        this.remainingRefreshQuota = remainingRefreshQuota == null ? null : remainingRefreshQuota.intValue();
         this.quotaResetAt = quotaResetAt;
         if (status != null) this.status = status;
     }
@@ -81,24 +86,24 @@ public class UserSubscription {
         this.purchasedAt = purchasedAt;
     }
 
-    public Short getRemainingStandardQuota() {
+    public Integer getRemainingStandardQuota() {
         return remainingStandardQuota;
     }
-    public void setRemainingStandardQuota(Short remainingStandardQuota) {
+    public void setRemainingStandardQuota(Integer remainingStandardQuota) {
         this.remainingStandardQuota = remainingStandardQuota;
     }
 
-    public Short getRemainingVipQuota() {
+    public Integer getRemainingVipQuota() {
         return remainingVipQuota;
     }
-    public void setRemainingVipQuota(Short remainingVipQuota) {
+    public void setRemainingVipQuota(Integer remainingVipQuota) {
         this.remainingVipQuota = remainingVipQuota;
     }
 
-    public Short getRemainingRefreshQuota() {
+    public Integer getRemainingRefreshQuota() {
         return remainingRefreshQuota;
     }
-    public void setRemainingRefreshQuota(Short remainingRefreshQuota) {
+    public void setRemainingRefreshQuota(Integer remainingRefreshQuota) {
         this.remainingRefreshQuota = remainingRefreshQuota;
     }
 

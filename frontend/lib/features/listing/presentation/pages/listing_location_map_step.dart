@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../map/presentation/widgets/rental_map_tiles.dart';
 
 import 'package:flutter/material.dart';
@@ -8,11 +10,11 @@ import 'package:latlong2/latlong.dart';
 import '../cubit/create_listing_cubit.dart';
 import '../cubit/create_listing_state.dart';
 
-const _kAccent = Color(0xFFD76B28);
-const _kDark = Color(0xFF2C1D11);
-const _kBackground = Color(0xFFFAF8F5);
-const _kBorder = Color(0xFFE8DED1);
-const _kSubText = Color(0xFF8A7464);
+const _kAccent = AppColors.primary;
+const _kDark = AppColors.text;
+const _kBackground = AppColors.background;
+const _kBorder = AppColors.border;
+const _kSubText = AppColors.muted;
 
 class ListingLocationMapStep extends StatefulWidget {
   final VoidCallback? onConfirm;
@@ -524,7 +526,7 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
                   Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E1),
+                      color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -618,7 +620,7 @@ class _ListingLocationMapStepState extends State<ListingLocationMapStep> {
                     backgroundColor: _kAccent,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: const Color(0xFFF0EBE5),
-                    disabledForegroundColor: const Color(0xFFAD9D8E),
+                    disabledForegroundColor: AppColors.muted,
                     minimumSize: const Size.fromHeight(50),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,

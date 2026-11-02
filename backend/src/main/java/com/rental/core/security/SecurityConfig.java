@@ -44,7 +44,9 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/areas/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay-return", "/api/v1/payments/vnpay-ipn").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/areas/**", "/api/v1/amenities").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/content/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/properties").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/listings/public", "/api/v1/listings/public/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/listings/map").permitAll()

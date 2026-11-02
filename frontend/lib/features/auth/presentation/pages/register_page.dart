@@ -1,19 +1,21 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/auth_bloc.dart';
+import '../widgets/google_login_button.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../data/models/auth_models.dart';
 import 'otp_page.dart';
+import '../../../home/presentation/pages/main_page.dart';
 
-// ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark = Color(0xFF2C1D11);
-const kPrimaryAccent = Color(0xFFD85D15);
-const kBackground = Color(0xFFFAF8F5);
-const kBorderColor = Color(0xFFE8DED1);
+const kPrimaryDark = AppColors.text;
+const kPrimaryAccent = AppColors.primary;
+const kBackground = AppColors.background;
+const kBorderColor = AppColors.border;
 const kSubText = Color(0xFF64748B);
-// ──────────────────────────────────────────────────────────────────────
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -40,6 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _onRegister(BuildContext context) {
+    if (context.read<AuthBloc>().state is AuthLoading) return;
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
         RegisterRequested(
@@ -171,6 +174,12 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
               );
+            } else if (state is AuthAuthenticated) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const MainPage()),
+                (_) => false,
+              );
             } else if (state is AuthOtpSent) {
               Navigator.pushReplacement(
                 context,
@@ -258,7 +267,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Register Button
                         ElevatedButton(
                           onPressed: isLoading
                               ? null
@@ -291,7 +299,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Divider
                         Row(
                           children: [
                             Expanded(
@@ -311,39 +318,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Google Sign In
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            // TODO: Implement Google Sign-In
-                          },
-                          icon: Image.network(
-                            'https://img.icons8.com/color/48/000000/google-logo.png',
-                            height: 24,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.error_outline, size: 24);
-                            },
-                          ),
-                          label: const Text(
-                            'Đăng ký với Google',
-                            style: TextStyle(
-                              color: kPrimaryDark,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: const BorderSide(color: kBorderColor),
-                            elevation: 0,
-                          ),
-                        ),
+                        GoogleLoginButton(loading: isLoading, register: true),
                         const SizedBox(height: 32),
 
-                        // Login Link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

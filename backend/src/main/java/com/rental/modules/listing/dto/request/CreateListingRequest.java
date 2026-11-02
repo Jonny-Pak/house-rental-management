@@ -7,6 +7,11 @@ import java.util.List;
 import java.math.BigDecimal;
 
 public class CreateListingRequest {
+    @jakarta.validation.constraints.Size(max = 30)
+    private java.util.List<@jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Positive Long> amenityIds;
+    public java.util.List<Long> getAmenityIds() { return amenityIds; }
+    public void setAmenityIds(java.util.List<Long> value) { amenityIds = value; }
+
     @Min(0) @Max(20)
     private Integer currentOccupants;
     @Min(1) @Max(20)

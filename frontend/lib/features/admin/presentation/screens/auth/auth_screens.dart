@@ -1,3 +1,6 @@
+import '../../../../auth/data/qr_login_repository.dart';
+import '../../../../auth/presentation/widgets/qr_login_panel.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,9 +9,12 @@ import 'package:kite_ui/kite_ui.dart';
 import '../../../../../app/admin/auth/session.dart';
 import '../../../../../app/admin/router/routes.dart';
 import 'auth_scaffold.dart';
+import 'sign_in_layout.dart';
+import '../../../../auth/presentation/pages/password_page.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+  const SignInScreen({super.key, this.qrRepository});
+  final QrLoginRepository? qrRepository;
   @override
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
@@ -17,6 +23,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _showQr = false;
   String? _error;
 
   @override
@@ -27,6 +34,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     final email = _email.text.trim();
     final password = _password.text;
     if (!email.contains('@')) {
@@ -42,7 +50,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       _error = null;
     });
     try {
-      await ref.read(sessionProvider.notifier).signIn(email: email, password: password);
+      await ref
+          .read(sessionProvider.notifier)
+          .signIn(email: email, password: password);
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -54,40 +64,64 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthScaffold(
-      title: 'Sign in',
+    return SignInLayout(
+      title: _showQr ? 'Đăng nhập bằng QR' : 'Đăng nhập quản trị',
       subtitle: 'Đăng nhập vào bảng điều khiển quản trị.',
-      fields: [
-        AuthField(
-          label: 'Email',
-          controller: _email,
-          hint: 'you@company.com',
-          keyboardType: TextInputType.emailAddress,
-          error: _error,
-        ),
-        AuthField(
-          label: 'Password',
-          controller: _password,
-          obscure: true,
-          onSubmitted: (_) => _submit(),
-        ),
-        KiteButton(
-          expands: true,
-          enabled: !_busy,
-          onPressed: _submit,
-          child: Text(_busy ? 'Signing in…' : 'Sign in'),
-        ),
-        const SizedBox(height: KiteSpace.md),
-        KiteButton.ghost(
-          expands: true,
-          onPressed: () => context.go(R.forgot),
-          child: const Text('Forgot password?'),
-        ),
-      ],
-      footer: GestureDetector(
-        onTap: () => context.go(R.signUp),
-        child: const Text('No account? Create one'),
-      ),
+      fields: _showQr
+          ? [
+              QrLoginPanel(
+                repository: widget.qrRepository,
+                onAuthenticated: (auth) =>
+                    ref.read(sessionProvider.notifier).signInWithQr(auth),
+                onCancel: () => setState(() => _showQr = false),
+              ),
+            ]
+          : [
+              AuthField(
+                label: 'Địa chỉ email',
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                error: _error,
+              ),
+              AuthField(
+                label: 'Mật khẩu',
+                controller: _password,
+                obscure: true,
+                onSubmitted: (_) => _submit(),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _busy ? null : _submit,
+                child: Text(
+                  _busy ? 'Đang đăng nhập…' : 'Đăng nhập',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => setState(() {
+                        _showQr = true;
+                        _error = null;
+                      }),
+                icon: const Icon(Icons.qr_code_2),
+                label: const Text('Đăng nhập bằng QR'),
+              ),
+              const SizedBox(height: KiteSpace.md),
+              TextButton(
+                onPressed: () => context.go(R.forgot),
+                child: const Text(
+                  'Quên mật khẩu?',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
     );
   }
 }
@@ -137,62 +171,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   );
 }
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _email = TextEditingController();
-  bool _sent = false;
-
-  @override
-  void dispose() {
-    _email.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = KiteText.of(context);
-    return AuthScaffold(
-      title: 'Reset password',
-      subtitle: _sent
-          ? 'Check your inbox for the reset link.'
-          : 'We will email you a link to choose a new one.',
-      fields: [
-        if (!_sent) ...[
-          AuthField(
-            label: 'Email',
-            controller: _email,
-            hint: 'you@company.com',
-            keyboardType: TextInputType.emailAddress,
-          ),
-          KiteButton(
-            expands: true,
-            onPressed: () => setState(() => _sent = true),
-            child: const Text('Send reset link'),
-          ),
-        ] else
-          Row(
-            children: [
-              Icon(
-                Icons.mark_email_read_outlined,
-                size: 18,
-                color: KiteColors.of(context).mutedForeground,
-              ),
-              const SizedBox(width: KiteSpace.sm),
-              Expanded(child: Text('Sent to ${_email.text}', style: t.small)),
-            ],
-          ),
-      ],
-      footer: GestureDetector(
-        onTap: () => context.go(R.signIn),
-        child: const Text('Back to sign in'),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      PasswordPage(onComplete: () => context.go(R.signIn));
 }
 
 class OtpScreen extends StatefulWidget {
@@ -311,8 +294,9 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         AuthField(label: 'Password', controller: _password, obscure: true),
         KiteButton(
           expands: true,
-          onPressed: () =>
-              ref.read(sessionProvider.notifier).signIn(email: 'ada@kite.dev', password: _password.text),
+          onPressed: () => ref
+              .read(sessionProvider.notifier)
+              .signIn(email: 'ada@kite.dev', password: _password.text),
           child: const Text('Unlock'),
         ),
       ],

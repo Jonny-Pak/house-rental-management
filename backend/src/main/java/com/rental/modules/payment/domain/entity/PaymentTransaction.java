@@ -10,6 +10,11 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "payment_transactions")
 public class PaymentTransaction {
+    @Column(name = "vnpay_response_code", length = 2)
+    private String responseCode;
+
+    public String getResponseCode() { return responseCode; }
+    public void setResponseCode(String value) { responseCode = value; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,6 +43,25 @@ public class PaymentTransaction {
 
     @Column(name = "transaction_date", updatable = false)
     private LocalDateTime transactionDate = LocalDateTime.now();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "package_id")
+    private com.rental.modules.subscription.domain.entity.MembershipPackage purchasedPackage;
+    @Column(name = "package_name_snapshot", length = 20)
+    private String packageNameSnapshot;
+    @Column(name = "standard_quota_snapshot") private Short standardQuotaSnapshot;
+    @Column(name = "vip_quota_snapshot") private Short vipQuotaSnapshot;
+    @Column(name = "refresh_quota_snapshot") private Short refreshQuotaSnapshot;
+    public com.rental.modules.subscription.domain.entity.MembershipPackage getPurchasedPackage() { return purchasedPackage; }
+    public void setPurchasedPackage(com.rental.modules.subscription.domain.entity.MembershipPackage value) { purchasedPackage = value; }
+    public String getPackageNameSnapshot() { return packageNameSnapshot; }
+    public void setPackageNameSnapshot(String value) { packageNameSnapshot = value; }
+    public Short getStandardQuotaSnapshot() { return standardQuotaSnapshot; }
+    public void setStandardQuotaSnapshot(Short value) { standardQuotaSnapshot = value; }
+    public Short getVipQuotaSnapshot() { return vipQuotaSnapshot; }
+    public void setVipQuotaSnapshot(Short value) { vipQuotaSnapshot = value; }
+    public Short getRefreshQuotaSnapshot() { return refreshQuotaSnapshot; }
+    public void setRefreshQuotaSnapshot(Short value) { refreshQuotaSnapshot = value; }
 
     public PaymentTransaction() {}
     public PaymentTransaction(Long id, User user, UserSubscription subscription, BigDecimal amount, String paymentMethod, String vnpayTransactionRef, String status, LocalDateTime transactionDate) {

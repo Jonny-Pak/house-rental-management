@@ -1,3 +1,14 @@
+import 'dart:async';
+
+import '../widgets/home_recent_listings.dart';
+import '../../../listing/data/repositories/listing_repository.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
+import '../../../incident/data/incident_repository.dart';
+import '../../../incident/presentation/incidents_page.dart';
+import '../../../content/presentation/system_content_page.dart';
+import '../../../content/data/repositories/system_content_repository.dart';
 import '../../../notification/presentation/notification_store.dart';
 import '../../../notification/presentation/notifications_page.dart';
 
@@ -16,12 +27,24 @@ import '../../../listing/presentation/pages/listing_browse_page.dart';
 import '../../../map/presentation/pages/listing_map_page.dart';
 import '../../../membership/presentation/pages/membership_page.dart';
 
-const _orange = Color(0xFFFF751B);
-const _ink = Color(0xFF0B1535);
-const _background = Color(0xFFF8F9FB);
+const _accent = AppColors.primary;
+const _ink = Color(0xFF16352B);
+const _background = AppColors.background;
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, this.onMenu, this.onTabSelected});
+  const HomePage({
+    super.key,
+    this.onMenu,
+    this.onTabSelected,
+    this.contentRepository,
+    this.incidentRepository,
+    this.userName,
+    this.listingRepository,
+  });
+  final String? userName;
+  final ListingRepository? listingRepository;
+  final SystemContentRepository? contentRepository;
+  final IncidentRepository? incidentRepository;
   final VoidCallback? onMenu;
   final ValueChanged<int>? onTabSelected;
 
@@ -29,47 +52,7 @@ class HomePage extends StatelessWidget {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
   }
 
-  void _information(
-    BuildContext context,
-    String title,
-    String body,
-    IconData icon,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HomeFeatureIcon(icon: icon, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(body, style: const TextStyle(fontSize: 15, height: 1.6)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   List<_Action> _primary(BuildContext context) => [
-    _Action(
-      'Đăng Tin',
-      Symbols.post_add,
-      () => _open(context, const CreateListingPage()),
-    ),
     _Action(
       'Thuê Nhà',
       Symbols.home_work,
@@ -100,6 +83,16 @@ class HomePage extends StatelessWidget {
         ),
       ),
     ),
+    _Action(
+      'Đăng Tin',
+      Symbols.post_add,
+      () => _open(context, const CreateListingPage()),
+    ),
+    _Action(
+      'Bản Đồ',
+      Symbols.map,
+      () => _open(context, const ListingMapPage()),
+    ),
     _Action('Quản Lý\nTin Đăng', Symbols.assignment, () {
       if (onTabSelected != null) {
         onTabSelected!(2);
@@ -117,205 +110,149 @@ class HomePage extends StatelessWidget {
       Symbols.payments,
       () => _open(context, const MembershipPage()),
     ),
-    _Action(
-      'Bản Đồ',
-      Symbols.map,
-      () => _open(context, const ListingMapPage()),
-    ),
-    _Action(
-      'Trợ Lý AI',
-      Symbols.smart_toy,
-      () => _information(
-        context,
-        'Trợ lý AI',
-        'Tính năng tìm nhà bằng ngôn ngữ tự nhiên đang được phát triển. Bạn có thể tìm tin theo địa chỉ hoặc xem vị trí trên bản đồ.',
-        Symbols.smart_toy,
-      ),
-    ),
   ];
 
   List<_Action> _secondary(BuildContext context) => [
     _Action(
       'Giới Thiệu',
       Symbols.menu_book,
-      () => _information(
+      () => _open(
         context,
-        'Giới thiệu',
-        'Ứng dụng kết nối người thuê và người cho thuê tại TP.HCM, hỗ trợ đăng tin, xem nhà trên bản đồ và quản lý hợp đồng.',
-        Symbols.tune,
+        SystemContentPage(slug: 'about', repository: contentRepository),
       ),
     ),
     _Action(
       'Quy Định',
       Symbols.gavel,
-      () => _information(
+      () => _open(
         context,
-        'Quy định đăng tin',
-        'Cung cấp đúng địa chỉ, giá thuê và ảnh thực tế. Tin mới và tin chỉnh sửa phải được Admin duyệt trước khi xuất hiện công khai.',
-        Symbols.gavel,
+        SystemContentPage(slug: 'rules', repository: contentRepository),
       ),
     ),
     _Action(
       'Hướng Dẫn\nSử Dụng',
       Symbols.help,
-      () => _information(
+      () => _open(
         context,
-        'Hướng dẫn sử dụng',
-        '1. Chọn Đăng Tin và điền thông tin nhà/phòng.\n2. Gửi tin để Admin duyệt.\n3. Xem trạng thái trong Quản Lý Tin Đăng.\n4. Tìm nhà đã duyệt ở mục Thuê Nhà, Thuê Phòng Trọ hoặc Bản Đồ.',
-        Symbols.help,
+        SystemContentPage(slug: 'guide', repository: contentRepository),
       ),
     ),
     _Action(
       'Báo Cáo\nSự Cố',
       Symbols.report,
-      () => _information(
+      () => _open(
         context,
-        'Báo cáo sự cố',
-        'Bạn có thể ghi lại thao tác gặp lỗi và ảnh màn hình để gửi cho người quản trị. Chức năng gửi báo cáo trong ứng dụng chưa được kết nối.',
-        Symbols.report,
+        IncidentsPage(
+          contentRepository: contentRepository,
+          repository: incidentRepository,
+        ),
       ),
     ),
     _Action(
       'Liên Hệ',
       Symbols.support_agent,
-      () => _information(
+      () => _open(
         context,
-        'Liên hệ',
-        'Thông tin liên hệ hỗ trợ sẽ được cập nhật khi hệ thống chính thức triển khai.',
-        Symbols.support_agent,
+        SystemContentPage(slug: 'contact', repository: contentRepository),
       ),
     ),
   ];
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: _background,
-    child: AppContent(
-      child: SingleChildScrollView(
-        key: const PageStorageKey('home-scroll'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _HomeHero(
-              onMenu: onMenu ?? () => Scaffold.maybeOf(context)?.openDrawer(),
-              onSearch: () => _open(
-                context,
-                const ListingBrowsePage(
-                  title: 'Tìm kiếm nhà cho thuê',
-                  autofocus: true,
+  Widget build(BuildContext context) {
+    final actions = _primary(context);
+    return Material(
+      color: _background,
+      child: AppContent(
+        child: SingleChildScrollView(
+          key: const PageStorageKey('home-scroll'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _HomeHeader(
+                userName: userName,
+                onMenu: onMenu ?? () => Scaffold.maybeOf(context)?.openDrawer(),
+                onSearch: () => _open(
+                  context,
+                  const ListingBrowsePage(
+                    title: 'Tìm kiếm nhà cho thuê',
+                    autofocus: true,
+                  ),
                 ),
+                onNotifications: () {
+                  if (onTabSelected != null) {
+                    onTabSelected!(3);
+                  } else {
+                    _open(context, const NotificationsPage());
+                  }
+                },
               ),
-              onNotifications: () {
-                if (onTabSelected != null) {
-                  onTabSelected!(3);
-                } else {
-                  _open(context, const NotificationsPage());
-                }
-              },
-            ),
-            Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
-              child: Column(
-                children: [
-                  _SectionHeader(
-                    title: 'Chức năng',
-                    onMore: () => _showAll(context),
-                  ),
-                  const SizedBox(height: 16),
-                  _ActionGrid(actions: _primary(context)),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _SectionHeader(
-                    title: 'Khám Phá Thêm',
-                    onMore: () => _open(
-                      context,
-                      const ListingBrowsePage(title: 'Khám phá tin cho thuê'),
+              Transform.translate(
+                offset: const Offset(0, -24),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  decoration: const BoxDecoration(
+                    color: _background,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(28),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stacked =
-                          constraints.maxWidth < 340 ||
-                          MediaQuery.textScalerOf(context).scale(14) > 19;
-                      final width = stacked
-                          ? constraints.maxWidth
-                          : (constraints.maxWidth - 12) / 2;
-                      return Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          SizedBox(
-                            width: width,
-                            child: _DiscoveryCard(
-                              title: 'TÌM NHÀ ĐÚNG Ý',
-                              subtitle: 'Khám phá hàng trăm căn nhà phù hợp với nhu cầu',
-                              image: 'assets/images/home/townhouse.webp',
-                              onTap: () => _open(
-                                context,
-                                const ListingBrowsePage(
-                                  title: 'Thuê nhà',
-                                  listingType: 'WHOLE_HOUSE',
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: width,
-                            child: _DiscoveryCard(
-                              title: 'PHÒNG TRỌ QUANH BẠN',
-                              subtitle: 'Xem vị trí trên bản đồ dễ dàng',
-                              image: 'assets/images/home/room.webp',
-                              onTap: () =>
-                                  _open(context, const ListingMapPage()),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 22),
-                  _SectionHeader(
-                    title: 'Các Chức Năng Khác',
-                    onMore: () => _showAll(context),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Column(
-                      children: [
-                        _ActionGrid(
-                          actions: _secondary(context).sublist(0, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _SectionHeader(
+                        title: 'Dành cho bạn',
+                        onMore: () => _showAll(context),
+                      ),
+                      const SizedBox(height: 10),
+                      _ActionGrid(actions: actions),
+                      const SizedBox(height: 16),
+                      _HomeBanner(
+                        onPost: () => _open(context, const CreateListingPage()),
+                        onSearch: () => _open(
+                          context,
+                          const ListingBrowsePage(title: 'Tin cho thuê'),
+                        ),
+                        onMap: () => _open(context, const ListingMapPage()),
+                      ),
+                      const SizedBox(height: 18),
+                      _SectionHeader(
+                        title: 'Tin cho thuê mới nhất',
+                        onMore: () => _open(
+                          context,
+                          const ListingBrowsePage(title: 'Tin cho thuê'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      HomeRecentListings(repository: listingRepository),
+                      const SizedBox(height: 24),
+                      _SectionHeader(
+                        title: 'Khám phá thêm',
+                        onMore: () => _showAll(context),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: _ActionGrid(
+                          actions: _secondary(context),
                           round: true,
                         ),
-                        const SizedBox(height: 8),
-                        _ContactTile(action: _secondary(context).last),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 124),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 124),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   void _showAll(BuildContext context) {
     showModalBottomSheet<void>(
@@ -353,245 +290,371 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class _HomeHero extends StatefulWidget {
-  const _HomeHero({
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({
+    required this.userName,
     required this.onMenu,
     required this.onSearch,
     required this.onNotifications,
   });
+  final String? userName;
   final VoidCallback onMenu, onSearch, onNotifications;
-  @override
-  State<_HomeHero> createState() => _HomeHeroState();
-}
-
-class _HomeHeroState extends State<_HomeHero> {
-  int _index = 0;
-  static const _slides = [
-    (
-      'Quản lý nhà cho thuê',
-      'Dễ dàng\nHiệu quả hơn',
-      'Quản lý phòng, hợp đồng, thanh toán\ntất cả trong một ứng dụng',
-    ),
-    (
-      'Tìm nơi ở phù hợp',
-      'Nhà đẹp\nTrong tầm tay',
-      'Khám phá tin thuê theo khu vực,\ngiá và nhu cầu của bạn',
-    ),
-    (
-      'Kết nối chủ nhà và người thuê',
-      'An tâm thuê\nDễ quản lý',
-      'Theo dõi tin đăng và hợp đồng\nngay trên ứng dụng',
-    ),
-  ];
-  void _slide(int index) => setState(() => _index = index);
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 760;
-      final top = MediaQuery.paddingOf(context).top;
-      return GestureDetector(
-        onHorizontalDragEnd: (details) {
-          final speed = details.primaryVelocity ?? 0;
-          if (speed < -100) {
-            _slide((_index + 1) % _slides.length);
-          }
-          if (speed > 100) {
-            _slide((_index + _slides.length - 1) % _slides.length);
-          }
-        },
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: (wide ? 350 : 280) + top),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Image.asset(
-                  'assets/images/home/townhouse.webp',
-                  fit: BoxFit.cover,
-                  alignment: const Alignment(.35, .1),
-                ),
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFFFFAF3).withValues(alpha: .97),
-                        const Color(0xFFFFFAF3).withValues(alpha: .70),
-                        Colors.white.withValues(alpha: .04),
-                      ],
-                      stops: const [0, .43, 1],
+  Widget build(BuildContext context) {
+    final name = userName?.trim() ?? '';
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/home/townhouse.webp'),
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+        ),
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xF018674A), Color(0xD12A8862), Color(0x705DA98C)],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 38),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Mở menu',
+                      onPressed: onMenu,
+                      icon: const Icon(
+                        Symbols.menu,
+                        color: Colors.white,
+                        size: 26,
+                      ),
                     ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              name.isEmpty
+                                  ? 'Chào mừng bạn'
+                                  : 'Chào bạn, $name',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Symbols.waving_hand,
+                            color: Color(0xFFFFD58D),
+                            size: 20,
+                            fill: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      tooltip: 'Thông báo',
+                      onPressed: onNotifications,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primaryDark,
+                      ),
+                      icon: const NotificationBadge(
+                        child: Icon(Symbols.notifications, size: 23),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Tìm nhà, phòng trọ, ở ghép dễ dàng hơn!',
+                  style: TextStyle(
+                    color: Color(0xFFE4F6EA),
+                    fontSize: 13,
+                    height: 1.5,
                   ),
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(8, top + 12, 8, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Mở menu',
-                          onPressed: widget.onMenu,
-                          icon: const Icon(Symbols.menu, color: _ink, size: 28),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Material(
-                            color: Colors.white.withValues(alpha: .97),
-                            borderRadius: BorderRadius.circular(32),
-                            elevation: 5,
-                            shadowColor: const Color(0x15233057),
-                            child: InkWell(
-                              key: const ValueKey('home-search'),
-                              borderRadius: BorderRadius.circular(32),
-                              onTap: widget.onSearch,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 15,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Symbols.search, size: 24, color: _ink),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        'Tìm kiếm nhà, phòng trọ...',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Color(0xFF778096),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                const SizedBox(height: 18),
+                Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  elevation: 2,
+                  shadowColor: const Color(0x18203E2D),
+                  child: InkWell(
+                    onTap: onSearch,
+                    borderRadius: BorderRadius.circular(28),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Symbols.search,
+                            color: AppColors.primaryDark,
+                            size: 24,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Colors.white, Color(0xFFFFF3E7)],
-                            ),
-                            border: Border.all(color: const Color(0xFFEAD8C5)),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x183F2918),
-                                blurRadius: 16,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            tooltip: 'Thông báo',
-                            onPressed: widget.onNotifications,
-                            style: IconButton.styleFrom(
-                              foregroundColor: const Color(0xFF573B28),
-                              fixedSize: const Size(48, 48),
-                              shape: const CircleBorder(),
-                            ),
-                            icon: const NotificationBadge(
-                              child: Icon(
-                                Symbols.notifications,
-                                size: 25,
-                                weight: 300,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(wide ? 36 : 20, 24, 16, 0),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: SizedBox(
-                        width: wide ? 500 : constraints.maxWidth * .78,
-                        child: Column(
-                          key: ValueKey(_index),
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _slides[_index].$1,
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Tìm kiếm nhà, phòng trọ, khu vực...',
                               style: TextStyle(
-                                fontSize: wide ? 18 : 14,
-                                color: _ink,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _slides[_index].$2,
-                              style: TextStyle(
-                                fontSize: wide ? 44 : 30,
-                                height: 1.08,
-                                letterSpacing: -.8,
-                                fontWeight: FontWeight.w800,
-                                color: _ink,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              _slides[_index].$3,
-                              style: TextStyle(
-                                fontSize: wide ? 16 : 12.5,
+                                color: AppColors.muted,
+                                fontSize: 12,
                                 height: 1.4,
-                                color: const Color(0xFF46516A),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: 'Tìm kiếm và bộ lọc',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: onSearch,
+                            icon: const Icon(
+                              Symbols.tune,
+                              color: AppColors.primaryDark,
+                              size: 22,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(wide ? 30 : 14, 8, 0, 24),
-                    child: Row(
-                      children: [
-                        for (var index = 0; index < _slides.length; index++)
-                          Semantics(
-                            selected: _index == index,
-                            child: IconButton(
-                              key: ValueKey('home-slide-$index'),
-                              tooltip: 'Trang giới thiệu ${index + 1}',
-                              constraints: const BoxConstraints(
-                                minWidth: 28,
-                                minHeight: 32,
-                              ),
-                              padding: const EdgeInsets.all(6),
-                              onPressed: () => _slide(index),
-                              icon: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _index == index
-                                      ? _orange
-                                      : const Color(0xFFD4CEC8),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
-      );
-    },
+      ),
+    );
+  }
+}
+
+class _HomeBanner extends StatefulWidget {
+  const _HomeBanner({
+    required this.onPost,
+    required this.onSearch,
+    required this.onMap,
+  });
+  final VoidCallback onPost, onSearch, onMap;
+  @override
+  State<_HomeBanner> createState() => _HomeBannerState();
+}
+
+class _HomeBannerState extends State<_HomeBanner> with WidgetsBindingObserver {
+  Timer? _timer;
+  bool _resumed = true;
+  double _dragOffset = 0;
+  int _index = 0;
+  static const _titles = [
+    'Đăng tin cho thuê',
+    'Tìm nơi ở phù hợp',
+    'Khám phá quanh bạn',
+  ];
+  static const _subtitles = [
+    'Kết nối với người thuê dễ dàng hơn.',
+    'Nhà, phòng trọ và chỗ ở ghép dành cho bạn.',
+    'Tìm nhà theo vị trí và bán kính trên bản đồ.',
+  ];
+  static const _buttons = ['Đăng tin ngay', 'Tìm nhà ngay', 'Xem bản đồ'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _resumed = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _startAutoSlide();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _resumed = state == AppLifecycleState.resumed;
+    _startAutoSlide();
+  }
+
+  void _startAutoSlide() {
+    _timer?.cancel();
+    if (!_resumed ||
+        !TickerMode.valuesOf(context).enabled ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    _timer = Timer(const Duration(seconds: 4), () {
+      _changeSlide((_index + 1) % _titles.length);
+    });
+  }
+
+  void _changeSlide(int index) {
+    setState(() => _index = index);
+    _startAutoSlide();
+  }
+
+  void _endSwipe(DragEndDetails details) {
+    if (_dragOffset.abs() >= 24) {
+      final direction = _dragOffset < 0 ? 1 : -1;
+      _changeSlide((_index + direction + _titles.length) % _titles.length);
+    } else {
+      _startAutoSlide();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _openBanner() {
+    if (_index == 0) {
+      widget.onPost();
+    } else if (_index == 1) {
+      widget.onSearch();
+    } else {
+      widget.onMap();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      GestureDetector(
+        key: const ValueKey('home-banner'),
+        onHorizontalDragStart: (_) {
+          _dragOffset = 0;
+          _timer?.cancel();
+        },
+        onHorizontalDragUpdate: (details) =>
+            _dragOffset += details.primaryDelta ?? 0,
+        onHorizontalDragEnd: _endSwipe,
+        onHorizontalDragCancel: _startAutoSlide,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: Container(
+            key: ValueKey('home-banner-content-$_index'),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFCDEEDB), Color(0xFFEAF7EF)],
+              ),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _titles[_index],
+                        style: const TextStyle(
+                          color: AppColors.text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _subtitles[_index],
+                        style: const TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: _openBanner,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                        ),
+                        child: Text(
+                          _buttons[_index],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      _index == 1
+                          ? 'assets/images/home/room.webp'
+                          : 'assets/images/home/townhouse.webp',
+                      height: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 6),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < _titles.length; i++)
+            Semantics(
+              label: 'Banner ${i + 1}',
+              selected: i == _index,
+              button: true,
+              child: InkWell(
+                key: ValueKey('home-slide-$i'),
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _changeSlide(i),
+                child: Padding(
+                  padding: const EdgeInsets.all(7),
+                  child: Container(
+                    width: i == _index ? 16 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i == _index
+                          ? AppColors.primary
+                          : const Color(0xFFCEDFD4),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ],
   );
 }
 
@@ -610,12 +673,12 @@ class _ActionGrid extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-      final columns = constraints.maxWidth < 330 || largeText
+      final columns = constraints.maxWidth < 280 || largeText
           ? 2
           : (constraints.maxWidth >= 1000 && !round ? 8 : 4);
       final width = constraints.maxWidth / columns;
       return Wrap(
-        runSpacing: 18,
+        runSpacing: 12,
         children: [
           for (final action in actions)
             SizedBox(
@@ -634,12 +697,12 @@ class _ActionGrid extends StatelessWidget {
                     child: Column(
                       children: [
                         _ActionIcon(action: action, round: round),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
                           action.label,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 12,
                             height: 1.15,
                             fontWeight: FontWeight.w700,
                             color: _ink,
@@ -664,46 +727,17 @@ class _ActionIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: round ? 62 : 72,
-      height: round ? 62 : 72,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFAF5),
-        border: Border.all(color: const Color(0xFFF3DDCD)),
-        borderRadius: BorderRadius.circular(20),
+        color: HomeFeatureIcon(icon: action.icon).backgroundColor,
+        border: Border.all(color: const Color(0x0F26384A)),
+        shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: HomeFeatureIcon(icon: action.icon, size: round ? 48 : 56),
+      child: HomeFeatureIcon(icon: action.icon, size: 36),
     );
   }
-}
-
-class _ContactTile extends StatelessWidget {
-  const _ContactTile({required this.action});
-  final _Action action;
-  @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(18),
-    onTap: action.onTap,
-    child: Padding(
-      padding: const EdgeInsets.all(5),
-      child: Row(
-        children: [
-          _ActionIcon(action: action, round: true),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              action.label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: _ink,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -717,7 +751,7 @@ class _SectionHeader extends StatelessWidget {
         width: 4,
         height: 18,
         decoration: BoxDecoration(
-          color: _orange,
+          color: _accent,
           borderRadius: BorderRadius.circular(3),
         ),
       ),
@@ -735,8 +769,10 @@ class _SectionHeader extends StatelessWidget {
       TextButton(
         onPressed: onMore,
         style: TextButton.styleFrom(
-          foregroundColor: _ink,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          foregroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
@@ -751,80 +787,5 @@ class _SectionHeader extends StatelessWidget {
         ),
       ),
     ],
-  );
-}
-
-class _DiscoveryCard extends StatelessWidget {
-  const _DiscoveryCard({
-    required this.title,
-    required this.subtitle,
-    required this.image,
-    required this.onTap,
-  });
-  final String title, subtitle, image;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: title,
-    child: Material(
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: MediaQuery.textScalerOf(context).scale(155),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(image, fit: BoxFit.cover),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xE60B1931)],
-                    stops: [.2, 1],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        height: 1.25,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const CircleAvatar(
-                      radius: 11,
-                      backgroundColor: Colors.white,
-                      child: Icon(Symbols.arrow_forward, size: 16, color: _ink),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
   );
 }

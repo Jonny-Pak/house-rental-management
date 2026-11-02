@@ -14,6 +14,10 @@ abstract final class R {
   static const dashboard = '/';
   static const listings = '/listings';
   static const users = '/users';
+  static const amenities = '/amenities';
+  static const areas = '/areas';
+  static const content = '/content';
+  static const incidents = '/incidents';
   static const contracts = '/contracts';
   static const memberships = '/memberships';
   static const settings = '/settings';
@@ -38,11 +42,15 @@ class NavItem {
   final bool inSidebar;
 
   String labelOf(L l) => switch (path) {
-    R.dashboard => 'Dashboard',
+    R.dashboard => 'Thống kê & báo cáo',
     R.listings => 'Duyệt bài đăng',
     R.users => 'Quản lý người dùng',
+    R.areas => 'Khu vực hành chính',
+    R.amenities => 'Nội thất & tiện ích',
+    R.content => 'Nội dung hệ thống',
+    R.incidents => 'Báo cáo sự cố',
     R.contracts => 'Hợp đồng thuê',
-    R.memberships => 'Gói thành viên',
+    R.memberships => 'Gói dịch vụ',
     R.settings => 'Cài đặt',
     R.profile => l.navProfile,
     _ => label,
@@ -65,15 +73,19 @@ class NavGroup {
 
 const kNavGroups = <NavGroup>[
   NavGroup('Overview', [
-    NavItem('Dashboard', R.dashboard, Icons.dashboard_outlined),
+    NavItem('Thống kê & báo cáo', R.dashboard, Icons.dashboard_outlined),
   ]),
   NavGroup('Manage', [
     NavItem('Duyệt bài đăng', R.listings, Icons.approval_outlined),
     NavItem('Quản lý người dùng', R.users, Icons.people_outline),
+    NavItem('Khu vực hành chính', R.areas, Icons.location_city_outlined),
+    NavItem('Nội thất & tiện ích', R.amenities, Icons.chair_outlined),
     NavItem('Hợp đồng thuê', R.contracts, Icons.description_outlined),
-    NavItem('Gói thành viên', R.memberships, Icons.card_membership_outlined),
+    NavItem('Gói dịch vụ', R.memberships, Icons.card_membership_outlined),
   ]),
   NavGroup('System', [
+    NavItem('Báo cáo sự cố', R.incidents, Icons.support_agent_outlined),
+    NavItem('Nội dung hệ thống', R.content, Icons.article_outlined),
     NavItem('Cài đặt', R.settings, Icons.settings_outlined),
     NavItem('Profile', R.profile, Icons.person_outline, inSidebar: false),
   ]),

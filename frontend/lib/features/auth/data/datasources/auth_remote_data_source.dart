@@ -5,6 +5,7 @@ import '../models/auth_models.dart';
 
 abstract class AuthRemoteDataSource {
   Future<AuthResponse> login(LoginRequest request);
+  Future<AuthResponse> googleLogin(String idToken);
   Future<void> register(RegisterRequest request);
   Future<void> verifyOtp(VerifyOtpRequest request);
   Future<void> resendOtp(String email);
@@ -14,6 +15,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final ApiClient _apiClient;
 
   AuthRemoteDataSourceImpl(this._apiClient);
+
+  @override
+  Future<AuthResponse> googleLogin(String idToken) async {
+    final response = await _apiClient.post('/auth/google-login', {
+      'idToken': idToken,
+    });
+    return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+  }
 
   @override
   Future<AuthResponse> login(LoginRequest request) async {

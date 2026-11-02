@@ -1,6 +1,15 @@
 package com.rental.modules.user.dto.response;
 
 public class UserProfileResponse {
+    private Long listingCount;
+    private Long contractCount;
+    private Long savedListingCount;
+    public Long getListingCount() { return listingCount; }
+    public void setListingCount(Long value) { listingCount = value; }
+    public Long getContractCount() { return contractCount; }
+    public void setContractCount(Long value) { contractCount = value; }
+    public Long getSavedListingCount() { return savedListingCount; }
+    public void setSavedListingCount(Long value) { savedListingCount = value; }
     private java.util.List<String> interests = java.util.List.of();
     public java.util.List<String> getInterests() { return interests; }
     public void setInterests(java.util.List<String> interests) { this.interests = interests; }
@@ -14,9 +23,9 @@ public class UserProfileResponse {
     private String status;
     private String membershipPackageName;
     private String subscriptionStatus;
-    private Short remainingStandardQuota;
-    private Short remainingVipQuota;
-    private Short remainingRefreshQuota;
+    private Integer remainingStandardQuota;
+    private Integer remainingVipQuota;
+    private Integer remainingRefreshQuota;
 
     public UserProfileResponse() {}
     public UserProfileResponse(Long id, String fullName, String email, String phoneNumber, String avatarUrl, String role, String status) {
@@ -82,10 +91,10 @@ public class UserProfileResponse {
     public void setMembershipPackageName(String membershipPackageName) { this.membershipPackageName = membershipPackageName; }
     public String getSubscriptionStatus() { return subscriptionStatus; }
     public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
-    public Short getRemainingStandardQuota() { return remainingStandardQuota; }
-    public void setRemainingStandardQuota(Short remainingStandardQuota) { this.remainingStandardQuota = remainingStandardQuota; }
-    public Short getRemainingVipQuota() { return remainingVipQuota; }
-    public void setRemainingVipQuota(Short remainingVipQuota) { this.remainingVipQuota = remainingVipQuota; }
-    public Short getRemainingRefreshQuota() { return remainingRefreshQuota; }
-    public void setRemainingRefreshQuota(Short remainingRefreshQuota) { this.remainingRefreshQuota = remainingRefreshQuota; }
+    public Integer getRemainingStandardQuota() { return remainingStandardQuota; }
+    public void setRemainingStandardQuota(Integer remainingStandardQuota) { this.remainingStandardQuota = remainingStandardQuota; }
+    public Integer getRemainingVipQuota() { return remainingVipQuota; }
+    public void setRemainingVipQuota(Integer remainingVipQuota) { this.remainingVipQuota = remainingVipQuota; }
+    public Integer getRemainingRefreshQuota() { return remainingRefreshQuota; }
+    public void setRemainingRefreshQuota(Integer remainingRefreshQuota) { this.remainingRefreshQuota = remainingRefreshQuota; }
 }

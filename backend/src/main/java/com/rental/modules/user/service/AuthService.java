@@ -1,27 +1,21 @@
 package com.rental.modules.user.service;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 import com.rental.core.security.JwtService;
+import com.rental.modules.subscription.service.DefaultMembershipService;
+import org.springframework.transaction.annotation.Transactional;
 import com.rental.modules.user.domain.entity.User;
 import com.rental.modules.user.domain.enums.Role;
 import com.rental.modules.user.domain.enums.UserStatus;
-import com.rental.modules.user.dto.request.GoogleLoginRequest;
 import com.rental.modules.user.dto.request.LoginRequest;
 import com.rental.modules.user.dto.request.RegisterRequest;
 import com.rental.modules.user.dto.request.VerifyOtpRequest;
 import com.rental.modules.user.dto.response.AuthResponse;
 import com.rental.modules.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.Optional;
 
 @Service
@@ -33,18 +27,17 @@ public class AuthService {
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final DefaultMembershipService defaultMembership;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, OtpService otpService, EmailService emailService, AuthenticationManager authenticationManager, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, OtpService otpService, EmailService emailService, AuthenticationManager authenticationManager, JwtService jwtService, DefaultMembershipService defaultMembership) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.otpService = otpService;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.defaultMembership = defaultMembership;
     }
-
-    @Value("${app.google.client-id}")
-    private String googleClientId;
 
     public String register(RegisterRequest request) {
         if (request.getRole() == Role.ADMIN) {
@@ -101,6 +94,7 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public String verifyOtp(VerifyOtpRequest request) {
         boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
         if (!valid) {
@@ -115,6 +109,7 @@ public class AuthService {
 
         user.setIsVerified(true);
         userRepository.save(user);
+        defaultMembership.assignIfMissing(user.getUserId());
 
         return "Tài khoản đã xác thực thành công. Vui lòng đăng nhập.";
     }
@@ -127,7 +122,7 @@ public class AuthService {
         User user = userResult.get();
 
         if (!Boolean.TRUE.equals(user.getIsVerified())) {
-            throw new IllegalStateException("Tài khoản chưa xác thực email. Vui lòng chọn Xác thực email trên app.");
+            throw new IllegalStateException("Tài khoản chưa xác thực email. Vui lòng hoàn tất mã OTP của bước đăng ký.");
         }
 
         authenticationManager.authenticate(
@@ -137,74 +132,11 @@ public class AuthService {
         return createAuthResponse(user);
     }
 
-    public AuthResponse googleLogin(GoogleLoginRequest request) {
-
-        GoogleIdToken idToken = verifyGoogleToken(request.getIdToken());
-        User user = findOrCreateGoogleUser(idToken.getPayload());
-        return createAuthResponse(user);
-    }
-
-    private GoogleIdToken verifyGoogleToken(String token) {
-        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
-                new NetHttpTransport(), GsonFactory.getDefaultInstance())
-                .setAudience(Collections.singletonList(googleClientId))
-                .build();
-
-        GoogleIdToken idToken;
-        try {
-            idToken = verifier.verify(token);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Tháº¥t báº¡i khi xÃ¡c minh Google ID Token: " + e.getMessage());
-        }
-
-        if (idToken == null) {
-            throw new IllegalArgumentException("Token Google ID khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng thá»­ láº¡i.");
-        }
-
-        return idToken;
-    }
-
-    private User findOrCreateGoogleUser(Payload payload) {
-        String email      = payload.getEmail();
-        String name       = (String) payload.get("name");
-        String googleId   = payload.getSubject();
-        String avatarUrl  = (String) payload.get("picture");
-
-        Optional<User> existingUser = userRepository.findByEmail(email);
-        User user;
-
-        if (existingUser.isPresent()) {
-
-            user = existingUser.get();
-            if (user.getGoogleId() == null) {
-                user.setGoogleId(googleId);
-            }
-            if (user.getAvatarUrl() == null) {
-                user.setAvatarUrl(avatarUrl);
-            }
-            user.setIsVerified(true);
-            userRepository.save(user);
-        } else {
-
-            user = new User();
-            user.setEmail(email);
-            user.setFullName(name);
-            user.setGoogleId(googleId);
-            user.setAvatarUrl(avatarUrl);
-            user.setPasswordHash(null);
-            user.setRole(Role.MEMBER);
-            user.setStatus(UserStatus.ACTIVE);
-            user.setIsVerified(true);
-            userRepository.save(user);
-        }
-
-        return user;
-    }
-
     private AuthResponse createAuthResponse(User user) {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new IllegalStateException("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.");
         }
+        defaultMembership.assignIfMissing(user.getUserId());
         String accessToken  = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 

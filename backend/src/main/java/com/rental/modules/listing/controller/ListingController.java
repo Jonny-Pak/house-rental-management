@@ -15,6 +15,12 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/listings")
 public class ListingController {
 
+    @GetMapping("/public/nearby")
+    public List<ListingResponse> findNearby(@RequestParam double latitude,
+            @RequestParam double longitude, @RequestParam double radiusKm) {
+        return listingService.findNearby(latitude, longitude, radiusKm);
+    }
+
     @GetMapping("/public/{id}")
     public ListingResponse getPublicListing(@PathVariable Long id) {
         return listingService.getPublicListing(id);
@@ -37,6 +43,18 @@ public class ListingController {
             @AuthenticationPrincipal com.rental.core.security.CustomUserDetails user,
             @Valid @RequestBody com.rental.modules.listing.dto.request.UpdateRentalStatusRequest request) {
         return listingService.updateRentalStatus(id, user.getUser().getUserId(), request.getRentalStatus());
+    }
+
+    @PostMapping("/{id}/vip")
+    public ListingResponse promoteVip(@PathVariable Long id,
+            @AuthenticationPrincipal com.rental.core.security.CustomUserDetails user) {
+        return listingService.promoteVip(id, user.getUser().getUserId());
+    }
+
+    @PostMapping("/{id}/refresh")
+    public ListingResponse refresh(@PathVariable Long id,
+            @AuthenticationPrincipal com.rental.core.security.CustomUserDetails user) {
+        return listingService.refreshListing(id, user.getUser().getUserId());
     }
 
     @DeleteMapping("/{id}")

@@ -1,6 +1,9 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../data/repositories/property_repository.dart';
 import '../../data/models/property_model.dart';
@@ -10,25 +13,29 @@ import '../../../favorites/presentation/widgets/favorite_button.dart';
 
 import '../cubit/property_browse_cubit.dart';
 
-
 // ─── Design System Colors ─────────────────────────────────────────────
-const kPrimaryDark   = Color(0xFF2C1D11); // Brown
-const kPrimaryAccent = Color(0xFFD85D15); // Orange
-const kBackground    = Color(0xFFFAF8F5); // Off-white
-const kBorderColor   = Color(0xFFE8DED1); // Border
-const kSubText       = Color(0xFF64748B); // Slate subtitle text
+const kPrimaryDark = AppColors.text; // Brown
+const kPrimaryAccent = AppColors.primary;
+const kBackground = AppColors.background; // Off-white
+const kBorderColor = AppColors.border; // Border
+const kSubText = Color(0xFF64748B); // Slate subtitle text
 // ──────────────────────────────────────────────────────────────────────
 
 class PropertyBrowsePage extends StatelessWidget {
   final String propertyType;
   final String title;
 
-  const PropertyBrowsePage({super.key, required this.propertyType, required this.title});
+  const PropertyBrowsePage({
+    super.key,
+    required this.propertyType,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => PropertyBrowseCubit(PropertyRepository(GetIt.I<ApiClient>())),
+      create: (_) =>
+          PropertyBrowseCubit(PropertyRepository(GetIt.I<ApiClient>())),
       child: _HomeView(propertyType: propertyType, title: title),
     );
   }
@@ -61,7 +68,10 @@ class _HomeViewState extends State<_HomeView> {
     return Scaffold(
       backgroundColor: kBackground,
       appBar: AppBar(
-        title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          widget.title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: kPrimaryDark,
         elevation: 0,
@@ -69,28 +79,24 @@ class _HomeViewState extends State<_HomeView> {
       body: SafeArea(
         child: RefreshIndicator(
           color: kPrimaryAccent,
-          onRefresh: () => context.read<PropertyBrowseCubit>().loadProperties(widget.propertyType),
+          onRefresh: () => context.read<PropertyBrowseCubit>().loadProperties(
+            widget.propertyType,
+          ),
           child: CustomScrollView(
             slivers: [
               // 0. Top App Bar Header Section
-              
 
               // 1. Hero Header Section
-              
 
               // 2. Section Title: Tin nổi bật + Filter Chips
-              
 
               // 3. Featured Properties List/Grid
               _PropertyListSliver(propertyType: widget.propertyType),
 
               // 4. Tools & Utilities Section
-              
 
               // Bottom padding sliver
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 32),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
             ],
           ),
         ),
@@ -127,7 +133,11 @@ class _PropertyListSliver extends StatelessWidget {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.redAccent,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Lỗi: ${state.message}',
@@ -140,7 +150,9 @@ class _PropertyListSliver extends StatelessWidget {
                       backgroundColor: kPrimaryAccent,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: () => context.read<PropertyBrowseCubit>().loadProperties(propertyType),
+                    onPressed: () => context
+                        .read<PropertyBrowseCubit>()
+                        .loadProperties(propertyType),
                     child: const Text('Thử lại'),
                   ),
                 ],
@@ -167,16 +179,13 @@ class _PropertyListSliver extends StatelessWidget {
           return SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final property = state.properties[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: PropertyCard(property: property),
-                  );
-                },
-                childCount: state.properties.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final property = state.properties[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: PropertyCard(property: property),
+                );
+              }, childCount: state.properties.length),
             ),
           );
         }
@@ -244,14 +253,23 @@ class PropertyCard extends StatelessWidget {
                       ? Image.network(
                           property.imageUrls.first,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                          ),
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.broken_image,
+                                  size: 40,
+                                  color: Colors.grey,
+                                ),
+                              ),
                         )
                       : Container(
                           color: Colors.grey[200],
-                          child: const Icon(Icons.home_work_outlined, size: 50, color: Colors.grey),
+                          child: const Icon(
+                            Icons.home_work_outlined,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
                         ),
                 ),
 
@@ -260,7 +278,10 @@ class PropertyCard extends StatelessWidget {
                   bottom: 10,
                   left: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: kPrimaryDark,
                       borderRadius: BorderRadius.circular(6),
@@ -314,11 +335,16 @@ class PropertyCard extends StatelessWidget {
                     children: [
                       // Property Type Chip
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: kPrimaryAccent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: kPrimaryAccent.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: kPrimaryAccent.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
                           _propertyTypeLabel(property.propertyType),
@@ -335,7 +361,11 @@ class PropertyCard extends StatelessWidget {
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.location_on_outlined, size: 14, color: kSubText),
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: kSubText,
+                            ),
                             const SizedBox(width: 2),
                             Expanded(
                               child: Text(

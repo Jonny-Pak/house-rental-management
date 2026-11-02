@@ -23,10 +23,18 @@ public class EmailService {
     }
 
     public void sendOtpEmail(String toEmail, String otp) {
+        sendCode(toEmail, otp, "Mã xác thực tài khoản");
+    }
+
+    public void sendPasswordResetEmail(String toEmail, String otp) {
+        sendCode(toEmail, otp, "Mã đặt lại mật khẩu");
+    }
+
+    private void sendCode(String toEmail, String otp, String subject) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(senderEmail);
         message.setTo(toEmail);
-        message.setSubject("[Rental Management] Mã xác thực tài khoản");
+        message.setSubject("[Rental Management] " + subject);
         message.setText("Mã OTP của bạn là: " + otp + "\n\nMã có hiệu lực trong 5 phút. Không chia sẻ mã này.");
         try {
             mailSender.send(message);

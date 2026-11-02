@@ -1,3 +1,8 @@
+import '../widgets/map_radius_controls.dart';
+import '../../../listing/presentation/pages/search_location_page.dart';
+
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../listing/data/models/listing_filter.dart';
 import '../../../listing/presentation/widgets/listing_filter_bar.dart';
 import '../../../listing/presentation/pages/listing_browse_page.dart';
@@ -27,8 +32,10 @@ class ListingMapPage extends StatefulWidget {
     super.key,
     this.initialFilter = const ListingFilter(),
     this.repository,
+    this.locationService,
   });
   final ListingRepository? repository;
+  final SearchLocationService? locationService;
   final ListingFilter initialFilter;
 
   @override
@@ -46,7 +53,9 @@ class _ListingMapPageState extends State<ListingMapPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _repository = widget.repository ?? ListingRepository(ApiClient());
-    _cubit = HomeMapCubit(_repository)..fetchApprovedListings();
+    _cubit = HomeMapCubit(_repository);
+    _cubit.filter = widget.initialFilter;
+    _cubit.fetchApprovedListings();
     _startRefresh();
   }
 
@@ -83,6 +92,7 @@ class _ListingMapPageState extends State<ListingMapPage>
       child: _ListingMapPageContent(
         initialFilter: widget.initialFilter,
         repository: _repository,
+        locationService: widget.locationService,
       ),
     );
   }
@@ -92,8 +102,10 @@ class _ListingMapPageContent extends StatefulWidget {
   const _ListingMapPageContent({
     required this.initialFilter,
     required this.repository,
+    this.locationService,
   });
   final ListingRepository repository;
+  final SearchLocationService? locationService;
   final ListingFilter initialFilter;
   @override
   State<_ListingMapPageContent> createState() => _ListingMapPageContentState();
@@ -103,6 +115,9 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
   late ListingFilter _filter = widget.initialFilter;
   final _mapController = MapController();
   bool _mapReady = false, _needsFit = true;
+  bool _findingLocation = false;
+  String? _locationError;
+  late final _locations = widget.locationService ?? SearchLocationService();
   @override
   void dispose() {
     _mapController.dispose();
@@ -124,6 +139,24 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
         )
         .map((l) => LatLng(l.latitude!, l.longitude!))
         .toList();
+    if (_filter.hasRadius) {
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints([
+            for (final bearing in [0.0, 90.0, 180.0, 270.0])
+              const Distance().offset(
+                _filter.center!,
+                _filter.radiusKm! * 1000,
+                bearing,
+              ),
+          ]),
+          padding: const EdgeInsets.all(48),
+          maxZoom: 16,
+        ),
+      );
+      _needsFit = false;
+      return;
+    }
     if (points.isEmpty) return;
     _mapController.fitCamera(
       CameraFit.coordinates(
@@ -136,12 +169,74 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
   }
 
   void _changeFilter(ListingFilter filter) {
+    final changed =
+        _filter.center != filter.center || _filter.radiusKm != filter.radiusKm;
     setState(() {
       _filter = filter;
       _needsFit = true;
     });
-    final state = context.read<HomeMapCubit>().state;
+    final cubit = context.read<HomeMapCubit>();
+    cubit.filter = filter;
+    if (changed) cubit.fetchApprovedListings();
+    final state = cubit.state;
     if (state is HomeMapLoaded) _fit(state.listings);
+  }
+
+  void _toggleRadius() {
+    if (_filter.hasRadius) {
+      setState(() => _locationError = null);
+      _changeFilter(_filter.withRadius());
+      return;
+    }
+    if (!_mapReady) return;
+    _setSearchCenter(_mapController.camera.center, 'Tâm bản đồ hiện tại');
+  }
+
+  void _setSearchCenter(LatLng point, String name) {
+    if (!point.latitude.isFinite ||
+        !point.longitude.isFinite ||
+        point.latitude.abs() > 90 ||
+        point.longitude.abs() > 180) {
+      setState(
+        () => _locationError = 'Vị trí không hợp lệ. Hãy chọn lại trên bản đồ.',
+      );
+      return;
+    }
+    setState(() => _locationError = null);
+    _changeFilter(
+      _filter.withRadius(
+        center: point,
+        centerName: name,
+        radiusKm: _filter.radiusKm ?? 3,
+      ),
+    );
+  }
+
+  Future<void> _findCenter({String? address}) async {
+    if (_findingLocation) return;
+    final previousCenter = _filter.center;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _findingLocation = true;
+      _locationError = null;
+    });
+    try {
+      final point = address == null
+          ? await _locations.current()
+          : await _locations.search(address);
+      if (!mounted || !_filter.hasRadius || _filter.center != previousCenter) {
+        return;
+      }
+      _setSearchCenter(point, address ?? 'Vị trí hiện tại');
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _locationError = 'Không lấy được vị trí. Kiểm tra địa chỉ hoặc quyền GPS; bạn vẫn có thể chạm bản đồ để chọn tâm.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _findingLocation = false);
+    }
   }
 
   String _formatPrice(double price) {
@@ -193,7 +288,7 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                   fontSize: 20,
                   height: 1.4,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF38291F),
+                  color: AppColors.text,
                 ),
               ),
               const SizedBox(height: 10),
@@ -207,14 +302,14 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                     style: const TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFFD76B28),
+                      color: AppColors.primary,
                     ),
                   ),
                   Text(
                     '${NumberFormat.decimalPattern('vi_VN').format(listing.areaSqm)} m²',
                     style: const TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF8A7464),
+                      color: AppColors.muted,
                     ),
                   ),
                 ],
@@ -226,7 +321,7 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                   const Icon(
                     Symbols.location_on,
                     size: 18,
-                    color: Color(0xFFC3976C),
+                    color: AppColors.placeholder,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -235,12 +330,17 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                       style: const TextStyle(
                         fontSize: 13,
                         height: 1.5,
-                        color: Color(0xFF8A7464),
+                        color: AppColors.muted,
                       ),
                     ),
                   ),
                 ],
               ),
+              if (_filter.distanceKm(listing) != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(_filter.distanceLabel(listing)),
+                ),
               const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
@@ -258,7 +358,7 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                     );
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFD76B28),
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -284,16 +384,16 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
   Widget _buildPlaceholder() => Container(
     height: 170,
     width: double.infinity,
-    color: const Color(0xFFFFF0E1),
+    color: AppColors.primaryLight,
     child: const Center(
-      child: Icon(Symbols.home_work, size: 50, color: Color(0xFFC99D74)),
+      child: Icon(Symbols.home_work, size: 50, color: AppColors.placeholder),
     ),
   );
 
   Widget _marker(Listing listing) => Tooltip(
     message: listing.title,
     child: Material(
-      color: const Color(0xFF573B28),
+      color: AppColors.primaryDark,
       shape: const CircleBorder(
         side: BorderSide(color: Colors.white, width: 2),
       ),
@@ -303,7 +403,7 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
         key: ValueKey('map-listing-${listing.id}'),
         onTap: () => _showListingDetail(context, listing),
         child: const Center(
-          child: Icon(Symbols.home, size: 24, color: Color(0xFFFFD2A5)),
+          child: Icon(Symbols.home, size: 24, color: AppColors.primaryLight),
         ),
       ),
     ),
@@ -312,16 +412,16 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF8F5),
+        backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Bản đồ nhà cho thuê',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         actions: [
@@ -329,8 +429,8 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
             tooltip: 'Xem danh sách',
             style: IconButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF8A7464),
-              side: const BorderSide(color: Color(0xFFEEDFD1)),
+              foregroundColor: AppColors.muted,
+              side: const BorderSide(color: AppColors.border),
             ),
             icon: const Icon(Symbols.list),
             onPressed: () => Navigator.push(
@@ -339,266 +439,330 @@ class _ListingMapPageContentState extends State<_ListingMapPageContent> {
                 builder: (_) => ListingBrowsePage(
                   title: 'Tin cho thuê',
                   initialFilter: _filter,
+                  repository: widget.repository,
                 ),
               ),
             ),
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Theme(
-            data: Theme.of(context).copyWith(
-              scaffoldBackgroundColor: const Color(0xFFFAF8F5),
-              colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: const Color(0xFFD76B28),
-                secondaryContainer: const Color(0xFFFFEBD9),
-                onSecondaryContainer: const Color(0xFFAF541E),
+      body: LayoutBuilder(
+        builder: (context, constraints) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Theme(
+              data: Theme.of(context).copyWith(
+                scaffoldBackgroundColor: AppColors.background,
+                colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppColors.primary,
+                  secondaryContainer: AppColors.primaryLight,
+                  onSecondaryContainer: AppColors.primaryDark,
+                ),
+                inputDecorationTheme: InputDecorationTheme(
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintStyle: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.muted,
+                  ),
+                  prefixIconColor: AppColors.muted,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+                iconButtonTheme: IconButtonThemeData(
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
               ),
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: Colors.white,
-                hintStyle: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFFAA998A),
-                ),
-                prefixIconColor: const Color(0xFF8A7464),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: const BorderSide(color: Color(0xFFEEDFD1)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: const BorderSide(color: Color(0xFFD76B28)),
-                ),
+              child: ListingFilterBar(
+                filter: _filter,
+                onChanged: _changeFilter,
               ),
-              iconButtonTheme: IconButtonThemeData(
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: constraints.maxHeight * .45,
+              ),
+              child: SingleChildScrollView(
+                primary: false,
+                child: MapRadiusControls(
+                  enabled: _filter.hasRadius,
+                  centerName: _filter.centerName,
+                  radiusKm: _filter.radiusKm ?? 3,
+                  busy: _findingLocation,
+                  error: _locationError,
+                  onToggle: _toggleRadius,
+                  onSearch: (address) => _findCenter(address: address),
+                  onCurrentLocation: () => _findCenter(),
+                  onRadiusChanged: (radius) => _changeFilter(
+                    _filter.withRadius(
+                      center: _filter.center,
+                      centerName: _filter.centerName,
+                      radiusKm: radius,
+                    ),
                   ),
                 ),
               ),
             ),
-            child: ListingFilterBar(filter: _filter, onChanged: _changeFilter),
-          ),
-          Expanded(
-            child: Stack(
-              children: [
-                BlocConsumer<HomeMapCubit, HomeMapState>(
-                  listener: (_, state) {
-                    if (_needsFit && state is HomeMapLoaded) {
-                      _fit(state.listings);
-                    }
-                  },
-                  builder: (context, state) {
-                    List<Marker> markers = [];
+            Expanded(
+              child: Stack(
+                children: [
+                  BlocConsumer<HomeMapCubit, HomeMapState>(
+                    listener: (_, state) {
+                      if (_needsFit && state is HomeMapLoaded) {
+                        _fit(state.listings);
+                      }
+                    },
+                    builder: (context, state) {
+                      List<Marker> markers = [];
 
-                    if (state is HomeMapLoaded) {
-                      markers = _filter
-                          .apply(state.listings)
-                          .where(
-                            (item) =>
-                                item.latitude != null &&
-                                item.longitude != null &&
-                                item.latitude!.isFinite &&
-                                item.longitude!.isFinite &&
-                                item.latitude!.abs() <= 90 &&
-                                item.longitude!.abs() <= 180,
-                          )
-                          .map((item) {
-                            return Marker(
-                              point: LatLng(item.latitude!, item.longitude!),
-                              width: 44,
-                              height: 44,
-                              child: _marker(item),
-                            );
-                          })
-                          .toList();
-                    }
+                      if (state is HomeMapLoaded) {
+                        markers = _filter
+                            .apply(state.listings)
+                            .where(
+                              (item) =>
+                                  item.latitude != null &&
+                                  item.longitude != null &&
+                                  item.latitude!.isFinite &&
+                                  item.longitude!.isFinite &&
+                                  item.latitude!.abs() <= 90 &&
+                                  item.longitude!.abs() <= 180,
+                            )
+                            .map((item) {
+                              return Marker(
+                                point: LatLng(item.latitude!, item.longitude!),
+                                width: 44,
+                                height: 44,
+                                child: _marker(item),
+                              );
+                            })
+                            .toList();
+                      }
 
-                    return FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        onMapReady: () {
-                          _mapReady = true;
-                          final state = context.read<HomeMapCubit>().state;
-                          if (state is HomeMapLoaded) _fit(state.listings);
-                        },
-                        initialCenter: LatLng(
-                          10.7769,
-                          106.7009,
-                        ), // Tọa độ mặc định TP.HCM
-                        initialZoom: 13.0,
-                      ),
-                      children: [
-                        const RentalMapTiles(),
-                        MarkerLayer(markers: markers),
-                      ],
-                    );
-                  },
-                ),
-
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  bottom: 16,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        FloatingActionButton.small(
-                          heroTag: 'refresh-map',
-                          tooltip: 'Làm mới bản đồ',
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF8A7464),
-                          elevation: 2,
-                          shape: const CircleBorder(),
-                          onPressed: () => context
-                              .read<HomeMapCubit>()
-                              .fetchApprovedListings(),
-                          child: const Icon(Symbols.refresh),
-                        ),
-                        const SizedBox(height: 12),
-                        FloatingActionButton.small(
-                          heroTag: 'manage-listings',
-                          tooltip: 'Quản lý tin đăng',
-                          backgroundColor: const Color(0xFFD76B28),
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shape: const CircleBorder(),
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const MyListingsPage(),
-                              ),
-                            );
-                            if (context.mounted) {
-                              context
-                                  .read<HomeMapCubit>()
-                                  .fetchApprovedListings();
-                            }
+                      return FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          onMapReady: () {
+                            _mapReady = true;
+                            final state = context.read<HomeMapCubit>().state;
+                            if (state is HomeMapLoaded) _fit(state.listings);
                           },
-                          child: const Icon(Symbols.post_add),
+                          initialCenter: LatLng(10.7769, 106.7009),
+                          initialZoom: 13.0,
+                          onTap: _filter.hasRadius && !_findingLocation
+                              ? (_, point) => _setSearchCenter(
+                                  point,
+                                  'Điểm đã chọn trên bản đồ',
+                                )
+                              : null,
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                BlocBuilder<HomeMapCubit, HomeMapState>(
-                  builder: (context, state) {
-                    if (state is HomeMapLoading) {
-                      return const Center(
-                        child: Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      );
-                    }
-                    if (state is HomeMapError) {
-                      return Positioned(
-                        top: 50,
-                        left: 20,
-                        right: 20,
-                        child: Material(
-                          elevation: 4,
-                          borderRadius: BorderRadius.circular(18),
-                          color: const Color(0xFFAE5141),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    state.message,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Symbols.refresh,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () => context
-                                      .read<HomeMapCubit>()
-                                      .fetchApprovedListings(),
+                        children: [
+                          const RentalMapTiles(),
+                          if (_filter.hasRadius)
+                            CircleLayer(
+                              circles: [
+                                CircleMarker(
+                                  point: _filter.center!,
+                                  radius: _filter.radiusKm! * 1000,
+                                  useRadiusInMeter: true,
+                                  color: const Color(0x2215803D),
+                                  borderColor: AppColors.primary,
+                                  borderStrokeWidth: 2,
                                 ),
                               ],
                             ),
-                          ),
-                        ),
+                          if (_filter.center != null)
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: _filter.center!,
+                                  width: 36,
+                                  height: 36,
+                                  child: const Icon(
+                                    Icons.my_location,
+                                    color: AppColors.primary,
+                                    size: 28,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          MarkerLayer(markers: markers),
+                        ],
                       );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ],
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: BlocBuilder<HomeMapCubit, HomeMapState>(
-              builder: (_, state) {
-                if (state is! HomeMapLoaded) {
-                  return const SizedBox.shrink();
-                }
-                final matches = _filter.apply(state.listings);
-                final count = matches
-                    .where(
-                      (l) =>
-                          l.latitude != null &&
-                          l.longitude != null &&
-                          l.latitude!.isFinite &&
-                          l.longitude!.isFinite &&
-                          l.latitude!.abs() <= 90 &&
-                          l.longitude!.abs() <= 180,
-                    )
-                    .length;
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(top: BorderSide(color: Color(0xFFEEDFD1))),
+                    },
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    child: Text(
-                      count == 0
-                          ? (matches.isEmpty
-                                ? 'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.'
-                                : 'Tin phù hợp chưa có tọa độ. Xem trong danh sách.')
-                          : '$count tin phù hợp trên bản đồ',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.5,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF573B28),
+
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    bottom: 16,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          FloatingActionButton.small(
+                            heroTag: 'refresh-map',
+                            tooltip: 'Làm mới bản đồ',
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.muted,
+                            elevation: 2,
+                            shape: const CircleBorder(),
+                            onPressed: () => context
+                                .read<HomeMapCubit>()
+                                .fetchApprovedListings(),
+                            child: const Icon(Symbols.refresh),
+                          ),
+                          const SizedBox(height: 12),
+                          FloatingActionButton.small(
+                            heroTag: 'manage-listings',
+                            tooltip: 'Quản lý tin đăng',
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: const CircleBorder(),
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const MyListingsPage(),
+                                ),
+                              );
+                              if (context.mounted) {
+                                context
+                                    .read<HomeMapCubit>()
+                                    .fetchApprovedListings();
+                              }
+                            },
+                            child: const Icon(Symbols.post_add),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                );
-              },
+
+                  BlocBuilder<HomeMapCubit, HomeMapState>(
+                    builder: (context, state) {
+                      if (state is HomeMapLoading) {
+                        return const Center(
+                          child: Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        );
+                      }
+                      if (state is HomeMapError) {
+                        return Positioned(
+                          top: 50,
+                          left: 20,
+                          right: 20,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(18),
+                            color: const Color(0xFFAE5141),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      state.message,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Symbols.refresh,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () => context
+                                        .read<HomeMapCubit>()
+                                        .fetchApprovedListings(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            SafeArea(
+              top: false,
+              child: BlocBuilder<HomeMapCubit, HomeMapState>(
+                builder: (_, state) {
+                  if (state is! HomeMapLoaded) {
+                    return const SizedBox.shrink();
+                  }
+                  final matches = _filter.apply(state.listings);
+                  final count = matches
+                      .where(
+                        (l) =>
+                            l.latitude != null &&
+                            l.longitude != null &&
+                            l.latitude!.isFinite &&
+                            l.longitude!.isFinite &&
+                            l.latitude!.abs() <= 90 &&
+                            l.longitude!.abs() <= 180,
+                      )
+                      .length;
+                  return Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: AppColors.border)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      child: Text(
+                        count == 0
+                            ? (matches.isEmpty
+                                  ? 'Không có tin phù hợp. Hãy đổi từ khóa hoặc xóa bộ lọc.'
+                                  : 'Tin phù hợp chưa có tọa độ. Xem trong danh sách.')
+                            : '$count tin phù hợp trên bản đồ',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          height: 1.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

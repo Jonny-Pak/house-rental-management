@@ -1,3 +1,4 @@
+import '../../../amenity/data/amenity_model.dart';
 import 'roommate_info.dart';
 
 String listingTypeLabel(String? type) => switch (type) {
@@ -10,6 +11,21 @@ String listingRentUnit(String? type) =>
     type == 'SHARED_ROOM' ? 'người/tháng' : 'tháng';
 
 class Listing {
+  bool get isVip {
+    final expiry = DateTime.tryParse(details['vipExpiresAt']?.toString() ?? '');
+    return details['isVip'] == true &&
+        expiry != null &&
+        expiry.isAfter(DateTime.now());
+  }
+
+  DateTime? get displayTime => DateTime.tryParse(
+    (details['refreshedAt'] ?? details['createdAt'])?.toString() ?? '',
+  );
+
+  List<Amenity> get amenities => [
+    for (final item in details['amenities'] as List? ?? [])
+      Amenity.fromJson(Map<String, dynamic>.from(item)),
+  ];
   RoommateInfo get roommateInfo => RoommateInfo.fromJson(details);
   final int? areaId;
   final String approvalStatus;

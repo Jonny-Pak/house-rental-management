@@ -39,7 +39,7 @@ public class PropertyService {
         }
         com.rental.modules.area.domain.entity.AdministrativeArea ward = wardResult.get();
         com.rental.modules.area.domain.entity.AdministrativeArea parent = ward.getParent();
-        if (!List.of("WARD", "COMMUNE", "SPECIAL").contains(ward.getAreaType()) || parent == null) {
+        if (!ward.isAvailable() || !List.of("WARD", "COMMUNE", "SPECIAL").contains(ward.getAreaType()) || parent == null) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST, "Phường/xã/đặc khu không hợp lệ.");
         }

@@ -1,9 +1,10 @@
+import '../../../listing/data/models/listing_filter.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../listing/data/repositories/listing_repository.dart';
 import '../../../listing/data/models/listing_model.dart';
 
-// --- States ---
 abstract class HomeMapState {}
 
 class HomeMapInitial extends HomeMapState {}
@@ -20,26 +21,33 @@ class HomeMapError extends HomeMapState {
   HomeMapError(this.message);
 }
 
-// --- Cubit ---
 class HomeMapCubit extends Cubit<HomeMapState> {
   final ListingRepository _repository;
 
   HomeMapCubit(this._repository) : super(HomeMapInitial());
-  bool _fetching = false;
+  ListingFilter filter = const ListingFilter();
+  int _request = 0;
 
   Future<void> fetchApprovedListings({bool silent = false}) async {
-    if (_fetching || isClosed) return;
-    _fetching = true;
+    if (isClosed) return;
+    final request = ++_request;
+    final search = filter;
     if (!silent) emit(HomeMapLoading());
     try {
-      final listings = await _repository.fetchApprovedListings();
-      if (!isClosed) emit(HomeMapLoaded(listings));
+      final listings = search.hasRadius
+          ? await _repository.fetchNearby(
+              search.center!.latitude,
+              search.center!.longitude,
+              search.radiusKm!,
+            )
+          : await _repository.fetchApprovedListings();
+      if (!isClosed && request == _request) emit(HomeMapLoaded(listings));
     } catch (e) {
-      if (!isClosed && !(silent && state is HomeMapLoaded)) {
+      if (!isClosed &&
+          request == _request &&
+          !(silent && state is HomeMapLoaded)) {
         emit(HomeMapError(ListingRepository.errorMessage(e)));
       }
-    } finally {
-      _fetching = false;
     }
   }
 }

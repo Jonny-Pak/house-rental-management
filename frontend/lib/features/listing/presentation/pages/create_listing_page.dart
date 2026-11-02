@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import '../../../../core/layout/app_layout.dart';
 
 import 'package:flutter/material.dart';
@@ -132,9 +134,9 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
   Widget _buildTypeSelectionStep(BuildContext context) {
     final cubit = context.read<CreateListingCubit>();
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF8F5),
+        backgroundColor: AppColors.background,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         title: const Text(
@@ -142,7 +144,7 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         leading: IconButton(
@@ -166,13 +168,13 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
                       vertical: 7,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBD9),
+                      color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
                       'BƯỚC 01 / 04',
                       style: TextStyle(
-                        color: Color(0xFFAF541E),
+                        color: AppColors.primaryDark,
                         fontSize: 10,
                         letterSpacing: 1,
                         fontWeight: FontWeight.w700,
@@ -183,7 +185,7 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
                   const Expanded(
                     child: Text(
                       'Loại bất động sản',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF927C6D)),
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
                   ),
                 ],
@@ -195,7 +197,7 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
                   fontSize: 28,
                   height: 1.2,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF38291F),
+                  color: AppColors.text,
                 ),
               ),
               const SizedBox(height: 10),
@@ -204,7 +206,7 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.5,
-                  color: Color(0xFF8A7464),
+                  color: AppColors.muted,
                 ),
               ),
               const SizedBox(height: 28),
@@ -262,11 +264,7 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
               const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Symbols.verified_user,
-                    size: 18,
-                    color: Color(0xFFAD8A68),
-                  ),
+                  Icon(Symbols.verified_user, size: 18, color: AppColors.muted),
                   SizedBox(width: 9),
                   Expanded(
                     child: Text(
@@ -274,7 +272,7 @@ class _CreateListingFlowState extends State<_CreateListingFlow> {
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.5,
-                        color: Color(0xFF927C6D),
+                        color: AppColors.muted,
                       ),
                     ),
                   ),
@@ -305,7 +303,7 @@ class _TypeOptionCard extends StatelessWidget {
     color: Colors.white,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(24),
-      side: const BorderSide(color: Color(0xFFEEDFD1)),
+      side: const BorderSide(color: AppColors.border),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
@@ -322,7 +320,7 @@ class _TypeOptionCard extends StatelessWidget {
                   height: 76,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFFF2E4), Color(0xFFFFFAF5)],
+                      colors: [AppColors.primaryLight, AppColors.primaryLight],
                     ),
                     borderRadius: BorderRadius.circular(22),
                   ),
@@ -332,13 +330,13 @@ class _TypeOptionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFFAF5EF),
+                    color: AppColors.primaryLight,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Symbols.arrow_forward,
                     size: 19,
-                    color: Color(0xFFAE6B3B),
+                    color: AppColors.primaryDark,
                   ),
                 ),
               ],
@@ -349,7 +347,7 @@ class _TypeOptionCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF38291F),
+                color: AppColors.text,
               ),
             ),
             const SizedBox(height: 7),
@@ -358,7 +356,7 @@ class _TypeOptionCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 height: 1.5,
-                color: Color(0xFF8A7464),
+                color: AppColors.muted,
               ),
             ),
           ],

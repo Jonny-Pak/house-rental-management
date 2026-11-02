@@ -1,3 +1,5 @@
+import 'package:frontend/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -80,7 +82,7 @@ class PreferencesView extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: const Color(0xFFEEDFD1)),
+      border: Border.all(color: AppColors.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -90,7 +92,7 @@ class PreferencesView extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF38291F),
+            color: AppColors.text,
           ),
         ),
         const SizedBox(height: 16),
@@ -108,8 +110,8 @@ class PreferencesView extends StatelessWidget {
                     _icon(code),
                     size: 18,
                     color: state.interests.contains(code)
-                        ? const Color(0xFFAF541E)
-                        : const Color(0xFFAD8A68),
+                        ? AppColors.primaryDark
+                        : AppColors.muted,
                   ),
                   label: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -123,16 +125,16 @@ class PreferencesView extends StatelessWidget {
                         fontWeight: state.interests.contains(code)
                             ? FontWeight.w700
                             : FontWeight.w400,
-                        color: const Color(0xFF573B28),
+                        color: AppColors.primaryDark,
                       ),
                     ),
                   ),
-                  selectedColor: const Color(0xFFFFE4C7),
-                  backgroundColor: const Color(0xFFFCFAF7),
+                  selectedColor: AppColors.primaryLight,
+                  backgroundColor: AppColors.background,
                   side: BorderSide(
                     color: state.interests.contains(code)
-                        ? const Color(0xFFDCA778)
-                        : const Color(0xFFEEDFD1),
+                        ? AppColors.primary
+                        : AppColors.border,
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 9,
@@ -159,16 +161,16 @@ class PreferencesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFFAF8F5),
+    backgroundColor: AppColors.background,
     appBar: AppBar(
-      backgroundColor: const Color(0xFFFAF8F5),
+      backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
       title: const Text(
         'Sở thích của tôi',
         style: TextStyle(
           fontSize: 19,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF38291F),
+          color: AppColors.text,
         ),
       ),
     ),
@@ -196,7 +198,7 @@ class PreferencesView extends StatelessWidget {
           if (state.status == PreferencesStatus.initial ||
               state.status == PreferencesStatus.loading) {
             return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFD76B28)),
+              child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
           if (state.currentPreference == null) {
@@ -208,7 +210,7 @@ class PreferencesView extends StatelessWidget {
                   children: [
                     const Icon(
                       Symbols.cloud_off,
-                      color: Color(0xFFAD8A68),
+                      color: AppColors.muted,
                       size: 40,
                     ),
                     const SizedBox(height: 12),
@@ -236,7 +238,7 @@ class PreferencesView extends StatelessWidget {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFFEBD6), Color(0xFFFFFAF4)],
+                          colors: [AppColors.primaryLight, Color(0xFFFFFAF4)],
                         ),
                         borderRadius: BorderRadius.circular(24),
                       ),
@@ -246,7 +248,7 @@ class PreferencesView extends StatelessWidget {
                           const Icon(
                             Symbols.interests,
                             size: 36,
-                            color: Color(0xFFD76B28),
+                            color: AppColors.primary,
                           ),
                           const SizedBox(height: 16),
                           const Text(
@@ -254,7 +256,7 @@ class PreferencesView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 25,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF38291F),
+                              color: AppColors.text,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -263,7 +265,7 @@ class PreferencesView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               height: 1.6,
-                              color: Color(0xFF8A7464),
+                              color: AppColors.muted,
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -272,7 +274,7 @@ class PreferencesView extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFAF541E),
+                              color: AppColors.primaryDark,
                             ),
                           ),
                         ],
@@ -312,7 +314,7 @@ class PreferencesView extends StatelessWidget {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFEEDFD1))),
+                  border: Border(top: BorderSide(color: AppColors.border)),
                 ),
                 child: SafeArea(
                   top: false,
@@ -324,7 +326,7 @@ class PreferencesView extends StatelessWidget {
                               .read<PreferencesCubit>()
                               .updatePreferences(),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFD76B28),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,

@@ -1,3 +1,8 @@
+import '../../../auth/presentation/pages/qr_login_scanner_page.dart';
+import '../../../listing/data/repositories/listing_repository.dart';
+import '../../../listing/presentation/pages/create_listing_page.dart';
+import '../widgets/user_bottom_navigation.dart';
+
 import '../../../notification/data/notification_repository.dart';
 import '../../../notification/presentation/notification_store.dart';
 import '../../../notification/presentation/notifications_page.dart';
@@ -21,14 +26,23 @@ import '../../../user/presentation/bloc/profile_event.dart';
 import '../../../user/presentation/bloc/profile_state.dart';
 import '../../../user/presentation/pages/profile_page.dart';
 import 'home_page.dart';
-import '../theme/home_icon_colors.dart';
-
-const _orange = Color(0xFFFF751B);
+import '../widgets/user_navigation_drawer.dart';
+import '../../../listing/presentation/pages/listing_browse_page.dart';
+import '../../../contract/presentation/pages/my_contracts_page.dart';
+import '../../../membership/presentation/pages/membership_page.dart';
+import '../../../map/presentation/pages/listing_map_page.dart';
+import '../../../content/presentation/system_content_page.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({super.key, this.userRepository, this.notificationRepository});
+  const MainPage({
+    super.key,
+    this.userRepository,
+    this.notificationRepository,
+    this.listingRepository,
+  });
   final UserRepository? userRepository;
   final NotificationRepository? notificationRepository;
+  final ListingRepository? listingRepository;
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -37,7 +51,7 @@ class _MainPageState extends State<MainPage> {
   final _scaffold = GlobalKey<ScaffoldState>();
   final _navigators = List.generate(5, (_) => GlobalKey<NavigatorState>());
   final _visited = <int>{0};
-  final _atTabRoot = List<bool>.filled(5, true);
+  final _showNavigation = List<bool>.filled(5, true);
   late final List<_TabRouteObserver> _routeObservers;
   int _index = 0;
   late final NotificationStore _notifications;
@@ -52,8 +66,8 @@ class _MainPageState extends State<MainPage> {
       5,
       (index) => _TabRouteObserver((atRoot) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _atTabRoot[index] != atRoot) {
-            setState(() => _atTabRoot[index] = atRoot);
+          if (mounted) {
+            setState(() => _showNavigation[index] = atRoot);
           }
         });
       }),
@@ -68,6 +82,10 @@ class _MainPageState extends State<MainPage> {
 
   void _select(int index) {
     if (index == 3) _notifications.refresh();
+    final profileContext = _scaffold.currentContext;
+    if (index == 4 && profileContext != null) {
+      profileContext.read<ProfileBloc>().add(FetchProfileEvent());
+    }
     setState(() {
       _visited.add(index);
       _index = index;
@@ -75,9 +93,13 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget _page(int index) => switch (index) {
-    0 => HomePage(
-      onMenu: () => _scaffold.currentState?.openDrawer(),
-      onTabSelected: _select,
+    0 => BlocBuilder<ProfileBloc, ProfileState>(
+      builder: (_, state) => HomePage(
+        userName: state is ProfileLoaded ? state.profile.fullName : null,
+        listingRepository: widget.listingRepository,
+        onMenu: () => _scaffold.currentState?.openDrawer(),
+        onTabSelected: _select,
+      ),
     ),
     1 => const SavedListingsPage(),
     2 => const MyListingsPage(),
@@ -108,7 +130,8 @@ class _MainPageState extends State<MainPage> {
             final showRail = constraints.maxWidth >= AppLayout.compact;
             return Scaffold(
               key: _scaffold,
-              extendBody: !showRail && _index == 0 && _atTabRoot[_index],
+              extendBody:
+                  !showRail && _index == 0 && _routeObservers[_index].atRoot,
               backgroundColor: const Color(0xFFF7F7F7),
               drawer: _drawer(context),
               body: Row(
@@ -122,11 +145,14 @@ class _MainPageState extends State<MainPage> {
                       children: [
                         for (var i = 0; i < 5; i++)
                           _visited.contains(i)
-                              ? Navigator(
-                                  key: _navigators[i],
-                                  observers: [_routeObservers[i]],
-                                  onGenerateRoute: (_) => MaterialPageRoute(
-                                    builder: (_) => _page(i),
+                              ? TickerMode(
+                                  enabled: _index == i,
+                                  child: Navigator(
+                                    key: _navigators[i],
+                                    observers: [_routeObservers[i]],
+                                    onGenerateRoute: (_) => MaterialPageRoute(
+                                      builder: (_) => _page(i),
+                                    ),
                                   ),
                                 )
                               : const SizedBox.shrink(),
@@ -135,7 +161,7 @@ class _MainPageState extends State<MainPage> {
                   ),
                 ],
               ),
-              bottomNavigationBar: !showRail && _atTabRoot[_index]
+              bottomNavigationBar: !showRail && _showNavigation[_index]
                   ? _navigation(context)
                   : null,
             );
@@ -157,7 +183,7 @@ class _MainPageState extends State<MainPage> {
               selectedIndex: _index,
               onDestinationSelected: _select,
               backgroundColor: Colors.white,
-              indicatorColor: const Color(0xFFFFD5A1),
+              indicatorColor: const Color(0xFFD8EDDF),
               labelType: extended
                   ? NavigationRailLabelType.none
                   : NavigationRailLabelType.selected,
@@ -203,328 +229,122 @@ class _MainPageState extends State<MainPage> {
     ),
   );
 
-  Widget _avatar({
-    double radius = 15,
-    Color? iconColor,
-  }) => BlocBuilder<ProfileBloc, ProfileState>(
-    builder: (_, state) {
-      final url = state is ProfileLoaded ? state.profile.avatarUrl : null;
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: const Color(0xFFFFD5A1),
-        backgroundImage: url == null || url.isEmpty ? null : NetworkImage(url),
-        onBackgroundImageError: url == null || url.isEmpty ? null : (_, _) {},
-        child: url == null || url.isEmpty
-            ? Icon(
-                Symbols.person,
-                size: radius * 1.4,
-                color: iconColor ?? HomeIconColors.forIcon(Symbols.person),
-                weight: 500,
-              )
-            : null,
+  Future<void> _onBottomSelected(int index) async {
+    if (index == 2) {
+      if (!_routeObservers[_index].atRoot) return;
+      await _navigators[_index].currentState?.push(
+        MaterialPageRoute(builder: (_) => const CreateListingPage()),
       );
-    },
-  );
-
-  Widget _navigation(BuildContext context) => SafeArea(
-    minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-    child: Center(
-      heightFactor: 1,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: Container(
-          height:
-              82 +
-              (MediaQuery.textScalerOf(context).scale(12) - 12).clamp(0, 24),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0B172340),
-                blurRadius: 24,
-                offset: Offset(0, -3),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(child: _navItem(0, 'Trang chủ', Symbols.home)),
-              Expanded(child: _navItem(1, 'Yêu thích', Symbols.favorite)),
-              Expanded(child: _navItem(2, 'Tin đăng', Symbols.view_list)),
-              Expanded(child: _navItem(3, 'Thông báo', Symbols.notifications)),
-              Expanded(
-                child: _navItem(4, 'Tài khoản', Symbols.person, avatar: true),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-
-  Widget _navItem(
-    int index,
-    String label,
-    IconData icon, {
-    bool avatar = false,
-  }) {
-    final selected = _index == index;
-    return Semantics(
-      selected: selected,
-      button: true,
-      label: label,
-      child: Tooltip(
-        message: label,
-        child: InkWell(
-          onTap: () => _select(index),
-          borderRadius: BorderRadius.circular(20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              color: selected ? const Color(0xFFFFF4ED) : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  height: 29,
-                  child: avatar
-                      ? _avatar(radius: 14, iconColor: const Color(0xFF0B1535))
-                      : _navIcon(
-                          index,
-                          Icon(
-                            icon,
-                            size: 28,
-                            weight: 450,
-                            fill: selected ? 1 : 0,
-                            color: selected ? _orange : const Color(0xFF0B1535),
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: selected ? _orange : const Color(0xFF71798D),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected ? _orange : Colors.transparent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+      if (mounted && _index == 4) _select(4);
+      return;
+    }
+    _select(index);
   }
 
-  Widget _navIcon(int index, Widget icon) =>
-      index == 3 ? NotificationBadge(child: icon) : icon;
-
-  Widget _drawer(BuildContext context) => Drawer(
-    width: math.min(352, MediaQuery.sizeOf(context).width * .88),
-    backgroundColor: const Color(0xFFFFFCF8),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.horizontal(right: Radius.circular(28)),
-    ),
-    child: SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 12, 8),
-            child: Row(
-              children: [
-                const Icon(Symbols.home_work, color: _orange, size: 25),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Không gian của bạn',
-                    style: TextStyle(
-                      color: Color(0xFF573B28),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Đóng menu',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Symbols.close, size: 20),
-                  color: const Color(0xFF927C6D),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _drawerProfile(),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(12, 26, 12, 12),
-                  child: Text(
-                    'KHÁM PHÁ & QUẢN LÝ',
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF927C6D),
-                    ),
-                  ),
-                ),
-                for (final entry in [
-                  (0, 'Trang chủ', Symbols.home),
-                  (1, 'Yêu thích', Symbols.favorite),
-                  (2, 'Quản lý tin đăng', Symbols.assignment),
-                  (3, 'Thông báo', Symbols.notifications),
-                  (4, 'Tài khoản', Symbols.person),
-                ])
-                  _drawerItem(context, entry.$1, entry.$2, entry.$3),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: OutlinedButton.icon(
-              onPressed: () => logout(context),
-              icon: const Icon(Symbols.logout, size: 21),
-              label: const Text('Đăng xuất'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFAE5141),
-                backgroundColor: const Color(0xFFFFF7F4),
-                side: const BorderSide(color: Color(0xFFF0DAD3)),
-                minimumSize: const Size.fromHeight(48),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
+  Widget _navigation(BuildContext context) => UserBottomNavigation(
+    selectedIndex: _index == 2 ? -1 : _index,
+    onSelected: _onBottomSelected,
   );
 
-  Widget _drawerProfile() => BlocBuilder<ProfileBloc, ProfileState>(
-    builder: (_, state) => Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFF1DF), Color(0xFFFFFAF4)],
+  Widget _drawer(BuildContext context) =>
+      BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (_, state) => UserNavigationDrawer(
+          profile: state is ProfileLoaded ? state.profile : null,
+          selectedAction: const [
+            'home',
+            'favorites',
+            'listings',
+            'notifications',
+            'profile',
+          ][_index],
+          onClose: () => _scaffold.currentState?.closeDrawer(),
+          onAction: _onDrawerAction,
         ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFF0DDC9)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFEBD3B7)),
-            ),
-            child: _avatar(radius: 28, iconColor: const Color(0xFF9A5A31)),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            state is ProfileLoaded
-                ? state.profile.fullName
-                : 'Tài khoản của bạn',
-            style: const TextStyle(
-              fontSize: 19,
-              height: 1.3,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF38291F),
-            ),
-          ),
-          if (state is ProfileLoaded) ...[
-            const SizedBox(height: 5),
-            Text(
-              state.profile.email,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8A7464)),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
+      );
 
-  Widget _drawerItem(
-    BuildContext context,
-    int index,
-    String label,
-    IconData icon,
-  ) {
-    final selected = _index == index;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: ListTile(
-        selected: selected,
-        selectedColor: const Color(0xFFAF541E),
-        textColor: const Color(0xFF573B28),
-        selectedTileColor: const Color(0xFFFFEBD9),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        leading: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: selected ? Colors.white : const Color(0xFFF6F0E9),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: selected ? const Color(0xFFC56428) : const Color(0xFF8A7464),
-            size: 22,
-            weight: 350,
-          ),
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-        trailing: selected
-            ? Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: _orange,
-                  shape: BoxShape.circle,
-                ),
-              )
-            : null,
-        onTap: () {
-          Navigator.pop(context);
-          _select(index);
-        },
-      ),
+  Future<void> _openDrawerPage(Widget page) async {
+    await _navigators[_index].currentState?.push(
+      MaterialPageRoute(builder: (_) => page),
     );
+    if (mounted && _index == 4) _select(4);
+  }
+
+  void _onDrawerAction(String action) {
+    _scaffold.currentState?.closeDrawer();
+    switch (action) {
+      case 'home':
+        _select(0);
+        break;
+      case 'favorites':
+        _select(1);
+        break;
+      case 'listings':
+        _select(2);
+        break;
+      case 'notifications':
+        _select(3);
+        break;
+      case 'profile':
+        _select(4);
+        break;
+      case 'search':
+        _openDrawerPage(
+          ListingBrowsePage(
+            title: 'Tìm kiếm',
+            autofocus: true,
+            repository: widget.listingRepository,
+          ),
+        );
+        break;
+      case 'rent-house':
+        _openDrawerPage(
+          ListingBrowsePage(
+            title: 'Thuê nhà',
+            listingType: 'WHOLE_HOUSE',
+            repository: widget.listingRepository,
+          ),
+        );
+        break;
+      case 'rent-room':
+        _openDrawerPage(
+          ListingBrowsePage(
+            title: 'Thuê phòng trọ',
+            listingType: 'BOARDING_ROOM',
+            repository: widget.listingRepository,
+          ),
+        );
+        break;
+      case 'roommate':
+        _openDrawerPage(
+          ListingBrowsePage(
+            title: 'Tìm người ở ghép',
+            listingType: 'SHARED_ROOM',
+            repository: widget.listingRepository,
+          ),
+        );
+        break;
+      case 'post':
+        _openDrawerPage(const CreateListingPage());
+        break;
+      case 'contracts':
+        _openDrawerPage(const MyContractsPage(isLandlord: true));
+        break;
+      case 'qr-login':
+        _openDrawerPage(const QrLoginScannerPage());
+        break;
+      case 'membership':
+        _openDrawerPage(const MembershipPage());
+        break;
+      case 'map':
+        _openDrawerPage(const ListingMapPage());
+        break;
+      case 'help':
+        _openDrawerPage(const SystemContentPage(slug: 'guide'));
+        break;
+      case 'logout':
+        logout(_scaffold.currentContext!);
+        break;
+    }
   }
 }
 
@@ -533,8 +353,9 @@ class _TabRouteObserver extends NavigatorObserver {
   _TabRouteObserver(this.onChanged);
   final ValueChanged<bool> onChanged;
   final List<Route<dynamic>> _pages = [];
+  bool get atRoot => _pages.length <= 1;
 
-  void _notify() => onChanged(_pages.length <= 1);
+  void _notify() => onChanged(atRoot);
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
