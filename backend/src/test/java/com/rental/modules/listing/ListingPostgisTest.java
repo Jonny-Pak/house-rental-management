@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({com.rental.modules.user.service.GoogleAuthService.class,com.rental.modules.user.qr.QrLoginService.class, com.rental.core.security.JwtService.class,com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+@Import({com.rental.modules.chatbot.ChatbotSearch.class,com.rental.modules.user.service.GoogleAuthService.class,com.rental.modules.user.qr.QrLoginService.class, com.rental.core.security.JwtService.class,com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
         com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
         org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
         com.rental.modules.property.service.PropertyService.class,
@@ -77,6 +77,28 @@ class ListingPostgisTest {
     }
 
     @org.springframework.boot.test.mock.mockito.MockBean com.rental.modules.user.service.GoogleTokenService googleTokens;
+    @Autowired com.rental.modules.chatbot.ChatbotSearch chatSearch;
+    @Test void chatbotSearchUsesRealPostgisRadiusAndStrictBudgetWithoutReturningPendingOrHiddenListings() throws Exception {
+        User owner = user("chatowner", Role.MEMBER), reviewer = user("chatreviewer", Role.ADMIN);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(10);
+        java.util.ArrayList<Long> ids = new java.util.ArrayList<>();
+        for(int i=0;i<5;i++) {
+            CreateListingRequest request = new CreateListingRequest();
+            request.setTitle("Phòng chatbot " + i); request.setListingType("BOARDING_ROOM");
+            request.setRentPrice(new BigDecimal(i==4 ? "5000000" : "3000000")); request.setAreaSqm(new BigDecimal("25"));
+            request.setAddress("Thủ Đức, TP.HCM"); request.setAreaId(6L);
+            request.setLatitude(i==3 ? 11.0 : 10.78); request.setLongitude(106.7);
+            request.setImageUrls(List.of("https://example.com/chat.jpg"));
+            Long id = listings.createListing(owner.getUserId(),request).getId(); ids.add(id);
+            if(i!=1) admin.approveListing(id,reviewer.getUserId());
+        }
+        listings.updateRentalStatus(ids.get(2),owner.getUserId(),"HIDDEN");
+        entityManager.flush(); entityManager.clear();
+        var filters = new com.fasterxml.jackson.databind.ObjectMapper().readValue("{\"radiusKm\":3,\"maxPrice\":4000000}",com.rental.modules.chatbot.ChatFilters.class);
+        assertEquals(List.of(ids.get(0)),chatSearch.find(filters,10.78,106.7).stream().map(item->item.getId()).toList());
+    }
+
     @Autowired com.rental.modules.user.service.GoogleAuthService googleAuth;
 
     @Test void googleLoginCreatesOneMemberWithOneBasicSubscriptionAndReusesSameAccount() {
@@ -1346,6 +1368,24 @@ class ListingPostgisTest {
             .setParameter("id", ids.get(2)).executeUpdate();
         entityManager.flush(); entityManager.clear();
         assertEquals(1, listings.findNearby(10.78, 106.7, 0.1).size());
+    }
+
+    @Test void chatHistorySurvivesStoreRecreationAndIsolatesAccountsWithPagination() {
+        User first = user("chatHistoryFirst", Role.MEMBER), second = user("chatHistorySecond", Role.MEMBER);
+        var store = new com.rental.modules.chatbot.ChatHistoryStore(jdbc);
+        for (int index = 0; index < 35; index++) store.save(first.getUserId(), "{\"message\":\"hello\"}", "{}");
+        store.save(second.getUserId(), "{\"message\":\"private\"}", "{}");
+        var restored = new com.rental.modules.chatbot.ChatHistoryStore(jdbc);
+        var newest = restored.find(first.getUserId(), Long.MAX_VALUE);
+        assertEquals(31, newest.size());
+        long before = newest.get(29).id();
+        var older = restored.find(first.getUserId(), before);
+        assertEquals(5, older.size());
+        assertTrue(older.getFirst().id() < before);
+        assertEquals("{\"message\":\"hello\"}", older.getFirst().requestJson());
+        restored.clear(first.getUserId());
+        assertTrue(restored.find(first.getUserId(), Long.MAX_VALUE).isEmpty());
+        assertEquals(1, restored.find(second.getUserId(), Long.MAX_VALUE).size());
     }
 
     private User user(String name, Role role) {
