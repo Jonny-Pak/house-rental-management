@@ -1,22 +1,12 @@
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
 import '../storage/token_storage.dart';
 
-/// Dynamically resolve baseUrl depending on platform:
-/// - Android Emulator requires `10.0.2.2` to access host machine's localhost (8080).
-/// - Web & iOS Simulator use `localhost`.
+/// Base URL trỏ tới Backend trên Render (hoặc ghi đè bằng --dart-define=API_BASE_URL=...)
 String get _baseUrl {
   const configuredUrl = String.fromEnvironment('API_BASE_URL');
   if (configuredUrl.isNotEmpty) return configuredUrl;
-  if (kIsWeb) {
-    return 'http://localhost:8080/api/v1';
-  }
-  if (defaultTargetPlatform == TargetPlatform.android) {
-    // Đổi về IP LAN của máy tính để test trên điện thoại thật
-    return 'http://192.168.100.72:8080/api/v1';
-  }
-  return 'http://localhost:8080/api/v1';
+  return 'https://house-rental-backend-b03i.onrender.com/api/v1';
 }
 
 class ApiClient {
@@ -26,8 +16,8 @@ class ApiClient {
     : _dio = Dio(
         BaseOptions(
           baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
+          connectTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
         ),
       ) {
     _dio.interceptors.add(
