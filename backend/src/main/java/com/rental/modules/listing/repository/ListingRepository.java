@@ -1,0 +1,46 @@
+package com.rental.modules.listing.repository;
+
+import com.rental.modules.listing.domain.entity.Listing;
+import org.locationtech.jts.geom.Polygon;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
+
+@Repository
+public interface ListingRepository extends JpaRepository<Listing, Long> {
+
+    @Query("SELECT l FROM Listing l " +
+           "WHERE l.location IS NOT NULL " +
+           "AND within(l.location, :bbox) = true " +
+           "AND l.approvalStatus = 'APPROVED' " +
+           "AND l.rentalStatus = 'AVAILABLE'")
+    List<Listing> findListingsWithinBoundingBox(@Param("bbox") Polygon bbox);
+
+    @Query(value = """
+        SELECT l.* FROM tin_cho_thue l
+        WHERE l.toa_do_vi_tri IS NOT NULL
+          AND l.trang_thai_kiem_duyet = 'APPROVED'
+          AND l.trang_thai_cho_thue = 'AVAILABLE'
+          AND ST_DWithin(CAST(l.toa_do_vi_tri AS geography),
+              CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography),
+              :radiusMeters, false)
+        ORDER BY ST_Distance(CAST(l.toa_do_vi_tri AS geography),
+            CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography), false), l.ma_tin_dang
+        """, nativeQuery = true)
+    List<Listing> findNearby(@Param("latitude") double latitude,
+            @Param("longitude") double longitude, @Param("radiusMeters") double radiusMeters);
+
+    List<Listing> findByApprovalStatus(String approvalStatus);
+    List<Listing> findByApprovalStatusAndRentalStatusOrderByCreatedAtDesc(String approvalStatus, String rentalStatus);
+    List<Listing> findByOwner_UserIdAndRentalStatusNotOrderByCreatedAtDesc(Long ownerId, String excludedStatus);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from Listing l where l.id = :id")
+    Optional<Listing> findLockedById(@Param("id") Long id);
+}

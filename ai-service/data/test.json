@@ -1,0 +1,8 @@
+{
+  "search": ["Mình muốn kiếm phòng trọ tầm dưới 2 triệu tại Phú Nhuận", "Cho thuê nhà nguyên căn giá không quá 10 triệu có không", "Tôi cần tìm bạn cùng phòng nữ", "Tìm chỗ trọ gần đây 1 km cho mang mèo", "Thuê nhà diện tích ít nhất 60m2 ở Bình Tân", "Tim phong tro co ban cong gia 3tr5", "Tôi cần nhà hai phòng ngủ giá từ 6 tới 9 triệu", "Tìm phòng 20 đến 35 m2 ở Tân Phú"],
+  "refine": ["Giữ nguyên yêu cầu nhưng thêm máy lạnh", "Bỏ giới hạn về ngân sách nhé", "Mức trần tăng thành 7 triệu", "Cho phòng diện tích lớn lên trước", "Mình đã chọn điểm trên bản đồ rồi", "Tìm tiếp ở Thủ Đức thay vì chỗ cũ", "Khong can wifi nua", "Sắp theo giá tăng dần giúp mình"],
+  "help": ["Xin chào trợ lý nhà trọ", "Chỉ cách sử dụng cho người mới", "Tôi nên hỏi bạn ra sao", "Cho mình biết các việc bot hỗ trợ", "Có thể giới thiệu cách tìm kiếm không", "Chỉ mình cách nhập mức tiền"],
+  "reset": ["Hãy xóa hết tiêu chí hiện tại", "Mình muốn bắt đầu tìm nhà lại", "Đặt lại toàn bộ yêu cầu tìm kiếm", "Quên hết những gì đã lọc", "Hãy hủy mọi bộ lọc trước đây", "Xoa het tieu chi cu"],
+  "unsupported": ["Lập hợp đồng thuê cho hai bên", "Tôi cần đổi lại mật khẩu", "Nhờ bạn mua gói dịch vụ", "Gửi thông báo đến chủ nhà hộ tôi", "Sửa nội dung bài cho thuê giúp mình", "Xuất tiền thuê sang Excel"],
+  "unknown": ["Hôm nay đội bóng nào thi đấu", "Cách nấu bún bò", "Kể chuyện cười cho tôi nghe", "Học tiếng Anh giao tiếp", "Ai là người phát minh máy bay", "xyzqv 9999", "Gợi ý điện thoại chụp ảnh", "Tính căn bậc hai của 144"]
+}

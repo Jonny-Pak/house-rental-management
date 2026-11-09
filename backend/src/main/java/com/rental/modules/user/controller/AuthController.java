@@ -1,0 +1,58 @@
+package com.rental.modules.user.controller;
+
+import com.rental.modules.user.dto.request.LoginRequest;
+import com.rental.modules.user.dto.request.RegisterRequest;
+import com.rental.modules.user.dto.request.VerifyOtpRequest;
+import com.rental.core.dto.ApiResponse;
+import com.rental.modules.user.dto.response.AuthResponse;
+import com.rental.modules.user.service.AuthService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+public class AuthController {
+
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<String>> register(
+            @Valid @RequestBody RegisterRequest request) {
+        String message = authService.register(request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(message));
+    }
+
+    public record ResendOtpRequest(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Email String email) {}
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<String>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.resendOtp(request.email())));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<String>> verifyOtp(
+            @Valid @RequestBody VerifyOtpRequest request) {
+        String message = authService.verifyOtp(request);
+        return ResponseEntity.ok(ApiResponse.success(message));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request) {
+        AuthResponse authResponse = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success("ÄÄƒng nháº­p thÃ nh cÃ´ng.", authResponse));
+    }
+
+}

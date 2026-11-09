@@ -1,0 +1,80 @@
+CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+
+{{title}}
+Số: {{contractNumber}}
+Lập ngày {{signingDate}} tại {{signingPlace}}.
+Căn cứ nhu cầu, sự tự nguyện của các bên và quy định pháp luật áp dụng.
+
+BÊN CHO THUÊ (BÊN A)
+Họ và tên: {{landlordName}}
+Giấy tờ tùy thân (số, ngày cấp, nơi cấp): {{landlordIdentity}}
+Địa chỉ cư trú/liên hệ: {{landlordAddress}}
+Điện thoại: {{landlordPhone}}
+
+BÊN THUÊ (BÊN B)
+Họ và tên: {{tenantName}}
+Giấy tờ tùy thân (số, ngày cấp, nơi cấp): {{tenantIdentity}}
+Địa chỉ cư trú/liên hệ: {{tenantAddress}}
+Điện thoại: {{tenantPhone}}
+
+Điều 1. Nhà ở cho thuê
+Bên A cho Bên B thuê nhà ở: {{listingTitle}}.
+Địa chỉ: {{address}}. Diện tích: {{area}} m².
+Hiện trạng: {{conditionDescription}}
+Trang thiết bị, tài sản kèm theo: {{equipment}}
+Các giấy tờ, diện tích riêng/chung và tài sản bàn giao được hai bên đối chiếu, ghi nhận khi ký/bàn giao nếu có.
+
+Điều 2. Tiền thuê và chi phí sử dụng
+Tiền thuê: {{monthlyRent}} đồng/tháng. Tiền đặt cọc: {{depositAmount}} đồng.
+Tiền điện: {{electricityTerms}}
+Tiền nước: {{waterTerms}}
+Phí dịch vụ và các chi phí khác: {{serviceFees}}
+Việc thu tiền điện, nước và các khoản phí phải phù hợp quy định pháp luật áp dụng.
+
+Điều 3. Phương thức và thời hạn thanh toán
+Thanh toán tiền thuê vào ngày {{paymentDay}} hằng tháng.
+Phương thức, tài khoản nhận tiền và hướng dẫn thanh toán: {{paymentMethod}}
+Hai bên lưu chứng từ hoặc xác nhận giao nhận tiền cho từng lần thanh toán.
+
+Điều 4. Thời hạn thuê và bàn giao
+Thời hạn từ ngày {{startDate}} đến hết ngày {{endDate}}.
+Ngày bàn giao dự kiến: {{handoverDate}}.
+Hai bên cùng kiểm tra hiện trạng, tài sản, chìa khóa và chỉ số điện nước khi bàn giao; ghi nhận bằng biên bản nếu có.
+
+Điều 5. Mục đích sử dụng và nội quy
+Nhà được thuê để ở. Nội quy và giới hạn sử dụng đã thỏa thuận: {{useRules}}
+
+Điều 6. Quyền và nghĩa vụ của Bên A
+Bàn giao nhà và tài sản theo thỏa thuận; cung cấp thông tin trung thực về nhà cho thuê; bảo đảm quyền sử dụng ổn định của Bên B theo hợp đồng.
+Thực hiện việc bảo trì, sửa chữa thuộc trách nhiệm của mình và nghĩa vụ tài chính theo quy định áp dụng.
+Được yêu cầu thanh toán đúng hạn, bảo quản tài sản, bồi thường thiệt hại do lỗi của Bên B và nhận lại nhà khi hợp đồng kết thúc theo thỏa thuận hợp pháp.
+
+Điều 7. Quyền và nghĩa vụ của Bên B
+Được nhận, sử dụng nhà và yêu cầu sửa chữa hư hỏng thuộc trách nhiệm Bên A; được cung cấp thông tin đầy đủ về nhà thuê.
+Thanh toán đúng hạn; sử dụng đúng mục đích; bảo quản tài sản; giữ vệ sinh, an ninh và an toàn phòng cháy; bồi thường hư hỏng do lỗi của mình.
+Không tự ý sửa chữa, cải tạo hoặc cho thuê lại khi chưa có thỏa thuận hợp lệ. Bàn giao lại nhà và tài sản khi kết thúc hợp đồng.
+
+Điều 8. Trách nhiệm do vi phạm và bất khả kháng
+{{violationTerms}}
+Khi xảy ra sự kiện bất khả kháng, bên bị ảnh hưởng thông báo cho bên còn lại, cung cấp thông tin và cùng thỏa thuận biện pháp xử lý theo pháp luật áp dụng.
+
+Điều 9. Thỏa thuận về tiền đặt cọc
+{{depositTerms}}
+
+Điều 10. Chấm dứt hợp đồng và xử lý nghĩa vụ
+{{terminationTerms}}
+Hai bên đối chiếu tiền thuê, các khoản phí và tình trạng tài sản; ghi nhận việc bàn giao và xử lý nghĩa vụ còn lại. Quyền chấm dứt và trách nhiệm liên quan thực hiện theo thỏa thuận hợp pháp và quy định áp dụng.
+
+Điều 11. Giải quyết tranh chấp
+Ưu tiên thương lượng trên cơ sở chứng từ, nội dung hợp đồng và tình trạng thực tế. Nếu không giải quyết được, các bên có quyền yêu cầu cơ quan có thẩm quyền giải quyết theo pháp luật.
+
+Điều 12. Thỏa thuận bổ sung và hiệu lực
+Thỏa thuận bổ sung: {{note}}
+Thời gian thuê theo Điều 4; hiệu lực thực hiện theo thỏa thuận hợp pháp của hai bên và quy định áp dụng. Mọi sửa đổi, bổ sung phải được hai bên thống nhất và ghi nhận bằng văn bản phù hợp.
+Khi ký bản giấy, hợp đồng được lập thành 02 bản có nội dung như nhau, mỗi bên giữ 01 bản. Biên bản bàn giao và phụ lục đã được hai bên thống nhất là tài liệu kèm theo nếu có.
+
+BÊN THUÊ (BÊN B)                         BÊN CHO THUÊ (BÊN A)
+Ký và ghi rõ họ tên                       Ký và ghi rõ họ tên
+
+{{tenantName}}                            {{landlordName}}

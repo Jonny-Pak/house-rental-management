@@ -1,0 +1,59 @@
+CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+
+{{title}}
+Số: {{contractNumber}}
+Lập ngày {{signingDate}} tại {{signingPlace}}.
+Căn cứ nhu cầu, sự tự nguyện của các bên và quy định pháp luật áp dụng.
+
+BÊN CHO THUÊ (BÊN A)
+Họ và tên: {{landlordName}}
+Giấy tờ tùy thân (số, ngày cấp, nơi cấp): {{landlordIdentity}}
+Địa chỉ cư trú/liên hệ: {{landlordAddress}}
+Điện thoại: {{landlordPhone}}
+
+BÊN THUÊ (BÊN B)
+Họ và tên: {{tenantName}}
+Giấy tờ tùy thân (số, ngày cấp, nơi cấp): {{tenantIdentity}}
+Địa chỉ cư trú/liên hệ: {{tenantAddress}}
+Điện thoại: {{tenantPhone}}
+
+Điều 1. Phòng trọ và thời hạn thuê
+Bên A đồng ý cho Bên B thuê phòng trọ: {{listingTitle}}.
+Địa chỉ: {{address}}. Diện tích: {{area}} m².
+Hiện trạng phòng: {{conditionDescription}}
+Trang thiết bị, tài sản kèm theo: {{equipment}}
+Thời hạn thuê từ ngày {{startDate}} đến hết ngày {{endDate}}. Ngày bàn giao dự kiến: {{handoverDate}}.
+Hai bên kiểm tra hiện trạng, tài sản, chìa khóa và chỉ số điện nước khi giao nhận phòng.
+
+Điều 2. Tiền thuê, tiền cọc và thanh toán
+Giá thuê: {{monthlyRent}} đồng/tháng. Tiền đặt cọc: {{depositAmount}} đồng.
+Thanh toán tiền thuê vào ngày {{paymentDay}} hằng tháng.
+Hình thức và hướng dẫn thanh toán: {{paymentMethod}}
+Tiền điện (đơn giá, cách tính, thời hạn thanh toán): {{electricityTerms}}
+Tiền nước (đơn giá, đơn vị tính, thời hạn thanh toán): {{waterTerms}}
+Wifi, dịch vụ và các phí khác: {{serviceFees}}
+Việc thu tiền điện, nước và phí dịch vụ phải phù hợp quy định pháp luật áp dụng.
+
+Điều 3. Trách nhiệm của Bên A
+Bàn giao phòng và tài sản theo thỏa thuận; tạo điều kiện sử dụng phòng ổn định; cung cấp điện, nước và các dịch vụ đã cam kết.
+Cung cấp thông tin trung thực; sửa chữa hư hỏng thuộc trách nhiệm của mình; phối hợp giải quyết các vấn đề phát sinh.
+
+Điều 4. Trách nhiệm của Bên B
+Thanh toán đầy đủ và đúng hạn; bảo quản phòng và trang thiết bị; bồi thường mất mát, hư hỏng do lỗi của mình.
+Không tự ý sửa chữa, cải tạo hoặc cho thuê lại khi chưa có thỏa thuận hợp lệ; giữ vệ sinh, an ninh, phòng cháy và chấp hành pháp luật.
+Nội quy, số người ở và thỏa thuận về khách lưu trú: {{useRules}}
+
+Điều 5. Trách nhiệm chung, tiền cọc và chấm dứt
+Hai bên tạo điều kiện thực hiện hợp đồng và lưu các chứng từ thanh toán, bàn giao.
+Xử lý vi phạm: {{violationTerms}}
+Điều kiện chấm dứt, thời hạn báo trước: {{terminationTerms}}
+Hoàn trả, khấu trừ tiền đặt cọc: {{depositTerms}}
+Ưu tiên thương lượng khi có tranh chấp; nếu không giải quyết được thì yêu cầu cơ quan có thẩm quyền xử lý theo pháp luật áp dụng.
+Thỏa thuận bổ sung: {{note}}
+Mọi sửa đổi phải được hai bên thống nhất và ghi nhận bằng văn bản phù hợp. Khi ký bản giấy, hợp đồng lập thành 02 bản có nội dung như nhau, mỗi bên giữ 01 bản.
+
+BÊN THUÊ (BÊN B)                         BÊN CHO THUÊ (BÊN A)
+Ký và ghi rõ họ tên                       Ký và ghi rõ họ tên
+
+{{tenantName}}                            {{landlordName}}

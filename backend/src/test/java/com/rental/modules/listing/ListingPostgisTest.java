@@ -1,0 +1,1437 @@
+package com.rental.modules.listing;
+
+import com.rental.modules.admin.service.AdminListingService;
+import com.rental.modules.listing.dto.request.CreateListingRequest;
+import com.rental.modules.listing.service.ListingService;
+import com.rental.modules.user.domain.entity.User;
+import com.rental.modules.user.domain.enums.Role;
+import com.rental.modules.user.domain.enums.UserStatus;
+import com.rental.modules.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+
+import java.math.BigDecimal;
+import java.sql.DriverManager;
+import java.util.List;
+import java.util.Properties;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/** Opt-in integration check using an isolated, disposable schema on local PostGIS. */
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({com.rental.modules.chatbot.ChatbotSearch.class,com.rental.modules.user.service.GoogleAuthService.class,com.rental.modules.user.qr.QrLoginService.class, com.rental.core.security.JwtService.class,com.rental.modules.subscription.service.SubscriptionBenefitService.class,com.rental.modules.amenity.service.AmenityService.class, com.rental.modules.subscription.service.DefaultMembershipService.class, com.rental.modules.contract.service.AdminContractService.class, com.rental.modules.subscription.service.AdminPackageService.class, com.rental.modules.subscription.service.MembershipPackageService.class, com.rental.modules.payment.service.PaymentService.class, com.rental.modules.payment.config.VnPayConfig.class, com.rental.modules.incident.service.IncidentService.class, com.rental.modules.user.service.PasswordService.class, com.rental.modules.report.ReportService.class, com.rental.modules.report.ReportExcel.class, com.rental.modules.content.service.SystemContentService.class, com.rental.modules.admin.service.AdminAreaService.class, com.rental.modules.admin.service.AdminCreateUserService.class, com.rental.modules.user.service.OtpService.class, com.rental.modules.admin.service.AdminUserService.class, com.rental.modules.notification.service.NotificationService.class, ListingService.class, com.rental.modules.listing.service.ListingExcelService.class,
+        com.rental.modules.contract.service.ContractExcelService.class, com.rental.modules.contract.service.ContractExcelWriter.class,
+        org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration.class, AdminListingService.class, com.rental.modules.area.service.AreaService.class,
+        com.rental.modules.property.service.PropertyService.class,
+        com.rental.modules.favorite.service.ListingFavoriteService.class,
+        com.rental.modules.contract.service.ContractService.class, com.rental.modules.contract.service.ContractDocumentService.class, com.rental.modules.user.service.UserService.class})
+@EnabledIfEnvironmentVariable(named = "RENTAL_POSTGIS_TESTS", matches = "true")
+class ListingPostgisTest {
+    private static final String SCHEMA = "listing_flow_" + UUID.randomUUID().toString().replace("-", "");
+    private static Properties configuration;
+    private static boolean created;
+
+    @DynamicPropertySource
+    static void database(DynamicPropertyRegistry registry) throws Exception {
+        var yaml = new YamlPropertiesFactoryBean();
+        yaml.setResources(new ClassPathResource("application.yml"));
+        configuration = yaml.getObject();
+        String configuredUrl = configuration.getProperty("spring.datasource.url");
+        if (!configuredUrl.matches("jdbc:postgresql://(127\\.0\\.0\\.1|localhost):[0-9]+/.*")) {
+            throw new IllegalStateException("PostGIS integration tests require a local development database");
+        }
+        try (var connection = DriverManager.getConnection(configuration.getProperty("spring.datasource.url"),
+                configuration.getProperty("spring.datasource.username"), configuration.getProperty("spring.datasource.password"));
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE SCHEMA " + SCHEMA);
+            created = true;
+            statement.execute("SET search_path TO " + SCHEMA + ", public");
+            statement.execute(java.nio.file.Files.readString(java.nio.file.Path.of("database.sql")));
+        }
+        String baseUrl = configuration.getProperty("spring.datasource.url");
+        registry.add("spring.datasource.url", () -> baseUrl + (baseUrl.contains("?") ? "&" : "?") + "currentSchema=" + SCHEMA + ",public");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+    }
+
+    @AfterAll static void cleanup() throws Exception {
+        if (!created) return;
+        if (!SCHEMA.matches("listing_flow_[a-f0-9]{32}")) throw new IllegalStateException("Unexpected test schema");
+        try (var connection = DriverManager.getConnection(configuration.getProperty("spring.datasource.url"),
+                configuration.getProperty("spring.datasource.username"), configuration.getProperty("spring.datasource.password"));
+             var statement = connection.createStatement()) {
+            statement.execute("DROP SCHEMA " + SCHEMA + " CASCADE");
+        }
+    }
+
+    @org.springframework.boot.test.mock.mockito.MockBean com.rental.modules.user.service.GoogleTokenService googleTokens;
+    @Autowired com.rental.modules.chatbot.ChatbotSearch chatSearch;
+    @Test void chatbotSearchUsesRealPostgisRadiusAndStrictBudgetWithoutReturningPendingOrHiddenListings() throws Exception {
+        User owner = user("chatowner", Role.MEMBER), reviewer = user("chatreviewer", Role.ADMIN);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(10);
+        java.util.ArrayList<Long> ids = new java.util.ArrayList<>();
+        for(int i=0;i<5;i++) {
+            CreateListingRequest request = new CreateListingRequest();
+            request.setTitle("Phòng chatbot " + i); request.setListingType("BOARDING_ROOM");
+            request.setRentPrice(new BigDecimal(i==4 ? "5000000" : "3000000")); request.setAreaSqm(new BigDecimal("25"));
+            request.setAddress("Thủ Đức, TP.HCM"); request.setAreaId(6L);
+            request.setLatitude(i==3 ? 11.0 : 10.78); request.setLongitude(106.7);
+            request.setImageUrls(List.of("https://example.com/chat.jpg"));
+            Long id = listings.createListing(owner.getUserId(),request).getId(); ids.add(id);
+            if(i!=1) admin.approveListing(id,reviewer.getUserId());
+        }
+        listings.updateRentalStatus(ids.get(2),owner.getUserId(),"HIDDEN");
+        entityManager.flush(); entityManager.clear();
+        var filters = new com.fasterxml.jackson.databind.ObjectMapper().readValue("{\"radiusKm\":3,\"maxPrice\":4000000}",com.rental.modules.chatbot.ChatFilters.class);
+        assertEquals(List.of(ids.get(0)),chatSearch.find(filters,10.78,106.7).stream().map(item->item.getId()).toList());
+    }
+
+    @Autowired com.rental.modules.user.service.GoogleAuthService googleAuth;
+
+    @Test void googleLoginCreatesOneMemberWithOneBasicSubscriptionAndReusesSameAccount() {
+        var profile = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload()
+                .setSubject("google-integration-123").setEmail("googleintegration@gmail.com").setEmailVerified(true);
+        profile.set("name", "Google Member");
+        org.mockito.Mockito.when(googleTokens.verify("integration-token")).thenReturn(profile);
+        var first = googleAuth.login("integration-token");
+        var second = googleAuth.login("integration-token");
+        assertEquals(first.getUserId(), second.getUserId());
+        assertEquals("MEMBER", first.getRole());
+        User saved = users.findById(first.getUserId()).orElseThrow();
+        assertTrue(saved.getIsVerified()); assertNull(saved.getPasswordHash());
+        assertEquals("google-integration-123", saved.getGoogleId());
+        assertEquals("googleintegration@gmail.com", qrJwt.extractEmail(first.getAccessToken()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM dang_ky_goi_dich_vu WHERE ma_nguoi_dung = ?", Integer.class, first.getUserId()));
+    }
+
+    @Test void googleLoginLinksCaseInsensitiveEmailWithoutChangingRoleOrExistingPassword() {
+        User saved = user("GoogleCase", Role.MEMBER);
+        saved.setEmail("GoogleCase@Gmail.com"); saved.setIsVerified(true); saved.setPasswordHash("keep-password"); users.saveAndFlush(saved);
+        var profile = new com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload()
+                .setSubject("google-case-123").setEmail("googlecase@gmail.com").setEmailVerified(true);
+        org.mockito.Mockito.when(googleTokens.verify("case-token")).thenReturn(profile);
+        assertEquals(saved.getUserId(), googleAuth.login("case-token").getUserId());
+        assertEquals("keep-password", users.findById(saved.getUserId()).orElseThrow().getPasswordHash());
+    }
+
+    @Autowired com.rental.modules.subscription.service.AdminPackageService adminPackages;
+    @Autowired com.rental.modules.subscription.service.MembershipPackageService memberPackages;
+    @Autowired com.rental.modules.payment.service.PaymentService payments;
+    @Autowired com.rental.modules.payment.config.VnPayConfig vnPay;
+    @Autowired com.rental.modules.subscription.repository.UserSubscriptionRepository subscriptions;
+
+    @Autowired com.rental.modules.subscription.service.DefaultMembershipService defaultMembership;
+    @Autowired com.rental.modules.subscription.repository.MembershipPackageRepository packageRepository;
+    @org.junit.jupiter.api.AfterEach
+    void removeCommittedBenefitFixtures() {
+        String owners = "SELECT ma_nguoi_dung FROM nguoi_dung WHERE dia_chi_thu_dien_tu IN ('concurrentBenefits@example.com','excelQuotaOwner@example.com')";
+        jdbc.update("DELETE FROM thong_bao WHERE ma_nguoi_dung IN (" + owners + ") OR ma_tin_dang IN (SELECT ma_tin_dang FROM tin_cho_thue WHERE ma_chu_tin IN (" + owners + "))");
+        jdbc.update("DELETE FROM tin_cho_thue WHERE ma_chu_tin IN (" + owners + ")");
+        jdbc.update("DELETE FROM dang_ky_goi_dich_vu WHERE ma_nguoi_dung IN (" + owners + ")");
+        jdbc.update("DELETE FROM nguoi_dung WHERE ma_nguoi_dung IN (" + owners + ")");
+    }
+
+    @Autowired com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
+    @Autowired com.rental.modules.user.qr.QrLoginService qrLogin;
+    @Autowired com.rental.modules.user.qr.QrLoginRepository qrSessions;
+    @Autowired com.rental.core.security.JwtService qrJwt;
+
+    private String qrToken(com.rental.modules.user.qr.QrLoginService.Started session) {
+        return session.qrData().split("token=")[1];
+    }
+
+    @Test void qrLoginUsesRealStorageAndOnlyIssuesAdminTokensAfterExplicitApproval() {
+        User member = user("qrMember", Role.MEMBER), admin = user("qrAdmin", Role.ADMIN);
+        var session = qrLogin.start("http://localhost:8081", "Chrome Windows", "qr-test");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.preview(session.id(), qrToken(session), member.getUserId()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.consume(session.id(), session.browserSecret()));
+        qrLogin.preview(session.id(), qrToken(session), admin.getUserId());
+        assertEquals("SCANNED", qrLogin.status(session.id(), session.browserSecret()).status());
+        qrLogin.decide(session.id(), qrToken(session), admin.getUserId(), true);
+        var auth = qrLogin.consume(session.id(), session.browserSecret());
+        assertEquals("ADMIN", auth.getRole());
+        assertEquals(admin.getEmail(), qrJwt.extractEmail(auth.getAccessToken()));
+        entityManager.flush(); entityManager.clear();
+        assertEquals("CONSUMED", qrSessions.findById(session.id()).orElseThrow().getStatus());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.consume(session.id(), session.browserSecret()));
+    }
+
+    @Test void qrExpiryAndPasswordChangePreventIssuingFreshTokens() {
+        User admin = user("qrChangedAdmin", Role.ADMIN);
+        var session = qrLogin.start("http://localhost:8081", "Firefox", "qr-test");
+        qrLogin.preview(session.id(), qrToken(session), admin.getUserId());
+        qrLogin.decide(session.id(), qrToken(session), admin.getUserId(), true);
+        admin.setPasswordVersion(admin.getPasswordVersion() + 1); users.saveAndFlush(admin);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.consume(session.id(), session.browserSecret()));
+        var expired = qrLogin.start("http://localhost:8081", "Firefox", "qr-test");
+        qrSessions.findById(expired.id()).orElseThrow().setExpiresAt(java.time.Instant.now().minusSeconds(1));
+        assertEquals("EXPIRED", qrLogin.status(expired.id(), expired.browserSecret()).status());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> qrLogin.preview(expired.id(), qrToken(expired), admin.getUserId()));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void concurrentQrExchangesCanOnlyIssueOneBrowserSession() throws Exception {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        Long adminId = transaction.execute(status -> user("qrConcurrent", Role.ADMIN).getUserId());
+        var session = qrLogin.start("http://localhost:8081", "Chrome Windows", "qr-concurrent");
+        qrLogin.preview(session.id(), qrToken(session), adminId);
+        qrLogin.decide(session.id(), qrToken(session), adminId, true);
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Integer> exchange = () -> {
+            start.await();
+            try {
+                assertEquals("ADMIN", qrLogin.consume(session.id(), session.browserSecret()).getRole());
+                return 200;
+            } catch (org.springframework.web.server.ResponseStatusException error) {
+                return error.getStatusCode().value();
+            }
+        };
+        try {
+            var first = executor.submit(exchange); var second = executor.submit(exchange);
+            start.countDown();
+            var results = new java.util.ArrayList<>(List.of(first.get(30, java.util.concurrent.TimeUnit.SECONDS), second.get(30, java.util.concurrent.TimeUnit.SECONDS)));
+            java.util.Collections.sort(results);
+            assertEquals(List.of(200, 409), results);
+            assertEquals("CONSUMED", qrSessions.findById(session.id()).orElseThrow().getStatus());
+        } finally {
+            executor.shutdownNow();
+            jdbc.update("DELETE FROM phien_dang_nhap_qr_quan_tri WHERE ma_ban_ghi=?", session.id());
+            jdbc.update("DELETE FROM nguoi_dung WHERE ma_nguoi_dung=?", adminId);
+        }
+    }
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    private CreateListingRequest benefitRequest(String title) {
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle(title); request.setListingType("BOARDING_ROOM");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("25"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/benefits.jpg"));
+        return request;
+    }
+
+    @Test void publicOrderPrefersActiveVipThenLastRefreshAndIgnoresExpiredVip() {
+        User owner = user("priorityOwner", Role.MEMBER), reviewer = user("priorityAdmin", Role.ADMIN);
+        Long first = listings.createListing(owner.getUserId(), benefitRequest("Old VIP")).getId();
+        Long second = listings.createListing(owner.getUserId(), benefitRequest("Fresh normal")).getId();
+        Long third = listings.createListing(owner.getUserId(), benefitRequest("Newest normal")).getId();
+        for (Long id : List.of(first, second, third)) admin.approveListing(id, reviewer.getUserId());
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingVipQuota(1); subscription.setRemainingRefreshQuota(1);
+        listings.promoteVip(first, owner.getUserId());
+        listings.refreshListing(second, owner.getUserId());
+        assertEquals(List.of(first, second, third), listings.getApprovedListings().stream().map(item -> item.getId()).toList());
+        listingRepository.findById(first).orElseThrow().setVipExpiresAt(java.time.LocalDateTime.now().minusMinutes(1));
+        assertEquals(List.of(second, third, first), listings.getApprovedListings().stream().map(item -> item.getId()).toList());
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void excelImportRollsBackAllRowsAndQuotaWhenTheFileExceedsBalance() throws Exception {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        Long ownerId = transaction.execute(status -> {
+            User owner = user("excelQuotaOwner", Role.MEMBER);
+            defaultMembership.assignIfMissing(owner.getUserId());
+            subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(1);
+            return owner.getUserId();
+        });
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS,
+            List.of(ListingExcelTest.listingRow("Quota row A"), ListingExcelTest.listingRow("Quota row B")));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listingExcel.importListings(ownerId, file));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=?", Integer.class, ownerId));
+        assertEquals(1, transaction.execute(status -> benefits.getBenefits(ownerId).standard()).intValue());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM thong_bao WHERE ma_nguoi_dung=?", Integer.class, ownerId));
+    }
+
+    @Test void postingConsumesQuotaAndEditingOrDeletingDoesNotRefillIt() {
+        User owner = user("quotaOwner", Role.MEMBER);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingStandardQuota(1);
+        Long id = listings.createListing(owner.getUserId(), benefitRequest("Quota test")).getId();
+        assertEquals(0, benefits.getBenefits(owner.getUserId()).standard());
+        listings.updateListing(id, owner.getUserId(), benefitRequest("Edited"));
+        listings.deleteListing(id, owner.getUserId());
+        assertEquals(0, subscription.getRemainingStandardQuota());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> listings.createListing(owner.getUserId(), benefitRequest("Out of quota"))).getStatusCode().value());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=?", Integer.class, owner.getUserId()));
+    }
+
+    @Test void vipAndRefreshRequirePublicOwnedListingsAndConsumeOnlyOneQuota() {
+        User owner = user("benefitOwner", Role.MEMBER), reviewer = user("benefitAdmin", Role.ADMIN);
+        User other = user("benefitOther", Role.MEMBER);
+        Long id = listings.createListing(owner.getUserId(), benefitRequest("Promoted")).getId();
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingVipQuota(2); subscription.setRemainingRefreshQuota(2);
+        subscription.setQuotaResetAt(java.time.LocalDateTime.now().plusDays(5));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.promoteVip(id, owner.getUserId()));
+        assertEquals(2, subscription.getRemainingVipQuota());
+        admin.approveListing(id, reviewer.getUserId());
+        assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> listings.refreshListing(id, other.getUserId())).getStatusCode().value());
+        var promoted = listings.promoteVip(id, owner.getUserId());
+        assertTrue(promoted.isIsVip()); assertEquals(subscription.getQuotaResetAt(), promoted.getVipExpiresAt());
+        assertEquals(1, subscription.getRemainingVipQuota());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.promoteVip(id, owner.getUserId()));
+        assertEquals(1, subscription.getRemainingVipQuota());
+        assertNotNull(listings.refreshListing(id, owner.getUserId()).getRefreshedAt());
+        assertEquals(1, subscription.getRemainingRefreshQuota());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.refreshListing(id, owner.getUserId()));
+        assertEquals(1, subscription.getRemainingRefreshQuota());
+        var stored = listingRepository.findById(id).orElseThrow();
+        stored.setRefreshedAt(java.time.LocalDateTime.now().minusHours(25));
+        listings.refreshListing(id, owner.getUserId());
+        assertEquals(0, subscription.getRemainingRefreshQuota());
+        stored.setVipExpiresAt(java.time.LocalDateTime.now().minusSeconds(1));
+        assertFalse(listings.getPublicListing(id).isIsVip());
+        listings.updateRentalStatus(id, owner.getUserId(), "HIDDEN");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.promoteVip(id, owner.getUserId()));
+    }
+
+    @Test void expiredRightsCannotBeUsedOrRevivedByBuyingAnotherPackage() {
+        User owner = user("expiredBenefits", Role.MEMBER);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        var subscription = subscriptions.findByUser(owner).orElseThrow();
+        subscription.setRemainingStandardQuota(20); subscription.setRemainingVipQuota(20);
+        subscription.setRemainingRefreshQuota(20);
+        subscription.setQuotaResetAt(java.time.LocalDateTime.now().minusDays(1));
+        assertEquals("EXPIRED", benefits.getBenefits(owner.getUserId()).status());
+        assertEquals(0, benefits.getBenefits(owner.getUserId()).standard());
+        assertEquals(0, userService.getMyProfile(owner.getEmail()).getRemainingStandardQuota());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> listings.createListing(owner.getUserId(), benefitRequest("Expired")));
+        var offer = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest(
+            "New rights", BigDecimal.ZERO, 2, 1, 1, "", true, null));
+        payments.createPaymentUrl(owner.getEmail(), offer.getId(), null);
+        assertEquals(2, subscription.getRemainingStandardQuota());
+        assertEquals(1, subscription.getRemainingVipQuota());
+        assertEquals(1, subscription.getRemainingRefreshQuota());
+        assertNotNull(listings.createListing(owner.getUserId(), benefitRequest("Renewed")).getId());
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void simultaneousPostsCannotSpendTheLastQuotaTwice() throws Exception {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        Long ownerId = transaction.execute(status -> {
+            User owner = user("concurrentBenefits", Role.MEMBER);
+            defaultMembership.assignIfMissing(owner.getUserId());
+            subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(1);
+            return owner.getUserId();
+        });
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Integer> post = () -> {
+            start.await();
+            try {
+                listings.createListing(ownerId, benefitRequest("Concurrent quota"));
+                return 201;
+            } catch (org.springframework.web.server.ResponseStatusException error) {
+                return error.getStatusCode().value();
+            }
+        };
+        try {
+            var first = executor.submit(post); var second = executor.submit(post);
+            start.countDown();
+            var results = new java.util.ArrayList<>(List.of(first.get(30, java.util.concurrent.TimeUnit.SECONDS), second.get(30, java.util.concurrent.TimeUnit.SECONDS)));
+            java.util.Collections.sort(results);
+            assertEquals(List.of(201, 409), results);
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=?", Integer.class, ownerId));
+            assertEquals(0, transaction.execute(status -> benefits.getBenefits(ownerId).standard()).intValue());
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test void otpActivationGrantsDefaultPackageAndNeverRefillsUsedQuotas() {
+        User member = user("defaultMember", Role.MEMBER);
+        member.setIsVerified(false); users.saveAndFlush(member);
+        var otp = org.mockito.Mockito.mock(com.rental.modules.user.service.OtpService.class);
+        org.mockito.Mockito.when(otp.validateOtp(member.getEmail(), "123456")).thenReturn(true);
+        var auth = new com.rental.modules.user.service.AuthService(users,
+            org.mockito.Mockito.mock(org.springframework.security.crypto.password.PasswordEncoder.class), otp,
+            org.mockito.Mockito.mock(com.rental.modules.user.service.EmailService.class),
+            org.mockito.Mockito.mock(org.springframework.security.authentication.AuthenticationManager.class),
+            org.mockito.Mockito.mock(com.rental.core.security.JwtService.class), defaultMembership);
+        assertTrue(subscriptions.findByUser(member).isEmpty());
+        auth.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest(member.getEmail(), "123456"));
+        entityManager.flush();
+        var basic = packageRepository.findByDefaultPackageTrue().orElseThrow();
+        assertEquals(0, basic.getPrice().signum()); assertTrue(basic.isActive());
+        var owned = subscriptions.findByUser(member).orElseThrow();
+        assertEquals(basic.getId(), owned.getMembershipPackage().getId());
+        assertEquals(basic.getStandardPostQuota().intValue(), owned.getRemainingStandardQuota());
+        assertEquals(basic.getPackageName(), userService.getMyProfile(member.getEmail()).getMembershipPackageName());
+        owned.setRemainingStandardQuota(0); subscriptions.saveAndFlush(owned);
+        defaultMembership.assignIfMissing(member.getUserId());
+        entityManager.flush(); entityManager.clear();
+        var reloaded = users.findById(member.getUserId()).orElseThrow();
+        assertEquals(0, subscriptions.findByUser(reloaded).orElseThrow().getRemainingStandardQuota());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM dang_ky_goi_dich_vu WHERE ma_nguoi_dung=?", Long.class, member.getUserId()));
+    }
+
+    @Test void defaultPlanCannotBeRepurchasedRemovedDisabledOrMadePaid() {
+        User buyer = user("defaultBuyer", Role.MEMBER);
+        var basic = packageRepository.findByDefaultPackageTrue().orElseThrow();
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> payments.createPaymentUrl(buyer.getEmail(), basic.getId(), null)).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminPackages.delete(basic.getId(), basic.getVersion())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminPackages.changeStatus(basic.getId(), false, basic.getVersion())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminPackages.update(basic.getId(), new com.rental.modules.subscription.dto.SavePackageRequest(
+                basic.getPackageName(), BigDecimal.ONE, 3, 0, 0, "", true, basic.getVersion()))).getStatusCode().value());
+        assertTrue(subscriptions.findByUser(buyer).isEmpty());
+    }
+
+    @Test void upgradeAddsPaidRightsAndDefaultGrantDoesNotReplaceThem() {
+        User buyer = user("defaultUpgrade", Role.MEMBER);
+        defaultMembership.assignIfMissing(buyer.getUserId());
+        var owned = subscriptions.findByUser(buyer).orElseThrow();
+        int initial = owned.getRemainingStandardQuota();
+        var offer = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest(
+            "Upgrade test", BigDecimal.ZERO, 10, 2, 5, "", true, null));
+        assertEquals("FREE_SUCCESS", payments.createPaymentUrl(buyer.getEmail(), offer.getId(), null));
+        defaultMembership.assignIfMissing(buyer.getUserId());
+        assertEquals(initial + 10, owned.getRemainingStandardQuota());
+        assertEquals("Upgrade test", owned.getPackageNameSnapshot());
+        assertEquals(2, owned.getRemainingVipQuota());
+        assertEquals(5, owned.getRemainingRefreshQuota());
+    }
+
+    @Test void profileStatisticsCountOnlyTheCurrentUsersVisibleData() {
+        User owner = user("statsOwner", Role.MEMBER), renter = user("statsRenter", Role.MEMBER), other = user("statsOther", Role.MEMBER);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setListingType("WHOLE_HOUSE"); request.setTitle("Profile statistics");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/stats.jpg"));
+        Long visible = listings.createListing(owner.getUserId(), request).getId();
+        Long hidden = listings.createListing(owner.getUserId(), request).getId();
+        Long deleted = listings.createListing(owner.getUserId(), request).getId();
+        entityManager.flush();
+        jdbc.update("UPDATE tin_cho_thue SET trang_thai_kiem_duyet='APPROVED' WHERE ma_tin_dang IN (?,?,?)", visible, hidden, deleted);
+        jdbc.update("UPDATE tin_cho_thue SET trang_thai_cho_thue='HIDDEN' WHERE ma_tin_dang=?", hidden);
+        jdbc.update("UPDATE tin_cho_thue SET trang_thai_cho_thue='DELETED' WHERE ma_tin_dang=?", deleted);
+        for (Long id : List.of(visible, hidden, deleted)) {
+            jdbc.update("INSERT INTO tin_yeu_thich(ma_nguoi_dung,ma_tin_dang) VALUES (?,?)", renter.getUserId(), id);
+        }
+        jdbc.update("INSERT INTO hop_dong_thue(ma_tin_dang,ma_ben_cho_thue,ma_ben_thue,ngay_bat_dau,ngay_ket_thuc,tien_thue_moi_thang,tien_dat_coc,trang_thai) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'ACTIVE')", visible, owner.getUserId(), renter.getUserId());
+        jdbc.update("INSERT INTO hop_dong_thue(ma_tin_dang,ma_ben_cho_thue,ma_ben_thue,ngay_bat_dau,ngay_ket_thuc,tien_thue_moi_thang,tien_dat_coc,trang_thai) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'DRAFT')", visible, renter.getUserId(), other.getUserId());
+        entityManager.clear();
+        var ownerProfile = userService.getMyProfile(owner.getEmail());
+        assertEquals(2L, ownerProfile.getListingCount()); assertEquals(1L, ownerProfile.getContractCount()); assertEquals(0L, ownerProfile.getSavedListingCount());
+        var renterProfile = userService.getMyProfile(renter.getEmail());
+        assertEquals(0L, renterProfile.getListingCount()); assertEquals(2L, renterProfile.getContractCount()); assertEquals(1L, renterProfile.getSavedListingCount());
+        var otherProfile = userService.getMyProfile(other.getEmail());
+        assertEquals(0L, otherProfile.getListingCount()); assertEquals(1L, otherProfile.getContractCount()); assertEquals(0L, otherProfile.getSavedListingCount());
+    }
+
+    @Autowired com.rental.modules.amenity.service.AmenityService amenityService;
+
+    @Test void amenityCatalogCrudVersionsAndListingLifecycleUseRealDatabase() {
+        var wifi = amenityService.create(new com.rental.modules.amenity.dto.SaveAmenityRequest("Wi-Fi riêng", "UTILITY", "Internet", true, null));
+        var bed = amenityService.create(new com.rental.modules.amenity.dto.SaveAmenityRequest("Giường riêng", "FURNITURE", "", true, null));
+        assertEquals(1, amenityService.search("Wi-Fi riêng", "UTILITY", true, 0).total());
+        assertEquals(0, amenityService.search("%", null, null, 0).total());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.create(new com.rental.modules.amenity.dto.SaveAmenityRequest("wi-fi RIÊNG", "UTILITY", "", true, null))).getStatusCode().value());
+        User owner = user("amenityOwner", Role.MEMBER), reviewer = user("amenityAdmin", Role.ADMIN);
+        var request = amenityListingRequest(); request.setAmenityIds(List.of(wifi.id(), bed.id()));
+        Long id = listings.createListing(owner.getUserId(), request).getId();
+        entityManager.flush();
+        assertEquals(2, listings.getMyListings(owner.getUserId()).get(0).getAmenities().size());
+        assertEquals(2, admin.getPendingListings().stream().filter(item -> item.getId().equals(id)).findFirst().orElseThrow().getAmenities().size());
+        admin.approveListing(id, reviewer.getUserId());
+        assertEquals(2, listings.getPublicListing(id).getAmenities().size());
+        var hidden = amenityService.changeStatus(wifi.id(), false, wifi.version());
+        assertTrue(amenityService.activeItems().stream().noneMatch(item -> item.id().equals(wifi.id())));
+        assertEquals(2, listings.getPublicListing(id).getAmenities().size());
+        assertEquals(1, amenityService.search("Wi-Fi riêng", null, false, 0).items().get(0).listingCount());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.delete(wifi.id(), hidden.version())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.update(wifi.id(), new com.rental.modules.amenity.dto.SaveAmenityRequest("Wifi", "FURNITURE", "", false, hidden.version()))).getStatusCode().value());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> amenityService.changeStatus(wifi.id(), true, wifi.version())).getStatusCode().value());
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request)).getStatusCode().value());
+        listings.updateListing(id, owner.getUserId(), request);
+        assertEquals("PENDING", listings.getMyListings(owner.getUserId()).get(0).getApprovalStatus());
+        request.setAmenityIds(null);
+        listings.updateListing(id, owner.getUserId(), request);
+        assertEquals(2, listings.getMyListings(owner.getUserId()).get(0).getAmenities().size());
+        request.setAmenityIds(List.of(bed.id()));
+        listings.updateListing(id, owner.getUserId(), request); entityManager.flush();
+        amenityService.delete(wifi.id(), hidden.version());
+        assertEquals(0, amenityService.search("Wi-Fi riêng", null, null, 0).total());
+        request.setAmenityIds(List.of());
+        listings.updateListing(id, owner.getUserId(), request); entityManager.flush();
+        amenityService.delete(bed.id(), bed.version());
+        assertTrue(listings.getMyListings(owner.getUserId()).get(0).getAmenities().isEmpty());
+    }
+
+    @Test void invalidAmenitySelectionNeverCreatesAPartialListing() {
+        User owner = user("badAmenity", Role.MEMBER);
+        var request = amenityListingRequest();
+        request.setAmenityIds(List.of(1L, 1L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        request.setAmenityIds(List.of(999999L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        request.setAmenityIds(java.util.Collections.nCopies(31, 1L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        assertTrue(listings.getMyListings(owner.getUserId()).isEmpty());
+    }
+
+    private CreateListingRequest amenityListingRequest() {
+        var request = new CreateListingRequest();
+        request.setTitle("Tin có tiện ích"); request.setListingType("BOARDING_ROOM");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L); request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/amenity.jpg"));
+        return request;
+    }
+
+    @Test void excelAmenityColumnIsOptionalAndInvalidIdsAreRejectedBeforeImport() throws Exception {
+        User owner = user("excelAmenityOwner", Role.MEMBER);
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin có nội thất")));
+        assertTrue(listingExcel.preview(owner.getUserId(), file).errors().isEmpty());
+        byte[] bytes;
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(file.getInputStream()); var output = new java.io.ByteArrayOutputStream()) {
+            book.getSheet("TinDang").getRow(0).createCell(28).setCellValue("Mã nội thất/tiện ích");
+            book.getSheet("TinDang").getRow(1).createCell(28).setCellValue("1,9");
+            book.write(output); bytes = output.toByteArray();
+        }
+        var selected = new org.springframework.mock.web.MockMultipartFile("file", "amenities.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        assertTrue(listingExcel.preview(owner.getUserId(), selected).errors().isEmpty());
+        assertEquals(1, listingExcel.importListings(owner.getUserId(), selected).importedRows());
+        entityManager.flush();
+        assertEquals(2, listings.getMyListings(owner.getUserId()).get(0).getAmenities().size());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(listingExcel.exportListings(owner.getUserId())))) {
+            assertEquals("1,9", book.getSheet("TinDang").getRow(1).getCell(28).getStringCellValue());
+            assertNotNull(book.getSheet("NoiThatTienIch"));
+        }
+        var invalid = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin sai tiện ích")));
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(invalid.getInputStream()); var output = new java.io.ByteArrayOutputStream()) {
+            book.getSheet("TinDang").getRow(0).createCell(28).setCellValue("Mã nội thất/tiện ích");
+            book.getSheet("TinDang").getRow(1).createCell(28).setCellValue("999999");
+            book.write(output); bytes = output.toByteArray();
+        }
+        var bad = new org.springframework.mock.web.MockMultipartFile("file", "bad.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        assertFalse(listingExcel.preview(owner.getUserId(), bad).errors().isEmpty());
+        assertEquals(0, listingExcel.importListings(owner.getUserId(), bad).importedRows());
+        assertEquals(1, listings.getMyListings(owner.getUserId()).size());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(bytes)); var output = new java.io.ByteArrayOutputStream()) {
+            book.getSheet("TinDang").getRow(0).getCell(28).setCellValue("Cột bị đổi tên");
+            book.write(output); bytes = output.toByteArray();
+        }
+        var wrongHeader = new org.springframework.mock.web.MockMultipartFile("file", "header.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        assertEquals(400, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listingExcel.preview(owner.getUserId(), wrongHeader)).getStatusCode().value());
+    }
+
+    @Test void adminPackageCrudVisibilityVersionsAndPurchasedRightsUseRealData() {
+        var request = new com.rental.modules.subscription.dto.SavePackageRequest("Gói thử", BigDecimal.ZERO, 10, 2, 3, "Quyền lợi thử", true, null);
+        var item = adminPackages.create(request);
+        Short id = item.getId(); Long version = item.getVersion();
+        assertTrue(memberPackages.getAllPackages().stream().anyMatch(p -> p.getId().equals(id)));
+        var hidden = adminPackages.changeStatus(id, false, version);
+        assertFalse(memberPackages.getAllPackages().stream().anyMatch(p -> p.getId().equals(id)));
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminPackages.changeStatus(id, true, version)).getStatusCode().value());
+        var enabled = adminPackages.changeStatus(id, true, hidden.getVersion());
+        User buyer = user("packageBuyer", Role.MEMBER);
+        assertEquals("FREE_SUCCESS", payments.createPaymentUrl(buyer.getEmail(), id, null));
+        var owned = subscriptions.findByUser(buyer).orElseThrow();
+        assertEquals(10, owned.getRemainingStandardQuota()); assertEquals("Gói thử", owned.getPackageNameSnapshot());
+        var edited = adminPackages.update(id, new com.rental.modules.subscription.dto.SavePackageRequest("Gói sửa", new BigDecimal("50000"), 20, 4, 5, "Đã sửa", true, enabled.getVersion()));
+        assertEquals(10, owned.getRemainingStandardQuota()); assertEquals("Gói thử", owned.getPackageNameSnapshot());
+        assertEquals("Gói thử", userService.getMyProfile(buyer.getEmail()).getMembershipPackageName());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminPackages.delete(id, edited.getVersion())).getStatusCode().value());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("gói sửa", BigDecimal.ZERO, 1, 0, 0, "", true, null))).getStatusCode().value());
+        var unused = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("Gói bỏ", BigDecimal.ZERO, 1, 0, 0, "", false, null));
+        adminPackages.delete(unused.getId(), unused.getVersion());
+        assertEquals(0, adminPackages.list("Gói bỏ", null, 0).total());
+        assertEquals(1, adminPackages.list("Gói sửa", true, 0).total());
+        assertEquals(0, adminPackages.list("%", null, 0).total());
+    }
+
+    @Test void pendingPaymentKeepsPackageSnapshotAndDuplicateCallbackDoesNotGrantTwice() {
+        User buyer = user("pendingPackage", Role.MEMBER);
+        var item = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("Gói chờ", new BigDecimal("50000"), 8, 2, 3, "", true, null));
+        var http = new org.springframework.mock.web.MockHttpServletRequest(); http.setRemoteAddr("127.0.0.1");
+        payments.createPaymentUrl(buyer.getEmail(), item.getId(), http);
+        String ref = jdbc.queryForObject("SELECT tham_chieu_giao_dich_vnpay FROM giao_dich_thanh_toan WHERE ma_nguoi_dung=?", String.class, buyer.getUserId());
+        var changed = adminPackages.update(item.getId(), new com.rental.modules.subscription.dto.SavePackageRequest("Gói khác", new BigDecimal("90000"), 99, 8, 9, "", false, item.getVersion()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> payments.createPaymentUrl(buyer.getEmail(), item.getId(), http));
+        java.util.Map<String,String> callback = new java.util.HashMap<>();
+        callback.put("vnp_Amount", "5000000"); callback.put("vnp_ResponseCode", "00"); callback.put("vnp_TxnRef", ref);
+        callback.put("vnp_TmnCode", vnPay.getVnp_TmnCode()); callback.put("vnp_TransactionStatus", "00");
+        String data = "vnp_Amount=5000000&vnp_ResponseCode=00&vnp_TmnCode=" + vnPay.getVnp_TmnCode()
+            + "&vnp_TransactionStatus=00&vnp_TxnRef=" + ref;
+        callback.put("vnp_SecureHash", vnPay.hmacSHA512(vnPay.getVnp_HashSecret(), data));
+        assertEquals("00", payments.processIpn(callback).get("RspCode"));
+        assertTrue(payments.processVnPayReturn(callback));
+        assertEquals("02", payments.processIpn(callback).get("RspCode"));
+        assertEquals("SUCCESS", payments.getStatus(buyer.getUserId(), ref).status());
+        assertEquals(1, payments.history(buyer.getUserId()).size());
+        var subscription = subscriptions.findByUser(buyer).orElseThrow();
+        assertEquals(8, subscription.getRemainingStandardQuota()); assertEquals(2, subscription.getRemainingVipQuota());
+        assertEquals("Gói chờ", subscription.getPackageNameSnapshot());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM giao_dich_thanh_toan WHERE ma_nguoi_dung=? AND trang_thai='SUCCESS'", Long.class, buyer.getUserId()));
+    }
+
+    @Autowired com.rental.modules.incident.service.IncidentService incidents;
+
+    @Test void incidentCreationPrivacyIdempotencyProcessingAndNotificationsWork() {
+        User reporter = user("incidentReporter", Role.MEMBER);
+        User other = user("incidentOther", Role.MEMBER);
+        User admin = user("incidentAdmin", Role.ADMIN);
+        var request = new com.rental.modules.incident.dto.CreateIncidentRequest("request-1", "  Không xem được bản đồ  ", "TECHNICAL", "  Mở bản đồ thì không tải dữ liệu.  ");
+        var created = incidents.create(reporter.getUserId(), request);
+        assertEquals("OPEN", created.status()); assertEquals(1, created.history().size());
+        assertEquals("Không xem được bản đồ", created.title());
+        assertEquals(1, incidents.search(reporter.getUserId(), "bản đồ", null, null, 0).total());
+        assertEquals(0, incidents.search(other.getUserId(), "", null, null, 0).total());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.detail(created.id(), other.getUserId())).getStatusCode().value());
+        assertEquals(created.id(), incidents.create(reporter.getUserId(), request).id());
+        assertEquals(1, incidents.search(reporter.getUserId(), "", null, null, 0).total());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM thong_bao WHERE ma_bao_cao_su_co=? AND ma_nguoi_dung=? AND loai_thong_bao='INCIDENT_CREATED'", Long.class, created.id(), admin.getUserId()));
+        assertEquals(429, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.create(reporter.getUserId(), new com.rental.modules.incident.dto.CreateIncidentRequest("request-2", "Khác", "OTHER", "Mô tả khác"))).getStatusCode().value());
+        var pending = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("IN_PROGRESS", "Đã tiếp nhận, đang kiểm tra.", created.version()));
+        assertEquals("IN_PROGRESS", pending.status()); assertEquals(2, pending.history().size());
+        assertTrue(pending.version() > created.version());
+        assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Cũ", created.version()))).getStatusCode().value());
+        var resolved = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Đã khắc phục lỗi bản đồ.", pending.version()));
+        assertEquals("RESOLVED", resolved.status()); assertEquals(3, incidents.detail(created.id(), reporter.getUserId()).history().size());
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM thong_bao WHERE ma_bao_cao_su_co=? AND ma_nguoi_dung=? AND loai_thong_bao='INCIDENT_UPDATED'", Long.class, created.id(), reporter.getUserId()));
+        assertEquals(1, incidents.search(null, "", "RESOLVED", "TECHNICAL", 0).total());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("REJECTED", "Không hợp lệ", resolved.version())));
+        var reopened = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("IN_PROGRESS", "Mở lại để kiểm tra thêm.", resolved.version()));
+        assertEquals(4, reopened.history().size()); assertEquals("IN_PROGRESS", reopened.status());
+        assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> incidents.update(created.id(), other.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Giả mạo", reopened.version()))).getStatusCode().value());
+    }
+
+    @Test void incidentSearchPaginationAndRejectedRepliesRemainVisibleToReporter() {
+        User reporter = user("incidentPages", Role.MEMBER), admin = user("incidentPagesAdmin", Role.ADMIN);
+        Long first = null;
+        for (int i = 0; i < 22; i++) {
+            Long id = jdbc.queryForObject("INSERT INTO bao_cao_su_co(ma_nguoi_bao_su_co,khoa_doi_chieu_yeu_cau,tieu_de,nhom_phan_loai,mo_ta) VALUES (?,?,'Lỗi kiểm thử','OTHER','Nội dung') RETURNING ma_ban_ghi", Long.class, reporter.getUserId(), "page-" + i);
+            if (first == null) first = id;
+        }
+        assertEquals(22, incidents.search(reporter.getUserId(), "kiểm thử", null, null, 0).total());
+        assertEquals(20, incidents.search(reporter.getUserId(), "", null, null, 0).items().size());
+        assertEquals(2, incidents.search(reporter.getUserId(), "", null, null, 1).items().size());
+        assertEquals(0, incidents.search(reporter.getUserId(), "%", null, null, 0).total());
+        var detail = incidents.detail(first, reporter.getUserId());
+        var rejected = incidents.update(first, admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("REJECTED", "Báo cáo trùng, vui lòng theo dõi mã trước đó.", detail.version()));
+        assertEquals("REJECTED", rejected.status()); assertEquals(1, rejected.history().size());
+        assertTrue(incidents.detail(first, reporter.getUserId()).history().getFirst().message().contains("trùng"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.search(null, "", "INVALID", null, 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.search(null, "", null, "INVALID", 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.search(null, "", null, null, -1));
+    }
+
+    @Autowired com.rental.modules.user.service.PasswordService passwords;
+
+    @Test void passwordResetAndChangePersistEncodedPasswords() {
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4);
+        org.mockito.Mockito.when(adminPasswords.encode(org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call -> encoder.encode(call.getArgument(0)));
+        org.mockito.Mockito.when(adminPasswords.matches(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call -> encoder.matches(call.getArgument(0), call.getArgument(1)));
+        Long id = jdbc.queryForObject("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,da_xac_thuc_thu_dien_tu,mat_khau_da_bam) VALUES ('Password test','password-flow@test.local','MEMBER','ACTIVE',true,?) RETURNING ma_nguoi_dung", Long.class, adminPasswords.encode("OldPassword123"));
+        passwords.requestReset("password-flow@test.local");
+        var code = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(adminEmail).sendPasswordResetEmail(org.mockito.ArgumentMatchers.eq("password-flow@test.local"), code.capture());
+        passwords.reset(new com.rental.modules.user.dto.request.ResetPasswordRequest("password-flow@test.local", code.getValue(), "NewPassword123"));
+        entityManager.flush(); entityManager.clear();
+        User user = users.findById(id).orElseThrow();
+        assertTrue(adminPasswords.matches("NewPassword123", user.getPasswordHash())); assertEquals(1, user.getPasswordVersion());
+        passwords.change(user.getEmail(), new com.rental.modules.user.dto.request.ChangePasswordRequest("NewPassword123", "AnotherPassword123"));
+        entityManager.flush(); entityManager.clear();
+        user = users.findById(id).orElseThrow();
+        assertTrue(adminPasswords.matches("AnotherPassword123", user.getPasswordHash())); assertEquals(2, user.getPasswordVersion());
+    }
+
+    @Autowired com.rental.modules.report.ReportService reports;
+    @Autowired com.rental.modules.report.ReportExcel reportExcel;
+
+    @Test void reportsAggregateRealDataBoundariesStatusesAndExport() throws Exception {
+        java.time.LocalDate from = java.time.LocalDate.of(2090, 1, 1);
+        java.time.LocalDate to = from.plusDays(2);
+        Long member = jdbc.queryForObject("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,thoi_diem_tao) VALUES ('Report member','report-member@test.local','MEMBER','ACTIVE','2090-01-01 00:00:00') RETURNING ma_nguoi_dung", Long.class);
+        Long admin = jdbc.queryForObject("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,thoi_diem_tao) VALUES ('Report admin','report-admin@test.local','ADMIN','ACTIVE','2090-01-02 12:00:00') RETURNING ma_nguoi_dung", Long.class);
+        jdbc.update("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,thoi_diem_tao) VALUES ('Outside','outside@test.local','MEMBER','ACTIVE','2090-01-04 00:00:00')");
+        Long area = jdbc.queryForObject("SELECT MIN(ma_khu_vuc) FROM khu_vuc_hanh_chinh", Long.class);
+        Long listing = jdbc.queryForObject("INSERT INTO tin_cho_thue(ma_chu_tin,ma_khu_vuc,tieu_de,loai_tin_dang,gia_cho_thue,trang_thai_kiem_duyet,thoi_diem_tao) VALUES (?,?,'Report listing','WHOLE_HOUSE',9000000,'APPROVED','2090-01-03 23:59:59.999999') RETURNING ma_tin_dang", Long.class, member, area);
+        jdbc.update("INSERT INTO hop_dong_thue(ma_tin_dang,ma_ben_cho_thue,ma_ben_thue,ngay_bat_dau,ngay_ket_thuc,tien_thue_moi_thang,tien_dat_coc,trang_thai,thoi_diem_tao) VALUES (?,?,?,'2090-01-01','2091-01-01',9000000,0,'DRAFT','2090-01-02 12:00:00')", listing, member, admin);
+        jdbc.update("INSERT INTO giao_dich_thanh_toan(ma_nguoi_dung,so_tien,trang_thai,thoi_diem_giao_dich) VALUES (?,123456.78,'SUCCESS','2090-01-01 00:00:00'), (?,200000,'SUCCESS','2090-01-03 23:59:59.999999'), (?,900000,'FAILED','2090-01-02'), (?,800000,'PENDING','2090-01-02'), (?,700000,'SUCCESS','2090-01-04 00:00:00')", member, member, member, member, member);
+        var report = reports.report(from, to);
+        assertEquals(1, report.members()); assertEquals(1, report.listings()); assertEquals(1, report.contracts());
+        assertEquals(2, report.successfulPayments());
+        assertEquals(0, new BigDecimal("323456.78").compareTo(report.revenue()));
+        assertEquals(3, report.daily().size());
+        assertEquals(BigDecimal.ZERO, report.daily().get(1).revenue());
+        assertEquals(1, report.daily().get(2).listings());
+        assertEquals("APPROVED", report.listingStatuses().getFirst().status());
+        assertEquals("DRAFT", report.contractStatuses().getFirst().status());
+        try (var workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(reportExcel.write(report)))) {
+            assertEquals(3, workbook.getNumberOfSheets());
+            assertEquals(323456.78, workbook.getSheetAt(0).getRow(5).getCell(1).getNumericCellValue(), .001);
+            assertEquals(4, workbook.getSheetAt(1).getPhysicalNumberOfRows());
+            assertEquals("2090-01-03", workbook.getSheetAt(1).getRow(3).getCell(0).getStringCellValue());
+        }
+        var empty = reports.report(java.time.LocalDate.of(2095, 1, 1), java.time.LocalDate.of(2095, 1, 1));
+        assertEquals(0, empty.members()); assertEquals(0, empty.listings()); assertEquals(0, empty.contracts());
+        assertEquals(BigDecimal.ZERO, empty.revenue()); assertEquals(1, empty.daily().size());
+        assertTrue(empty.listingStatuses().isEmpty());
+    }
+
+    @Autowired com.rental.modules.content.service.SystemContentService contentService;
+
+    @Test void defaultHelpContentDescribesTheWorkingIncidentFlow() {
+        assertTrue(contentService.published("support").body().contains("Gửi báo cáo mới"));
+        assertFalse(contentService.published("support").body().contains("chưa được kết nối"));
+    }
+
+    @Test void systemContentDraftPublishAndUnpublishKeepPublicContentSeparate() {
+        assertEquals(5, contentService.list().size());
+        var original = contentService.published("about");
+        var editor = contentService.detail("about");
+        assertTrue(editor.published()); assertFalse(editor.hasDraft());
+        var request = new com.rental.modules.content.dto.ContentRequest("  Giới thiệu mới  ", "Nội dung tiếng Việt mới.\nDòng thứ hai.", editor.version());
+        var draft = contentService.saveDraft("about", request);
+        assertTrue(draft.hasDraft()); assertTrue(draft.published());
+        assertTrue(draft.version() > editor.version());
+        assertEquals(original, contentService.published("about"));
+        assertEquals("Giới thiệu mới", draft.title());
+        var conflict = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.publish("about", request));
+        assertEquals(409, conflict.getStatusCode().value());
+        assertEquals(original, contentService.published("about"));
+        var published = contentService.publish("about", new com.rental.modules.content.dto.ContentRequest(draft.title(), draft.body(), draft.version()));
+        assertFalse(published.hasDraft()); assertTrue(published.published()); assertNotNull(published.publishedAt());
+        assertEquals(draft.body(), contentService.published("about").body());
+        assertEquals(draft.title(), contentService.published("about").title());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> contentService.unpublish("about", draft.version()));
+        var hidden = contentService.unpublish("about", published.version());
+        assertFalse(hidden.published()); assertEquals(draft.body(), contentService.detail("about").body());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.published("about")).getStatusCode().value());
+        contentService.publish("about", new com.rental.modules.content.dto.ContentRequest(hidden.title(), hidden.body(), hidden.version()));
+        assertEquals(draft.body(), contentService.published("about").body());
+    }
+
+    @Test void formattedContentRoundTripsThroughDraftAndPublication() {
+        var original = contentService.published("guide");
+        var current = contentService.detail("guide");
+        String html = "<h2>Hướng dẫn</h2><p style='color:#337788'>Nội dung <strong>in đậm</strong></p>"
+            + "<table><tr><td>Bảng dữ liệu</td></tr></table><script>alert(1)</script>";
+        var draft = contentService.saveDraft("guide", new com.rental.modules.content.dto.ContentRequest("Hướng dẫn mới", html, current.version()));
+        assertTrue(draft.body().contains("<strong>in đậm</strong>"));
+        assertTrue(draft.body().contains("<table>"));
+        assertFalse(draft.body().contains("script"));
+        assertEquals(original, contentService.published("guide"));
+        var published = contentService.publish("guide", new com.rental.modules.content.dto.ContentRequest(draft.title(), draft.body(), draft.version()));
+        assertEquals(published.body(), contentService.published("guide").body());
+        assertFalse(published.hasDraft());
+    }
+
+    @Test void hiddenContentStaysHiddenWhenSavingNewDraftAndUnknownPagesReturn404() {
+        var editor = contentService.detail("contact");
+        var hidden = contentService.unpublish("contact", editor.version());
+        var draft = contentService.saveDraft("contact", new com.rental.modules.content.dto.ContentRequest("Liên hệ mới", "Nội dung chưa công bố", hidden.version()));
+        assertFalse(draft.published()); assertTrue(draft.hasDraft());
+        assertEquals("Nội dung chưa công bố", contentService.detail("contact").body());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> contentService.published("contact"));
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.detail("unknown")).getStatusCode().value());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> contentService.saveDraft("unknown", new com.rental.modules.content.dto.ContentRequest("Title", "Body", 0L))).getStatusCode().value());
+    }
+
+    @Autowired com.rental.modules.admin.service.AdminAreaService adminAreas;
+
+    @Test void adminAreaCrudSearchAndPaginationUseRealDatabase() {
+        var province = adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Tỉnh kiểm thử", "PROVINCE", "TEST-P", null));
+        for (int i = 0; i < 22; i++) {
+            adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Xã kiểm thử " + i, "COMMUNE", "TEST-C-" + i, province.id()));
+        }
+        var page = adminAreas.search("KIỂM THỬ", "COMMUNE", province.id(), true, 0);
+        assertEquals(22, page.total()); assertEquals(20, page.items().size()); assertEquals(2, page.totalPages());
+        assertEquals(2, adminAreas.search("", "COMMUNE", province.id(), true, 1).items().size());
+        assertEquals(0, adminAreas.search("%", null, null, null, 0).total());
+        assertEquals(22, adminAreas.detail(province.id()).children());
+        assertTrue(adminAreas.parents().stream().anyMatch(p -> p.id().equals(province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Tên khác", "PROVINCE", "test-p", null)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("  Tỉnh kiểm thử  ", "PROVINCE", "TEST-DUP", null)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Sai cấp", "COMMUNE", "TEST-BAD", page.items().get(0).id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Quận mới", "DISTRICT", "TEST-D", province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.update(province.id(),
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Tỉnh kiểm thử", "WARD", "TEST-P", province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.search("", "INVALID", null, null, 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.search("", null, null, null, -1));
+    }
+
+    @Test void adminAreaActivationRespectsHierarchyAndDeletionKeepsReferences() {
+        var province = adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Tỉnh trạng thái", "PROVINCE", "STATUS-P", null));
+        var ward = adminAreas.create(new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường trạng thái", "WARD", "STATUS-W", province.id()));
+        assertTrue(areas.getAllProvinces().stream().anyMatch(p -> p.getId().equals(province.id())));
+        assertEquals(1, areas.getWardsByProvince(province.id()).size());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.changeStatus(province.id(), false));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.delete(province.id()));
+        adminAreas.changeStatus(ward.id(), false);
+        assertTrue(areas.getWardsByProvince(province.id()).isEmpty());
+        adminAreas.changeStatus(province.id(), false);
+        assertTrue(areas.getAllProvinces().stream().noneMatch(p -> p.getId().equals(province.id())));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.changeStatus(ward.id(), true));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.create(
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Xã không hợp lệ", "COMMUNE", "STATUS-NEW", province.id())));
+        adminAreas.changeStatus(province.id(), true); adminAreas.changeStatus(ward.id(), true);
+        assertEquals(1, areas.getWardsByProvince(province.id()).size());
+        adminAreas.delete(ward.id()); adminAreas.delete(province.id());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.detail(ward.id()));
+    }
+
+    @Test void disabledAreasBlockNewListingsAndExcelButKeepExistingListings() throws Exception {
+        User owner = user("areaowner", Role.MEMBER), reviewer = user("areaadmin", Role.ADMIN);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Tin giữ dữ liệu khu vực"); request.setListingType("WHOLE_HOUSE"); request.setAreaId(6L);
+        request.setAddress("TP.HCM"); request.setAreaSqm(new BigDecimal("40")); request.setRentPrice(new BigDecimal("4000000"));
+        request.setLatitude(10.78); request.setLongitude(106.7); request.setImageUrls(List.of("https://example.com/area.jpg"));
+        Long listingId = listings.createListing(owner.getUserId(), request).getId();
+        admin.approveListing(listingId, reviewer.getUserId());
+        var propertyRequest = new com.rental.modules.property.dto.request.PropertyRequest(
+            "Khu trọ giữ dữ liệu", "", "Địa chỉ", 1L, 2L, 6L, "BOARDING_HOUSE",
+            BigDecimal.ZERO, BigDecimal.ZERO, List.of());
+        var property = properties.createProperty(owner.getEmail(), propertyRequest);
+        entityManager.flush();
+        assertEquals(1, adminAreas.detail(6L).listingCount());
+        assertEquals(1, adminAreas.detail(6L).propertyCount());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.delete(6L));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.update(6L,
+            new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường Bến Nghé", "WARD", "BN", 1L)));
+        jdbc.update("UPDATE khu_vuc_hanh_chinh SET ranh_gioi_khu_vuc=ST_GeomFromText('POLYGON((106 10,107 10,107 11,106 10))',4326) WHERE ma_khu_vuc=6");
+        var renamed = adminAreas.update(6L, new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường đã đổi tên", "WARD", "BN", 2L));
+        assertEquals("Phường đã đổi tên", renamed.name());
+        assertNotNull(jdbc.queryForObject("SELECT ST_AsText(ranh_gioi_khu_vuc) FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc=6", String.class));
+        adminAreas.changeStatus(6L, false);
+        assertTrue(areas.getWardsByDistrict(2L).stream().noneMatch(w -> w.getId().equals(6L)));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> properties.createProperty(owner.getEmail(), propertyRequest));
+        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM tai_san_cho_thue WHERE ma_ban_ghi=?", Long.class, property.getId()));
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin không hợp lệ")));
+        assertFalse(listingExcel.preview(owner.getUserId(), file).errors().isEmpty());
+        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_tin_dang=?", Long.class, listingId));
+        assertEquals(listingId, listings.getPublicListing(listingId).getId());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(listingExcel.template()))) {
+            var sheet = book.getSheet("KhuVuc");
+            for (int row = 1; row <= sheet.getLastRowNum(); row++) {
+                assertNotEquals(6.0, sheet.getRow(row).getCell(0).getNumericCellValue());
+            }
+        }
+        adminAreas.changeStatus(6L, true);
+        assertTrue(areas.getWardsByDistrict(2L).stream().anyMatch(w -> w.getId().equals(6L)));
+    }
+
+    @Autowired com.rental.modules.admin.service.AdminCreateUserService adminCreation;
+    @Autowired com.rental.modules.user.service.OtpService adminOtp;
+    @org.springframework.boot.test.mock.mockito.MockBean com.rental.modules.user.service.EmailService adminEmail;
+    @org.springframework.boot.test.mock.mockito.MockBean org.springframework.security.crypto.password.PasswordEncoder adminPasswords;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void adminCreationCommitsOnlyWhenOtpMailSucceeds() {
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        org.mockito.Mockito.when(adminPasswords.encode(org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call -> encoder.encode(call.getArgument(0)));
+        String successEmail = "admincreated@example.com", failedEmail = "failedcreation@example.com";
+        try {
+            var request = new com.rental.modules.admin.dto.request.AdminCreateUserRequest(
+                "Người dùng mới", successEmail, null, "Password123!", Role.MEMBER);
+            var created = adminCreation.create(request);
+            User stored = users.findById(created.id()).orElseThrow();
+            assertFalse(stored.getIsVerified()); assertEquals(Role.MEMBER, stored.getRole());
+            assertTrue(encoder.matches("Password123!", stored.getPasswordHash()));
+            var successCode = org.mockito.ArgumentCaptor.forClass(String.class);
+            org.mockito.Mockito.verify(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(successEmail), successCode.capture());
+            var provider = new org.springframework.security.authentication.dao.DaoAuthenticationProvider();
+            provider.setUserDetailsService(new com.rental.core.security.CustomUserDetailsService(users));
+            provider.setPasswordEncoder(encoder);
+            var manager = new org.springframework.security.authentication.ProviderManager(provider);
+            var jwt = org.mockito.Mockito.mock(com.rental.core.security.JwtService.class);
+            org.mockito.Mockito.when(jwt.generateAccessToken(org.mockito.ArgumentMatchers.any())).thenReturn("verified-access");
+            var auth = new com.rental.modules.user.service.AuthService(users, encoder, adminOtp, adminEmail, manager, jwt, defaultMembership);
+            var login = new com.rental.modules.user.dto.request.LoginRequest(successEmail, "Password123!");
+            assertThrows(IllegalStateException.class, () -> auth.login(login));
+            auth.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest(successEmail, successCode.getValue()));
+            assertEquals(created.id(), auth.login(login).getUserId());
+            assertEquals("verified-access", auth.login(login).getAccessToken());
+            assertFalse(adminOtp.validateOtp(successEmail, successCode.getValue()));
+            org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
+                .when(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(failedEmail), org.mockito.ArgumentMatchers.anyString());
+            var failedRequest = new com.rental.modules.admin.dto.request.AdminCreateUserRequest(
+                "Mail failed", failedEmail, "0909999888", "Password123!", Role.MEMBER);
+            assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminCreation.create(failedRequest));
+            assertFalse(users.existsByEmailIgnoreCase(failedEmail));
+            assertTrue(users.findByPhoneNumber("0909999888").isEmpty());
+            var failedCode = org.mockito.ArgumentCaptor.forClass(String.class);
+            org.mockito.Mockito.verify(adminEmail).sendOtpEmail(org.mockito.ArgumentMatchers.eq(failedEmail), failedCode.capture());
+            assertFalse(adminOtp.validateOtp(failedEmail, failedCode.getValue()));
+        } finally {
+            users.findByEmail(successEmail).ifPresent(user -> {
+                subscriptions.findByUser(user).ifPresent(subscriptions::delete);
+                subscriptions.flush();
+                users.delete(user);
+            });
+            users.findByEmail(failedEmail).ifPresent(users::delete);
+        }
+    }
+
+    @Autowired com.rental.modules.admin.service.AdminUserService adminUsers;
+
+    @Test void adminUserSearchPaginationEditsAndLocksWorkWithRealDatabase() {
+        User admin = user("managementadmin", Role.ADMIN);
+        for (int index = 0; index < 23; index++) user("managementtenant" + index, Role.MEMBER);
+        var first = adminUsers.search("MANAGEMENTTENANT", null, null, null, 0);
+        assertEquals(23, first.total()); assertEquals(20, first.items().size()); assertEquals(2, first.totalPages());
+        assertEquals(3, adminUsers.search("managementtenant", Role.MEMBER, UserStatus.ACTIVE, true, 1).items().size());
+        User target = users.findByEmail("managementtenant0@example.com").orElseThrow();
+        adminUsers.update(target.getUserId(), admin.getUserId(),
+            new com.rental.modules.admin.dto.request.AdminUpdateUserRequest("Người dùng mới", "0901234567", Role.MEMBER));
+        adminUsers.changeStatus(target.getUserId(), admin.getUserId(), UserStatus.LOCKED);
+        entityManager.flush(); entityManager.clear();
+        var match = adminUsers.search("090123", Role.MEMBER, UserStatus.LOCKED, true, 0);
+        assertEquals(1, match.total()); assertEquals("Người dùng mới", match.items().get(0).fullName());
+        assertEquals(0, adminUsers.search("090123", Role.ADMIN, null, null, 0).total());
+        assertEquals(24, adminUsers.search("", null, null, null, 0).total());
+        assertEquals(0, adminUsers.search("%", null, null, null, 0).total());
+        target = users.findById(target.getUserId()).orElseThrow(); target.setIsVerified(false); users.saveAndFlush(target);
+        adminUsers.changeStatus(target.getUserId(), admin.getUserId(), UserStatus.ACTIVE);
+        assertEquals(0, adminUsers.search("090123", null, null, true, 0).total());
+        assertEquals(1, adminUsers.search("090123", null, UserStatus.ACTIVE, false, 0).total());
+    }
+
+    @Autowired com.rental.modules.listing.service.ListingExcelService listingExcel;
+    @Autowired com.rental.modules.contract.service.ContractExcelService contractExcel;
+
+    @Test void excelImportsCreatePendingListingsAndDraftContractsWithRealDatabase() throws Exception {
+        User owner = user("excelowner", Role.MEMBER), tenant = user("exceltenant", Role.MEMBER), reviewer = user("exceladmin", Role.ADMIN);
+        tenant.setPhoneNumber("0901234567"); users.saveAndFlush(tenant);
+        var row = ListingExcelTest.listingRow("Tin từ Excel");
+        var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(row));
+        var invalidRow = ListingExcelTest.listingRow("Sai giá từ Excel"); invalidRow.set(2, -1);
+        var invalidFile = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(row, invalidRow));
+        assertEquals(0, listingExcel.importListings(owner.getUserId(), invalidFile).importedRows());
+        assertTrue(listings.getMyListings(owner.getUserId()).isEmpty());
+        assertTrue(listingExcel.preview(owner.getUserId(), file).errors().isEmpty());
+        assertTrue(listings.getMyListings(owner.getUserId()).isEmpty());
+        assertEquals(1, listingExcel.importListings(owner.getUserId(), file).importedRows());
+        entityManager.flush(); entityManager.clear();
+        var created = listings.getMyListings(owner.getUserId()).get(0);
+        assertEquals("PENDING", created.getApprovalStatus());
+        assertTrue(listings.getMyListings(tenant.getUserId()).isEmpty());
+        assertFalse(listingExcel.importListings(owner.getUserId(), file).errors().isEmpty());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(listingExcel.exportListings(owner.getUserId())))) {
+            assertEquals("Tin từ Excel", book.getSheet("TinDang").getRow(1).getCell(0).getStringCellValue());
+        }
+        admin.approveListing(created.getId(), reviewer.getUserId());
+        entityManager.flush(); entityManager.clear();
+        var contractRow = new java.util.ArrayList<Object>(java.util.Arrays.asList(created.getId(), "0901234567", "2027-01-01", "2028-01-01", 2500000, 1000000, "Excel",
+            "001234567890", "Địa chỉ chủ nhà", "009876543210", "Địa chỉ người thuê", "TP.HCM", "2027-01-01", "2027-01-01", "Chuyển khoản", "Theo hóa đơn", "Theo hóa đơn"));
+        var contractFile = ListingExcelTest.file("HopDong", com.rental.modules.contract.service.ContractExcelService.HEADERS, List.of(contractRow));
+        var duplicateContracts = ListingExcelTest.file("HopDong", com.rental.modules.contract.service.ContractExcelService.HEADERS, List.of(contractRow, contractRow));
+        assertEquals(0, contractExcel.importContracts(owner.getEmail(), owner.getUserId(), duplicateContracts).importedRows());
+        assertTrue(leases.getMyContracts(owner.getEmail()).isEmpty());
+        assertTrue(contractExcel.preview(owner.getEmail(), owner.getUserId(), contractFile).errors().isEmpty());
+        assertTrue(leases.getMyContracts(owner.getEmail()).isEmpty());
+        assertEquals(1, contractExcel.importContracts(owner.getEmail(), owner.getUserId(), contractFile).importedRows());
+        entityManager.flush(); entityManager.clear();
+        var draft = leases.getMyContracts(owner.getEmail()).get(0);
+        assertEquals("DRAFT", draft.status()); assertEquals(tenant.getUserId(), draft.tenantId());
+        assertTrue(notifications.inbox(tenant.getUserId(), 0, false).items().stream().anyMatch(n -> n.getType().equals("CONTRACT_CREATED")));
+        assertTrue(draft.documentText().contains("001234567890"));
+        assertEquals("AVAILABLE", listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        assertEquals(1, leases.getMyContracts(tenant.getEmail()).size());
+        try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(contractExcel.exportContracts(owner.getEmail())))) {
+            assertEquals("0901234567", book.getSheet("HopDong").getRow(1).getCell(1).getStringCellValue());
+            assertEquals("DRAFT", book.getSheet("HopDong").getRow(1).getCell(26).getStringCellValue());
+        }
+    }
+
+    @Autowired com.rental.modules.notification.service.NotificationService notifications;
+
+    @Test void noticesPersistFollowWorkflowAndArePrivateToEachAccount() {
+        User owner = user("noticeowner", Role.MEMBER), adminUser = user("noticeadmin", Role.ADMIN), other = user("noticeother", Role.MEMBER);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Phòng có thông báo"); request.setListingType("BOARDING_ROOM"); request.setRentPrice(new BigDecimal("2000000")); request.setAreaSqm(new BigDecimal("20"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L); request.setLatitude(10.78); request.setLongitude(106.7); request.setImageUrls(List.of("https://example.com/a.jpg"));
+        var created = listings.createListing(owner.getUserId(), request);
+        entityManager.flush(); entityManager.clear();
+        assertEquals(1, notifications.unreadCount(owner.getUserId()));
+        assertEquals("LISTING_PENDING", notifications.inbox(adminUser.getUserId(), 0, false).items().get(0).getType());
+        Long noticeId = notifications.inbox(owner.getUserId(), 0, false).items().get(0).getId();
+        notifications.markRead(owner.getUserId(), noticeId);
+        notifications.markRead(owner.getUserId(), noticeId);
+        assertEquals(0, notifications.unreadCount(owner.getUserId()));
+        admin.rejectListing(created.getId(), adminUser.getUserId(), "Cần ảnh rõ hơn");
+        entityManager.flush(); entityManager.clear();
+        var rejected = notifications.inbox(owner.getUserId(), 0, true).items().get(0);
+        assertEquals("LISTING_REJECTED", rejected.getType()); assertTrue(rejected.getContent().contains("Cần ảnh rõ hơn"));
+        listings.updateListing(created.getId(), owner.getUserId(), request);
+        admin.approveListing(created.getId(), adminUser.getUserId());
+        entityManager.flush(); entityManager.clear();
+        assertTrue(notifications.inbox(owner.getUserId(), 0, false).items().stream().anyMatch(n -> n.getType().equals("LISTING_APPROVED")));
+        assertTrue(notifications.inbox(other.getUserId(), 0, false).items().isEmpty());
+        notifications.broadcast("Bảo trì", "Hệ thống bảo trì vào cuối tuần.");
+        assertEquals("SYSTEM", notifications.inbox(other.getUserId(), 0, false).items().get(0).getType());
+        notifications.markAllRead(other.getUserId());
+        assertEquals(0, notifications.unreadCount(other.getUserId()));
+        assertTrue(notifications.unreadCount(owner.getUserId()) > 0);
+        var unreadOwnerNotice = notifications.inbox(owner.getUserId(), 0, true).items().get(0);
+        notifications.markRead(owner.getUserId(), unreadOwnerNotice.getId());
+        long before = notifications.unreadCount(owner.getUserId());
+        notifications.markUnread(owner.getUserId(), unreadOwnerNotice.getId());
+        notifications.markUnread(owner.getUserId(), unreadOwnerNotice.getId());
+        assertEquals(before + 1, notifications.unreadCount(owner.getUserId()));
+        notifications.deleteRead(owner.getUserId());
+        assertTrue(notifications.inbox(owner.getUserId(), 0, false).items().stream().noneMatch(n -> n.isRead()));
+        notifications.delete(owner.getUserId(), unreadOwnerNotice.getId());
+        assertEquals(before, notifications.unreadCount(owner.getUserId()));
+        assertFalse(notifications.inbox(other.getUserId(), 0, false).items().isEmpty());
+    }
+
+    @Test void sharedRoomSurvivesModerationEditingAndMapVisibility() {
+        User owner = user("sharedowner", Role.MEMBER), reviewer = user("sharedadmin", Role.ADMIN);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Tìm người ở ghép"); request.setDescription("Giữ vệ sinh, chia sẻ điện nước");
+        request.setListingType("SHARED_ROOM"); request.setRentPrice(new BigDecimal("1500000"));
+        request.setAreaSqm(new BigDecimal("30")); request.setAddress("TP.HCM"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/shared.jpg"));
+        request.setCurrentOccupants(1); request.setMaxOccupants(3); request.setGenderPreference("FEMALE");
+        request.setAllowPets(true); request.setAllowSmoking(false); request.setRoommateRequirements("Giữ vệ sinh");
+        Long id = listings.createListing(owner.getUserId(), request).getId();
+        entityManager.flush(); entityManager.clear();
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        var pending = admin.getPendingListings().stream().filter(l -> l.getId().equals(id)).findFirst().orElseThrow();
+        assertEquals(3, pending.getMaxOccupants()); assertEquals("FEMALE", pending.getGenderPreference());
+        admin.approveListing(id, reviewer.getUserId());
+        entityManager.flush(); entityManager.clear();
+        var published = listings.getPublicListing(id);
+        assertEquals("SHARED_ROOM", published.getListingType());
+        assertEquals(1, published.getCurrentOccupants()); assertTrue(published.getAllowPets());
+        assertEquals("Giữ vệ sinh", published.getRoommateRequirements());
+        assertEquals(id, listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).get(0).getId());
+        request.setCurrentOccupants(2);
+        listings.updateListing(id, owner.getUserId(), request);
+        entityManager.flush(); entityManager.clear();
+        assertTrue(listings.getApprovedListings().isEmpty());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        admin.approveListing(id, reviewer.getUserId());
+        assertEquals(2, listings.getPublicListing(id).getCurrentOccupants());
+        listings.updateRentalStatus(id, owner.getUserId(), "HIDDEN");
+        assertTrue(listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).isEmpty());
+    }
+
+    @Autowired com.rental.modules.user.service.UserService userService;
+
+    @Test void personalInterestsPersistClearAndRemainPrivateToEachAccount() {
+        User member = user("interestmember", Role.MEMBER), other = user("interestother", Role.MEMBER);
+        var request = new com.rental.modules.user.dto.request.UserPreferenceDto(1000000.0, 3000000.0, true, "TP.HCM");
+        request.setInterests(List.of("CAT_LOVER", "QUIET", "MUSIC", "CAT_LOVER"));
+        userService.updateMyPreferences(member.getEmail(), request);
+        entityManager.flush(); entityManager.clear();
+        assertEquals(java.util.Set.of("CAT_LOVER", "QUIET", "MUSIC"), new java.util.HashSet<>(userService.getMyPreferences(member.getEmail()).getInterests()));
+        assertEquals(1000000.0, userService.getMyPreferences(member.getEmail()).getMinBudget());
+        assertTrue(userService.getMyPreferences(other.getEmail()).getInterests().isEmpty());
+        assertEquals(3, userService.getMyProfile(member.getEmail()).getInterests().size());
+        // Legacy preference updates preserve the selected personal interests.
+        request.setInterests(null);
+        userService.updateMyPreferences(member.getEmail(), request);
+        entityManager.flush(); entityManager.clear();
+        assertEquals(3, userService.getMyPreferences(member.getEmail()).getInterests().size());
+        // Changing the order or clearing selections must not violate collection constraints.
+        request.setInterests(List.of("MUSIC", "CAT_LOVER"));
+        userService.updateMyPreferences(member.getEmail(), request);
+        entityManager.flush(); entityManager.clear();
+        assertEquals(2, userService.getMyPreferences(member.getEmail()).getInterests().size());
+        request.setInterests(List.of());
+        userService.updateMyPreferences(member.getEmail(), request);
+        entityManager.flush(); entityManager.clear();
+        assertTrue(userService.getMyProfile(member.getEmail()).getInterests().isEmpty());
+    }
+
+    @Autowired UserRepository users;
+    @Autowired com.rental.modules.listing.repository.ListingRepository listingRepository;
+    @Autowired ListingService listings;
+    @Autowired AdminListingService admin;
+    @Autowired EntityManager entityManager;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired javax.sql.DataSource dataSource;
+    @Autowired com.rental.modules.area.service.AreaService areas;
+    @Autowired com.rental.modules.property.service.PropertyService properties;
+    @Autowired com.rental.modules.favorite.service.ListingFavoriteService favorites;
+    @Autowired com.rental.modules.contract.service.AdminContractService adminContracts;
+    @Test void adminContractSearchPaginationDetailsAndExpiredViewAreReadOnly() {
+        User owner = user("adminleaseowner", Role.MEMBER), tenant = user("adminleasetenant", Role.MEMBER);
+        User other = user("adminleaseother", Role.MEMBER);
+        tenant.setPhoneNumber("0907654321"); users.saveAndFlush(tenant);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Nhà kiểm tra Admin"); request.setListingType("WHOLE_HOUSE");
+        request.setRentPrice(new BigDecimal("4000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("Đường kiểm tra"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/room.jpg"));
+        Long listingId = listings.createListing(owner.getUserId(), request).getId();
+        var listing = entityManager.find(com.rental.modules.listing.domain.entity.Listing.class, listingId);
+        listing.setRentalStatus("RENTED");
+        var today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        com.rental.modules.contract.domain.entity.Contract expired = null;
+        for (int i = 0; i < 23; i++) {
+            var contract = new com.rental.modules.contract.domain.entity.Contract(listing, i == 0 ? other : owner,
+                tenant, today.minusMonths(2), i == 0 ? today.minusDays(1) : today.plusMonths(2),
+                new BigDecimal("4000000"), BigDecimal.ZERO, i == 0 ? "ACTIVE" : "DRAFT", null, java.time.LocalDateTime.now());
+            contract.setContractType(i == 0 ? "ROOM" : i == 22 ? null : "HOUSE");
+            contract.setDetailsJson("{\"landlordName\":\"Tên trên hợp đồng\",\"tenantName\":\"Người thuê thử\",\"tenantPhone\":\"0911111111\"}");
+            contract.setDocumentText("Thỏa thuận gốc của hai bên");
+            entityManager.persist(contract);
+            if (i == 0) expired = contract;
+        }
+        entityManager.flush();
+        Long version = expired.getVersion();
+        long notices = jdbc.queryForObject("select count(*) from thong_bao", Long.class);
+        var page = adminContracts.search("", "", "", 0);
+        assertEquals(23, page.total()); assertEquals(20, page.items().size());
+        assertEquals(3, adminContracts.search("", "", "", 1).items().size());
+        assertEquals("ADMIN", page.items().get(0).myRole());
+        assertNull(page.items().get(0).documentText()); assertNull(page.items().get(0).details());
+        assertEquals(22, adminContracts.search("", "DRAFT", "HOUSE", 0).total());
+        assertEquals(1, adminContracts.search("", "EXPIRED", "ROOM", 0).total());
+        assertEquals(0, adminContracts.search("", "ACTIVE", "", 0).total());
+        assertEquals(23, adminContracts.search("0911111111", "", "", 0).total());
+        assertEquals(23, adminContracts.search("0907654321", "", "", 0).total());
+        assertEquals(1, adminContracts.search("#" + expired.getId(), "", "", 0).total());
+        assertEquals(0, adminContracts.search("%", "", "", 0).total());
+        var detail = adminContracts.detail(expired.getId());
+        assertEquals("EXPIRED", detail.status()); assertEquals("Tên trên hợp đồng", detail.landlordName());
+        assertEquals("Thỏa thuận gốc của hai bên", detail.documentText());
+        entityManager.flush(); entityManager.refresh(expired); entityManager.refresh(listing);
+        assertEquals("ACTIVE", expired.getStatus()); assertEquals(version, expired.getVersion());
+        assertEquals("RENTED", listing.getRentalStatus());
+        assertEquals(notices, jdbc.queryForObject("select count(*) from thong_bao", Long.class));
+        final Long inaccessible = expired.getId();
+        assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> leases.getContract(owner.getEmail(), inaccessible)).getStatusCode().value());
+        assertEquals(404, assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            () -> adminContracts.detail(Long.MAX_VALUE)).getStatusCode().value());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminContracts.search("", "BAD", "", 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminContracts.search("", "", "BAD", 0));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminContracts.search("", "", "", -1));
+    }
+
+    @Autowired com.rental.modules.contract.service.ContractService leases;
+
+    @Test void roomContractRequiresCompleteSnapshotAndRejectsOutdatedConsent() {
+        User owner = user("roomleaseowner", Role.MEMBER), renter = user("roomleaserenter", Role.MEMBER), reviewer = user("roomleaseadmin", Role.ADMIN);
+        CreateListingRequest listing = new CreateListingRequest();
+        listing.setTitle("Phòng trọ theo mẫu"); listing.setListingType("BOARDING_ROOM"); listing.setAreaId(6L);
+        listing.setAddress("TP.HCM"); listing.setAreaSqm(new BigDecimal("25")); listing.setRentPrice(new BigDecimal("3000000"));
+        listing.setLatitude(10.78); listing.setLongitude(106.7); listing.setImageUrls(List.of("https://example.com/room.jpg"));
+        Long listingId = listings.createListing(owner.getUserId(), listing).getId();
+        admin.approveListing(listingId, reviewer.getUserId());
+        var start = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var request = new com.rental.modules.contract.dto.request.CreateContractRequest(listingId, renter.getUserId(), start, start.plusMonths(6), new BigDecimal("3000000"), new BigDecimal("1000000"));
+        var details = contractDetails(start); request.setDetails(details);
+        details.setTenantIdentity(" ");
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.previewContract(owner.getEmail(), request));
+        details.setTenantIdentity("Giấy tờ người thuê mẫu");
+        var draft = leases.createContract(owner.getEmail(), request);
+        assertEquals("ROOM", draft.contractType());
+        assertTrue(draft.documentText().contains("HỢP ĐỒNG THUÊ PHÒNG TRỌ"));
+        entityManager.flush();
+        jdbc.update("update hop_dong_thue set noi_dung_hop_dong=null where ma_hop_dong=?", draft.id());
+        var legacy = leases.getContract(renter.getEmail(), draft.id());
+        assertNull(legacy.documentText());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", legacy.version()));
+        var updated = leases.updateContract(owner.getEmail(), draft.id(), request);
+        assertNotNull(updated.documentText());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", draft.version()));
+        var active = leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", updated.version());
+        assertNotNull(active.acceptedAt());
+        assertEquals("ACTIVE", active.status());
+        assertEquals("RENTED", jdbc.queryForObject("select trang_thai_cho_thue from tin_cho_thue where ma_tin_dang=?", String.class, listingId));
+        String agreedDocument = active.documentText();
+        owner.setFullName("Tên chủ nhà đã thay đổi"); users.saveAndFlush(owner);
+        assertEquals(agreedDocument, leases.getContract(renter.getEmail(), draft.id()).documentText());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.updateContract(owner.getEmail(), draft.id(), request));
+    }
+
+    private com.rental.modules.contract.dto.request.ContractDetails contractDetails(java.time.LocalDate start) {
+        var details = new com.rental.modules.contract.dto.request.ContractDetails();
+        details.setLandlordIdentity("CCCD chủ nhà mẫu"); details.setLandlordAddress("Địa chỉ chủ nhà mẫu");
+        details.setTenantIdentity("CCCD người thuê mẫu"); details.setTenantAddress("Địa chỉ người thuê mẫu");
+        details.setSigningPlace("TP.HCM"); details.setSigningDate(start.toString()); details.setHandoverDate(start.toString());
+        details.setPaymentMethod("Chuyển khoản theo tài khoản được hai bên xác nhận");
+        details.setElectricityTerms("Theo hóa đơn điện"); details.setWaterTerms("Theo hóa đơn nước");
+        return details;
+    }
+
+    @Test void contractLifecycleChecksOwnershipConsentVersionAndListingAvailability() {
+        User owner=user("leaseowner",Role.MEMBER), renter=user("renter",Role.MEMBER), outsider=user("outsider",Role.MEMBER), reviewer=user("leaseadmin",Role.ADMIN);
+        CreateListingRequest listing=new CreateListingRequest();
+        listing.setTitle("Nhà cho thuê"); listing.setListingType("WHOLE_HOUSE"); listing.setAreaId(6L);
+        listing.setAddress("TP.HCM"); listing.setAreaSqm(new BigDecimal("50")); listing.setRentPrice(new BigDecimal("5000000"));
+        listing.setLatitude(10.78); listing.setLongitude(106.7); listing.setImageUrls(List.of("https://example.com/a.jpg"));
+        Long listingId=listings.createListing(owner.getUserId(),listing).getId();
+        admin.approveListing(listingId,reviewer.getUserId());
+        renter.setPhoneNumber("0901234567");
+        users.saveAndFlush(renter);
+        assertEquals(renter.getUserId(), leases.findTenant(owner.getEmail(), null, "0901234567", listingId).get("id"));
+        assertEquals(renter.getUserId(), leases.findTenant(owner.getEmail(), null, "+84 901-234-567", listingId).get("id"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(outsider.getEmail(), null, "0901234567", listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), null, "abcdefghij", listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), null, "0909999999", listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), renter.getEmail(), "0901234567", listingId));
+        outsider.setPhoneNumber("+84901234567");
+        users.saveAndFlush(outsider);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> leases.findTenant(owner.getEmail(), null, "0901234567", listingId));
+        outsider.setPhoneNumber(null);
+        users.saveAndFlush(outsider);
+        var today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var request=new com.rental.modules.contract.dto.request.CreateContractRequest(listingId,renter.getUserId(),today,today.plusMonths(12),new BigDecimal("5000000"),BigDecimal.ZERO);
+        request.setDetails(contractDetails(today));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(outsider.getEmail(),request));
+        assertEquals(renter.getUserId(),leases.findTenant(owner.getEmail(),renter.getEmail(),listingId).get("id"));
+        long countBeforePreview = jdbc.queryForObject("select count(*) from hop_dong_thue", Long.class);
+        var preview = leases.previewContract(owner.getEmail(), request);
+        assertTrue(preview.get("content").contains("HỢP ĐỒNG THUÊ NHÀ Ở"));
+        assertEquals(countBeforePreview, jdbc.queryForObject("select count(*) from hop_dong_thue", Long.class));
+        var draft=leases.createContract(owner.getEmail(),request);
+        assertNotNull(draft.documentText());
+        assertEquals("HOUSE", draft.contractType());
+        assertEquals("DRAFT",draft.status()); assertEquals("LANDLORD",draft.myRole());
+        assertEquals("TENANT",leases.getContract(renter.getEmail(),draft.id()).myRole());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.getContract(outsider.getEmail(),draft.id()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(owner.getEmail(),request));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.changeStatus(owner.getEmail(),draft.id(),"ACTIVE",draft.version()));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.updateContract(renter.getEmail(),draft.id(),request));
+        request.setMonthlyRent(new BigDecimal("5500000"));
+        var edited=leases.updateContract(owner.getEmail(),draft.id(),request);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.changeStatus(renter.getEmail(),draft.id(),"ACTIVE",draft.version()));
+        var active=leases.changeStatus(renter.getEmail(),draft.id(),"ACTIVE",edited.version());
+        assertEquals("ACTIVE",active.status()); assertEquals("RENTED",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->listings.updateRentalStatus(listingId,owner.getUserId(),"AVAILABLE"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->listings.getPublicListing(listingId));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.changeStatus(renter.getEmail(),draft.id(),"TERMINATED",active.version()));
+        var ended=leases.changeStatus(owner.getEmail(),draft.id(),"TERMINATED",active.version());
+        assertEquals("TERMINATED",ended.status()); assertEquals("HIDDEN",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        listings.updateRentalStatus(listingId,owner.getUserId(),"AVAILABLE");
+        var second=leases.createContract(owner.getEmail(),request);
+        var cancelled=leases.changeStatus(renter.getEmail(),second.id(),"CANCELLED",second.version());
+        assertEquals("CANCELLED",cancelled.status());
+        var third=leases.createContract(owner.getEmail(),request);
+        leases.changeStatus(renter.getEmail(),third.id(),"ACTIVE",third.version());
+        jdbc.update("UPDATE hop_dong_thue SET ngay_bat_dau=?, ngay_ket_thuc=? WHERE ma_hop_dong=?",today.minusDays(5),today.minusDays(1),third.id());
+        entityManager.clear();
+        assertEquals("EXPIRED",leases.getContract(owner.getEmail(),third.id()).status());
+        assertEquals("HIDDEN",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
+        var ownerTypes = notifications.inbox(owner.getUserId(), 0, false).items().stream().map(n -> n.getType()).toList();
+        var tenantTypes = notifications.inbox(renter.getUserId(), 0, false).items().stream().map(n -> n.getType()).toList();
+        assertTrue(ownerTypes.containsAll(List.of("CONTRACT_ACTIVE", "CONTRACT_CANCELLED", "CONTRACT_EXPIRED")));
+        assertTrue(tenantTypes.containsAll(List.of("CONTRACT_CREATED", "CONTRACT_UPDATED", "CONTRACT_TERMINATED", "CONTRACT_EXPIRED")));
+        long expiredBefore = notifications.inbox(owner.getUserId(), 0, false).items().stream().filter(n -> n.getType().equals("CONTRACT_EXPIRED")).count();
+        leases.getContract(owner.getEmail(), third.id());
+        assertEquals(expiredBefore, notifications.inbox(owner.getUserId(), 0, false).items().stream().filter(n -> n.getType().equals("CONTRACT_EXPIRED")).count());
+        request.setEndDate(request.getStartDate());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(owner.getEmail(),request));
+    }
+
+    @Test void seededAreaNamesUseVietnamese() {
+        assertEquals("Thành phố Hồ Chí Minh", jdbc.queryForObject("SELECT ten_khu_vuc FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc=1", String.class));
+        assertEquals("Phường Bến Nghé", jdbc.queryForObject("SELECT ten_khu_vuc FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc=6", String.class));
+    }
+
+    @Test void postMergerAreasAreCompleteAndSupportTwoLevelAddresses() {
+        var units = areas.getWardsByProvince(1L);
+        assertEquals(168, units.size());
+        assertEquals(113L, units.stream().filter(w -> "WARD".equals(w.getType())).count());
+        assertEquals(54L, units.stream().filter(w -> "COMMUNE".equals(w.getType())).count());
+        assertEquals(1L, units.stream().filter(w -> "SPECIAL".equals(w.getType())).count());
+        assertTrue(units.stream().allMatch(w -> w.getProvinceId().equals(1L) && w.getDistrictId() == null));
+        assertEquals(168L, units.stream().map(w -> w.getCode()).distinct().count());
+        assertTrue(units.stream().anyMatch(w -> w.getName().equals("Phường Sài Gòn")));
+        assertTrue(units.stream().anyMatch(w -> w.getName().equals("Phường Dĩ An")));
+        assertTrue(units.stream().anyMatch(w -> w.getName().equals("Phường Vũng Tàu")));
+        assertEquals("Phường Bến Nghé", areas.getWardsByDistrict(2L).stream()
+                .filter(w -> w.getId().equals(6L)).findFirst().orElseThrow().getName());
+        assertEquals(168, areas.getWardsByProvince(1L).size());
+
+        User owner = user("newareas", Role.MEMBER);
+        for (String type : List.of("WARD", "COMMUNE", "SPECIAL")) {
+            var unit = units.stream().filter(w -> type.equals(w.getType())).findFirst().orElseThrow();
+            CreateListingRequest request = new CreateListingRequest();
+            request.setTitle("Tin ở " + unit.getName()); request.setListingType("BOARDING_ROOM");
+            request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("30"));
+            request.setAddress(unit.getName() + ", TP.HCM"); request.setAreaId(unit.getId());
+            request.setLatitude(10.78); request.setLongitude(106.7);
+            request.setImageUrls(List.of("https://example.com/room.jpg"));
+            assertNotNull(listings.createListing(owner.getUserId(), request).getId());
+            var property = new com.rental.modules.property.dto.request.PropertyRequest(
+                    "Khu trọ", "", "Địa chỉ", 1L, null, unit.getId(), "BOARDING_HOUSE",
+                    BigDecimal.ZERO, BigDecimal.ZERO, List.of());
+            var result = properties.createProperty(owner.getEmail(), property);
+            assertNull(result.getDistrictId());
+            assertEquals(unit.getId(), result.getWardId());
+            property.setProvinceId(2L);
+            assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                    () -> properties.createProperty(owner.getEmail(), property));
+        }
+        entityManager.flush();
+    }
+
+    @Test void nearbySearchUsesMetersAndExcludesNonPublicListings() {
+        User owner = user("nearbyowner", Role.MEMBER);
+        defaultMembership.assignIfMissing(owner.getUserId());
+        subscriptions.findByUser(owner).orElseThrow().setRemainingStandardQuota(10);
+        User reviewer = user("nearbyadmin", Role.ADMIN);
+        java.util.ArrayList<Long> ids = new java.util.ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            CreateListingRequest request = new CreateListingRequest();
+            request.setTitle("Phòng gần " + i); request.setListingType("BOARDING_ROOM");
+            request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("25"));
+            request.setAddress("TP.HCM"); request.setAreaId(6L);
+            request.setLatitude(10.78 + i * 0.01); request.setLongitude(106.7);
+            request.setImageUrls(List.of("https://example.com/near.jpg"));
+            Long id = listings.createListing(owner.getUserId(), request).getId();
+            ids.add(id);
+            if (i != 3) admin.approveListing(id, reviewer.getUserId());
+        }
+        listings.updateRentalStatus(ids.get(4), owner.getUserId(), "HIDDEN");
+        listings.updateRentalStatus(ids.get(5), owner.getUserId(), "RENTED");
+        listings.deleteListing(ids.get(6), owner.getUserId());
+        entityManager.flush(); entityManager.clear();
+        assertEquals(List.of(ids.get(0), ids.get(1)), listings.findNearby(10.78, 106.7, 1.5)
+            .stream().map(item -> item.getId()).toList());
+        assertEquals(3, listings.findNearby(10.78, 106.7, 50).size());
+        Number meters = (Number) entityManager.createNativeQuery(
+            "SELECT ST_Distance(CAST(toa_do_vi_tri AS geography), CAST(ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) AS geography), false) FROM tin_cho_thue WHERE ma_tin_dang = :id")
+            .setParameter("id", ids.get(1)).getSingleResult();
+        assertEquals(1, listings.findNearby(10.78, 106.7, meters.doubleValue() / 1000 - 0.001).size());
+        assertEquals(2, listings.findNearby(10.78, 106.7, meters.doubleValue() / 1000 + 0.001).size());
+        assertTrue(listings.findNearby(0, 0, 50).isEmpty());
+        entityManager.createNativeQuery("UPDATE tin_cho_thue SET toa_do_vi_tri = ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) WHERE ma_tin_dang = :id")
+            .setParameter("id", ids.get(2)).executeUpdate();
+        entityManager.flush(); entityManager.clear();
+        assertEquals(2, listings.findNearby(10.78, 106.7, 0.1).size());
+        entityManager.createNativeQuery("UPDATE tin_cho_thue SET toa_do_vi_tri = NULL WHERE ma_tin_dang = :id")
+            .setParameter("id", ids.get(2)).executeUpdate();
+        entityManager.flush(); entityManager.clear();
+        assertEquals(1, listings.findNearby(10.78, 106.7, 0.1).size());
+    }
+
+    @Test void chatHistorySurvivesStoreRecreationAndIsolatesAccountsWithPagination() {
+        User first = user("chatHistoryFirst", Role.MEMBER), second = user("chatHistorySecond", Role.MEMBER);
+        var store = new com.rental.modules.chatbot.ChatHistoryStore(jdbc);
+        for (int index = 0; index < 35; index++) store.save(first.getUserId(), "{\"message\":\"hello\"}", "{}");
+        store.save(second.getUserId(), "{\"message\":\"private\"}", "{}");
+        var restored = new com.rental.modules.chatbot.ChatHistoryStore(jdbc);
+        var newest = restored.find(first.getUserId(), Long.MAX_VALUE);
+        assertEquals(31, newest.size());
+        long before = newest.get(29).id();
+        var older = restored.find(first.getUserId(), before);
+        assertEquals(5, older.size());
+        assertTrue(older.getFirst().id() < before);
+        assertEquals("{\"message\":\"hello\"}", older.getFirst().requestJson());
+        restored.clear(first.getUserId());
+        assertTrue(restored.find(first.getUserId(), Long.MAX_VALUE).isEmpty());
+        assertEquals(1, restored.find(second.getUserId(), Long.MAX_VALUE).size());
+    }
+
+    private User user(String name, Role role) {
+        User u = new User();
+        u.setFullName(name); u.setEmail(name + "@example.com"); u.setRole(role);
+        u.setStatus(UserStatus.ACTIVE); u.setIsVerified(true);
+        return users.saveAndFlush(u);
+    }
+
+    @Test void migrationsImagesModerationAndSpatialVisibilityWorkOnRealPostgis() {
+        User owner = user("owner", Role.MEMBER);
+        User reviewer = user("reviewer", Role.ADMIN);
+        CreateListingRequest request = new CreateListingRequest();
+        request.setTitle("Phòng trọ kiểm thử"); request.setListingType("BOARDING_ROOM");
+        request.setRentPrice(new BigDecimal("3000000")); request.setAreaSqm(new BigDecimal("30"));
+        request.setAddress("TP.HCM"); request.setAreaId(6L);
+        request.setLatitude(10.78); request.setLongitude(106.7);
+        request.setImageUrls(List.of("https://example.com/room.jpg"));
+        Long id = listings.createListing(owner.getUserId(), request).getId();
+        entityManager.flush(); entityManager.clear();
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> favorites.save(owner.getUserId(), id));
+        assertEquals(List.of("https://example.com/room.jpg"), listings.getMyListings(owner.getUserId()).get(0).getImageUrls());
+        assertTrue(listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).isEmpty());
+        admin.approveListing(id, reviewer.getUserId());
+        entityManager.flush(); entityManager.clear();
+        assertEquals(owner.getFullName(), listings.getPublicListing(id).getOwnerName());
+        assertEquals(request.getImageUrls(), listings.getPublicListing(id).getImageUrls());
+        favorites.save(owner.getUserId(), id);
+        favorites.save(owner.getUserId(), id);
+        assertTrue(favorites.isSaved(owner.getUserId(), id));
+        assertFalse(favorites.isSaved(reviewer.getUserId(), id));
+        assertEquals(1, favorites.getSaved(owner.getUserId()).size());
+        favorites.remove(reviewer.getUserId(), id);
+        assertTrue(favorites.isSaved(owner.getUserId(), id));
+        assertEquals(id, listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).get(0).getId());
+        assertTrue(listings.searchListingsInBoundingBox(11, 107, 12, 108).isEmpty());
+        listings.updateListing(id, owner.getUserId(), request);
+        entityManager.flush(); entityManager.clear();
+        assertTrue(listings.getApprovedListings().isEmpty());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        assertTrue(favorites.getSaved(owner.getUserId()).isEmpty());
+        assertEquals(1, listings.getMyListings(owner.getUserId()).get(0).getImageUrls().size());
+        admin.approveListing(id, reviewer.getUserId());
+        listings.updateRentalStatus(id, owner.getUserId(), "HIDDEN");
+        entityManager.flush(); entityManager.clear();
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        assertTrue(favorites.getSaved(owner.getUserId()).isEmpty());
+        assertTrue(listings.searchListingsInBoundingBox(10.7, 106.6, 10.9, 106.8).isEmpty());
+        listings.updateRentalStatus(id, owner.getUserId(), "AVAILABLE");
+        listings.deleteListing(id, owner.getUserId());
+        entityManager.flush(); entityManager.clear();
+        assertTrue(listings.getMyListings(owner.getUserId()).isEmpty());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.getPublicListing(id));
+        favorites.remove(owner.getUserId(), id);
+        assertFalse(favorites.isSaved(owner.getUserId(), id));
+        assertTrue(listings.getApprovedListings().isEmpty());
+    }
+}

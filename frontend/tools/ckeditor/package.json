@@ -1,0 +1,1 @@
+{"private":true,"scripts":{"build":"esbuild entry.js --bundle --format=esm --minify --outfile=../../web/vendor/ckeditor5/ckeditor5.js"},"dependencies":{"ckeditor5":"49.0.1"},"devDependencies":{"esbuild":"0.25.12"}}

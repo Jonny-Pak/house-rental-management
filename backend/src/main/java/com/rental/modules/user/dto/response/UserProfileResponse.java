@@ -1,0 +1,100 @@
+package com.rental.modules.user.dto.response;
+
+public class UserProfileResponse {
+    private Long listingCount;
+    private Long contractCount;
+    private Long savedListingCount;
+    public Long getListingCount() { return listingCount; }
+    public void setListingCount(Long value) { listingCount = value; }
+    public Long getContractCount() { return contractCount; }
+    public void setContractCount(Long value) { contractCount = value; }
+    public Long getSavedListingCount() { return savedListingCount; }
+    public void setSavedListingCount(Long value) { savedListingCount = value; }
+    private java.util.List<String> interests = java.util.List.of();
+    public java.util.List<String> getInterests() { return interests; }
+    public void setInterests(java.util.List<String> interests) { this.interests = interests; }
+
+    private Long id;
+    private String fullName;
+    private String email;
+    private String phoneNumber;
+    private String avatarUrl;
+    private String role;
+    private String status;
+    private String membershipPackageName;
+    private String subscriptionStatus;
+    private Integer remainingStandardQuota;
+    private Integer remainingVipQuota;
+    private Integer remainingRefreshQuota;
+
+    public UserProfileResponse() {}
+    public UserProfileResponse(Long id, String fullName, String email, String phoneNumber, String avatarUrl, String role, String status) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.avatarUrl = avatarUrl;
+        this.role = role;
+        this.status = status;
+    }
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getMembershipPackageName() { return membershipPackageName; }
+    public void setMembershipPackageName(String membershipPackageName) { this.membershipPackageName = membershipPackageName; }
+    public String getSubscriptionStatus() { return subscriptionStatus; }
+    public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+    public Integer getRemainingStandardQuota() { return remainingStandardQuota; }
+    public void setRemainingStandardQuota(Integer remainingStandardQuota) { this.remainingStandardQuota = remainingStandardQuota; }
+    public Integer getRemainingVipQuota() { return remainingVipQuota; }
+    public void setRemainingVipQuota(Integer remainingVipQuota) { this.remainingVipQuota = remainingVipQuota; }
+    public Integer getRemainingRefreshQuota() { return remainingRefreshQuota; }
+    public void setRemainingRefreshQuota(Integer remainingRefreshQuota) { this.remainingRefreshQuota = remainingRefreshQuota; }
+}

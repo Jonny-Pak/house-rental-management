@@ -1,0 +1,39 @@
+import '../datasources/auth_remote_data_source.dart';
+import '../models/auth_models.dart';
+
+abstract class AuthRepository {
+  Future<AuthResponse> login(LoginRequest request);
+  Future<AuthResponse> googleLogin(String idToken);
+  Future<void> register(RegisterRequest request);
+  Future<void> verifyOtp(VerifyOtpRequest request);
+  Future<void> resendOtp(String email);
+}
+
+class AuthRepositoryImpl implements AuthRepository {
+  final AuthRemoteDataSource _remoteDataSource;
+
+  AuthRepositoryImpl(this._remoteDataSource);
+
+  @override
+  Future<AuthResponse> googleLogin(String idToken) async {
+    return _remoteDataSource.googleLogin(idToken);
+  }
+
+  @override
+  Future<AuthResponse> login(LoginRequest request) async {
+    return _remoteDataSource.login(request);
+  }
+
+  @override
+  Future<void> register(RegisterRequest request) async {
+    return _remoteDataSource.register(request);
+  }
+
+  @override
+  Future<void> verifyOtp(VerifyOtpRequest request) async {
+    return _remoteDataSource.verifyOtp(request);
+  }
+
+  @override
+  Future<void> resendOtp(String email) => _remoteDataSource.resendOtp(email);
+}
