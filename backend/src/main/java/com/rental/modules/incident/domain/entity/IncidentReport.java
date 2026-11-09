@@ -5,27 +5,29 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "incident_reports")
+@Table(name = "bao_cao_su_co")
 public class IncidentReport {
+    @Column(name = "ma_ban_ghi")
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reporter_id", nullable = false)
+    @JoinColumn(name = "ma_nguoi_bao_su_co", nullable = false)
     private User reporter;
-    @Column(name = "request_key", nullable = false, length = 80)
+    @Column(name = "khoa_doi_chieu_yeu_cau", nullable = false, length = 80)
     private String requestKey;
-    @Column(nullable = false, length = 150)
+    @Column(name = "tieu_de", nullable = false, length = 150)
     private String title;
-    @Column(nullable = false, length = 20)
+    @Column(name = "nhom_phan_loai", nullable = false, length = 20)
     private String category;
-    @Column(nullable = false, length = 5000)
+    @Column(name = "mo_ta", nullable = false, length = 5000)
     private String description;
-    @Column(nullable = false, length = 20)
+    @Column(name = "trang_thai", nullable = false, length = 20)
     private String status = "OPEN";
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "thoi_diem_tao", nullable = false)
     private LocalDateTime createdAt;
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "thoi_diem_cap_nhat", nullable = false)
     private LocalDateTime updatedAt;
+    @Column(name = "phien_ban_du_lieu")
     @Version private Long version;
 
     public Long getId() { return id; }

@@ -1,3 +1,4 @@
+import '../../../chatbot/presentation/chatbot_page.dart';
 import '../../../auth/presentation/pages/qr_login_scanner_page.dart';
 import '../../../listing/data/repositories/listing_repository.dart';
 import '../../../listing/presentation/pages/create_listing_page.dart';
@@ -337,6 +338,9 @@ class _MainPageState extends State<MainPage> {
         break;
       case 'map':
         _openDrawerPage(const ListingMapPage());
+        break;
+      case 'chatbot':
+        _openDrawerPage(const ChatbotPage());
         break;
       case 'help':
         _openDrawerPage(const SystemContentPage(slug: 'guide'));

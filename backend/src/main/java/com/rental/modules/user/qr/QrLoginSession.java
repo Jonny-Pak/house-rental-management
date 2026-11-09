@@ -5,20 +5,21 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "admin_qr_logins")
+@Table(name = "phien_dang_nhap_qr_quan_tri")
 public class QrLoginSession {
+    @Column(name = "ma_ban_ghi")
     @Id private String id;
-    @Column(name = "browser_secret_hash", nullable = false) private String browserSecretHash;
-    @Column(name = "scan_secret_hash", nullable = false) private String scanSecretHash;
-    @Column(name = "verification_code", nullable = false) private String verificationCode;
-    @Column(name = "browser_name", nullable = false) private String browserName;
-    @Column(nullable = false) private String website;
-    @Column(name = "requester_hash", nullable = false) private String requesterHash;
-    @Column(nullable = false) private String status = "PENDING";
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "admin_id") private User admin;
-    @Column(name = "password_version") private Integer passwordVersion;
-    @Column(name = "created_at", nullable = false) private Instant createdAt;
-    @Column(name = "expires_at", nullable = false) private Instant expiresAt;
+    @Column(name = "bam_bi_mat_trinh_duyet", nullable = false) private String browserSecretHash;
+    @Column(name = "bam_bi_mat_quet_qr", nullable = false) private String scanSecretHash;
+    @Column(name = "ma_xac_thuc", nullable = false) private String verificationCode;
+    @Column(name = "ten_trinh_duyet", nullable = false) private String browserName;
+    @Column(name = "dia_chi_trang_web", nullable = false) private String website;
+    @Column(name = "bam_bang_chung_ben_yeu_cau", nullable = false) private String requesterHash;
+    @Column(name = "trang_thai", nullable = false) private String status = "PENDING";
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ma_quan_tri_vien") private User admin;
+    @Column(name = "phien_ban_mat_khau") private Integer passwordVersion;
+    @Column(name = "thoi_diem_tao", nullable = false) private Instant createdAt;
+    @Column(name = "thoi_diem_het_han", nullable = false) private Instant expiresAt;
 
     public String getId() { return id; }
     public void setId(String value) { id = value; }

@@ -239,6 +239,7 @@ class UserNavigationDrawer extends StatelessWidget {
                     'Quét QR đăng nhập Admin',
                     Symbols.qr_code_scanner,
                   ),
+                _item('chatbot', 'Trợ lý AI tìm nhà', Symbols.smart_toy),
                 _item('help', 'Trợ giúp', Symbols.help),
               ],
             ),

@@ -40,8 +40,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('drawer-assistant')), findsNothing);
-      expect(find.text('Trợ lý AI'), findsNothing);
       expect(find.text('Ngọc Thuận'), findsOneWidget);
       expect(find.text('0901234567'), findsOneWidget);
       expect(find.text('thuan@example.com'), findsOneWidget);
@@ -71,6 +69,7 @@ void main() {
         'favorites',
         'notifications',
         'profile',
+        'chatbot',
         'help',
       ]) {
         final target = find.byKey(ValueKey('drawer-$item'));

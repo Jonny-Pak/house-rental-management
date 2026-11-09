@@ -27,14 +27,14 @@ public class ReportService {
         }
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.plusDays(1).atStartOfDay();
-        Map<LocalDate, Long> members = counts("users", "created_at", "AND role = 'MEMBER'", start, end);
-        Map<LocalDate, Long> listings = counts("listings", "created_at", "", start, end);
-        Map<LocalDate, Long> contracts = counts("contracts", "created_at", "", start, end);
+        Map<LocalDate, Long> members = counts("nguoi_dung", "thoi_diem_tao", "AND vai_tro = 'MEMBER'", start, end);
+        Map<LocalDate, Long> listings = counts("tin_cho_thue", "thoi_diem_tao", "", start, end);
+        Map<LocalDate, Long> contracts = counts("hop_dong_thue", "thoi_diem_tao", "", start, end);
         Map<LocalDate, BigDecimal> revenue = new HashMap<>();
         List<Map<String, Object>> payments = jdbc.queryForList("""
-            SELECT CAST(transaction_date AS date) AS day, SUM(amount) AS revenue
-            FROM payment_transactions WHERE transaction_date >= ? AND transaction_date < ?
-            AND status = 'SUCCESS' GROUP BY CAST(transaction_date AS date)
+            SELECT CAST(thoi_diem_giao_dich AS date) AS day, SUM(so_tien) AS revenue
+            FROM giao_dich_thanh_toan WHERE thoi_diem_giao_dich >= ? AND thoi_diem_giao_dich < ?
+            AND trang_thai = 'SUCCESS' GROUP BY CAST(thoi_diem_giao_dich AS date)
             """, start, end);
         for (Map<String, Object> row : payments) {
             LocalDate day = ((java.sql.Date) row.get("day")).toLocalDate();
@@ -51,9 +51,9 @@ public class ReportService {
             memberTotal += m; listingTotal += l; contractTotal += c; revenueTotal = revenueTotal.add(r);
             daily.add(new ReportResponse.Daily(day, m, l, c, r));
         }
-        Long successful = jdbc.queryForObject("SELECT COUNT(*) FROM payment_transactions WHERE transaction_date >= ? AND transaction_date < ? AND status = 'SUCCESS'", Long.class, start, end);
+        Long successful = jdbc.queryForObject("SELECT COUNT(*) FROM giao_dich_thanh_toan WHERE thoi_diem_giao_dich >= ? AND thoi_diem_giao_dich < ? AND trang_thai = 'SUCCESS'", Long.class, start, end);
         return new ReportResponse(from, to, LocalDateTime.now(), memberTotal, listingTotal, contractTotal,
-            revenueTotal, successful, daily, statuses("listings", "approval_status", start, end), statuses("contracts", "status", start, end));
+            revenueTotal, successful, daily, statuses("tin_cho_thue", "trang_thai_kiem_duyet", start, end), statuses("hop_dong_thue", "trang_thai", start, end));
     }
 
     private Map<LocalDate, Long> counts(String table, String column, String filter, LocalDateTime start, LocalDateTime end) {
@@ -68,10 +68,10 @@ public class ReportService {
 
     private List<ReportResponse.Breakdown> statuses(String table, String column, LocalDateTime start, LocalDateTime end) {
         List<ReportResponse.Breakdown> result = new ArrayList<>();
-        String sql = "SELECT " + column + " AS status, COUNT(*) AS total FROM " + table
-            + " WHERE created_at >= ? AND created_at < ? GROUP BY " + column + " ORDER BY " + column;
+        String sql = "SELECT " + column + " AS trang_thai, COUNT(*) AS total FROM " + table
+            + " WHERE thoi_diem_tao >= ? AND thoi_diem_tao < ? GROUP BY " + column + " ORDER BY " + column;
         for (Map<String, Object> row : jdbc.queryForList(sql, start, end)) {
-            result.add(new ReportResponse.Breakdown((String) row.get("status"), ((Number) row.get("total")).longValue()));
+            result.add(new ReportResponse.Breakdown((String) row.get("trang_thai"), ((Number) row.get("total")).longValue()));
         }
         return result;
     }

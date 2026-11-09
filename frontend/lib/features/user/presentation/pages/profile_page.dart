@@ -1,3 +1,4 @@
+import '../../../chatbot/presentation/chatbot_page.dart';
 import '../../../auth/presentation/pages/qr_login_scanner_page.dart';
 import '../../../membership/presentation/widgets/membership_rank_tag.dart';
 
@@ -250,6 +251,11 @@ class ProfileView extends StatelessWidget {
                       Symbols.interests,
                       'Sở thích của tôi',
                       () => _editInterests(context),
+                    ),
+                    _menu(
+                      Symbols.smart_toy,
+                      'Trợ lý AI tìm nhà',
+                      () => _openPage(context, const ChatbotPage()),
                     ),
                     _menu(
                       Symbols.settings,

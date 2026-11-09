@@ -6,32 +6,32 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "administrative_areas")
+@Table(name = "khu_vuc_hanh_chinh")
 public class AdministrativeArea {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "area_id")
+    @Column(name = "ma_khu_vuc")
     private Long areaId;
 
-    @Column(name = "area_name", length = 150, nullable = false)
+    @Column(name = "ten_khu_vuc", length = 150, nullable = false)
     private String areaName;
 
-    @Column(name = "area_type", length = 10)
+    @Column(name = "cap_hanh_chinh", length = 10)
     private String areaType;
 
-    @Column(name = "code", length = 20)
+    @Column(name = "ma_quan_ly", length = 20)
     private String code;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
+    @JoinColumn(name = "ma_khu_vuc_cap_tren")
     private AdministrativeArea parent;
 
-    @Column(name = "is_active", nullable = false)
+    @Column(name = "dang_su_dung", nullable = false)
     private boolean active = true;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt;
 
     public boolean isActive() { return active; }

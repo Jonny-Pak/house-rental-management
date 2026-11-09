@@ -5,26 +5,27 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "system_contents")
+@Table(name = "noi_dung_he_thong")
 public class SystemContent {
     @Id
-    @Column(length = 20)
+    @Column(name = "ma_duong_dan_trang", length = 20)
     private String slug;
-    @Column(nullable = false, length = 150)
+    @Column(name = "tieu_de", nullable = false, length = 150)
     private String title;
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "noi_dung_ban_nhap", nullable = false, columnDefinition = "TEXT")
     private String body;
-    @Column(name = "published_title", length = 150)
+    @Column(name = "tieu_de_cong_khai", length = 150)
     private String publishedTitle;
-    @Column(name = "published_body", columnDefinition = "TEXT")
+    @Column(name = "noi_dung_cong_khai", columnDefinition = "TEXT")
     private String publishedBody;
-    @Column(nullable = false)
+    @Column(name = "da_xuat_ban", nullable = false)
     private boolean published;
-    @Column(name = "published_at")
+    @Column(name = "thoi_diem_xuat_ban")
     private LocalDateTime publishedAt;
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "thoi_diem_cap_nhat", nullable = false)
     private LocalDateTime updatedAt;
+    @Column(name = "phien_ban_du_lieu")
     @Version
     private Long version;
 

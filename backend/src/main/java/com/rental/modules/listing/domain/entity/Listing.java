@@ -11,25 +11,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "listings")
+@Table(name = "tin_cho_thue")
 public class Listing {
     @ManyToMany
-    @JoinTable(name = "listing_amenities", joinColumns = @JoinColumn(name = "listing_id"), inverseJoinColumns = @JoinColumn(name = "amenity_id"))
+    @JoinTable(name = "tien_ich_cua_tin_dang", joinColumns = @JoinColumn(name = "ma_tin_dang"), inverseJoinColumns = @JoinColumn(name = "ma_tien_ich"))
     @OrderBy("category ASC, name ASC")
     private List<com.rental.modules.amenity.domain.entity.Amenity> amenities = new ArrayList<>();
     public List<com.rental.modules.amenity.domain.entity.Amenity> getAmenities() { return amenities; }
 
-    @Column(name = "current_occupants")
+    @Column(name = "so_nguoi_dang_o")
     private Integer currentOccupants;
-    @Column(name = "max_occupants")
+    @Column(name = "so_nguoi_o_toi_da")
     private Integer maxOccupants;
-    @Column(name = "gender_preference")
+    @Column(name = "yeu_cau_gioi_tinh_nguoi_o")
     private String genderPreference;
-    @Column(name = "allow_pets")
+    @Column(name = "cho_phep_nuoi_thu_cung")
     private Boolean allowPets;
-    @Column(name = "allow_smoking")
+    @Column(name = "cho_phep_hut_thuoc")
     private Boolean allowSmoking;
-    @Column(name = "roommate_requirements", length = 500)
+    @Column(name = "yeu_cau_nguoi_o_ghep", length = 500)
     private String roommateRequirements;
 
     @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -46,94 +46,94 @@ public class Listing {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "listing_id")
+    @Column(name = "ma_tin_dang")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "ma_chu_tin", nullable = false)
     private User owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "area_id", nullable = false)
+    @JoinColumn(name = "ma_khu_vuc", nullable = false)
     private AdministrativeArea area;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approved_by")
+    @JoinColumn(name = "ma_nguoi_duyet")
     private User approvedBy;
 
-    @Column(nullable = false, length = 200)
+    @Column(name = "tieu_de", nullable = false, length = 200)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "mo_ta", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "listing_type", nullable = false, length = 15)
+    @Column(name = "loai_tin_dang", nullable = false, length = 15)
     private String listingType;
 
-    @Column(name = "rent_price", nullable = false, precision = 12, scale = 2)
+    @Column(name = "gia_cho_thue", nullable = false, precision = 12, scale = 2)
     private BigDecimal rentPrice;
 
-    @Column(name = "area_sqm", precision = 6, scale = 2)
+    @Column(name = "dien_tich_met_vuong", precision = 6, scale = 2)
     private BigDecimal areaSqm;
 
-    @Column(length = 255)
+    @Column(name = "dia_chi", length = 255)
     private String address;
 
-    @Column(columnDefinition = "geometry(Point,4326)")
+    @Column(name = "toa_do_vi_tri", columnDefinition = "geometry(Point,4326)")
     private Point location;
 
-    @Column(name = "house_type", length = 50)
+    @Column(name = "loai_hinh_nha", length = 50)
     private String houseType;
 
-    @Column(name = "bedrooms")
+    @Column(name = "so_phong_ngu")
     private Integer bedrooms;
 
-    @Column(name = "bathrooms")
+    @Column(name = "so_phong_tam")
     private Integer bathrooms;
 
-    @Column(name = "total_floors")
+    @Column(name = "tong_so_tang")
     private Integer totalFloors;
 
-    @Column(name = "door_direction", length = 50)
+    @Column(name = "huong_cua", length = 50)
     private String doorDirection;
 
-    @Column(name = "legal_documents", length = 100)
+    @Column(name = "giay_to_phap_ly", length = 100)
     private String legalDocuments;
 
-    @Column(name = "furniture_status", length = 50)
+    @Column(name = "tinh_trang_noi_that", length = 50)
     private String furnitureStatus;
 
-    @Column(name = "deposit_amount", precision = 12, scale = 2)
+    @Column(name = "tien_dat_coc", precision = 12, scale = 2)
     private BigDecimal depositAmount;
 
-    @Column(name = "poster_type", length = 20)
+    @Column(name = "loai_nguoi_dang", length = 20)
     private String posterType;
 
-    @Column(name = "approval_status", nullable = false, length = 15)
+    @Column(name = "trang_thai_kiem_duyet", nullable = false, length = 15)
     private String approvalStatus = "PENDING";
 
-    @Column(name = "rental_status", nullable = false, length = 15)
+    @Column(name = "trang_thai_cho_thue", nullable = false, length = 15)
     private String rentalStatus = "AVAILABLE";
 
-    @Column(name = "rejection_reason", length = 255)
+    @Column(name = "ly_do_tu_choi", length = 255)
     private String rejectionReason;
 
-    @Column(name = "is_vip")
+    @Column(name = "la_tin_uu_tien")
     private Boolean isVip = false;
 
-    @Column(name = "vip_expires_at")
+    @Column(name = "han_tin_uu_tien")
     private LocalDateTime vipExpiresAt;
 
-    @Column(name = "refreshed_at")
+    @Column(name = "thoi_diem_lam_moi_tin")
     private LocalDateTime refreshedAt;
 
-    @Column(name = "view_count")
+    @Column(name = "so_luot_xem")
     private Integer viewCount = 0;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "updated_at")
+    @Column(name = "thoi_diem_cap_nhat")
     private LocalDateTime updatedAt;
 
     public Long getId() {

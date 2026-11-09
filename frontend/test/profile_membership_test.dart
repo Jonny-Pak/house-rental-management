@@ -130,7 +130,7 @@ void main() {
           .data,
       '12',
     );
-    expect(find.text('Trợ lý AI'), findsNothing);
+    expect(find.text('Trợ lý AI tìm nhà'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

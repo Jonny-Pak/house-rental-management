@@ -7,23 +7,24 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "favorite_properties",
+@Table(name = "tai_san_yeu_thich",
         uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "property_id"}))
 public class FavoriteProperty {
 
+    @Column(name = "ma_ban_ghi")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "ma_nguoi_dung", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "property_id", nullable = false)
+    @JoinColumn(name = "ma_tai_san", nullable = false)
     private Property property;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt;
 
     public FavoriteProperty() {}

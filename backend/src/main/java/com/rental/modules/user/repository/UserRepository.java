@@ -8,13 +8,13 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM listings WHERE owner_id=:userId AND rental_status <> 'DELETED'", nativeQuery = true)
+    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=:userId AND trang_thai_cho_thue <> 'DELETED'", nativeQuery = true)
     long countListingsForUser(@org.springframework.data.repository.query.Param("userId") Long userId);
 
-    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM contracts WHERE landlord_id=:userId OR tenant_id=:userId", nativeQuery = true)
+    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM hop_dong_thue WHERE ma_ben_cho_thue=:userId OR ma_ben_thue=:userId", nativeQuery = true)
     long countContractsForUser(@org.springframework.data.repository.query.Param("userId") Long userId);
 
-    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM user_favorites f JOIN listings l ON l.listing_id=f.listing_id WHERE f.user_id=:userId AND l.approval_status='APPROVED' AND l.rental_status='AVAILABLE'", nativeQuery = true)
+    @org.springframework.data.jpa.repository.Query(value = "SELECT count(*) FROM tin_yeu_thich f JOIN tin_cho_thue l ON l.ma_tin_dang=f.ma_tin_dang WHERE f.ma_nguoi_dung=:userId AND l.trang_thai_kiem_duyet='APPROVED' AND l.trang_thai_cho_thue='AVAILABLE'", nativeQuery = true)
     long countSavedListingsForUser(@org.springframework.data.repository.query.Param("userId") Long userId);
 
     @org.springframework.data.jpa.repository.Query("""

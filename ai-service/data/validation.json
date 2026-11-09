@@ -1,0 +1,8 @@
+{
+  "search": ["Kiếm phòng cho thuê giá thấp hơn 3 triệu", "Nhà nguyên căn 3 phòng ngủ ở Thủ Đức", "Cần phòng ở ghép có wifi", "Tôi tìm nơi ở quanh điểm này 5 km", "Có phòng 30 m2 cho nuôi chó không", "Cho xem nhà cho thuê tại Tân Bình"],
+  "refine": ["Thêm máy lạnh nhé", "Đổi mức giá tối đa 4 triệu", "Bỏ điều kiện ban công", "Cho giá rẻ nhất lên đầu", "Vừa xác nhận vị trí trên bản đồ", "Chuyển địa chỉ sang Linh Trung"],
+  "help": ["Chào bot tìm nhà", "Tôi cần hướng dẫn cách hỏi", "Bạn hỗ trợ được gì cho tôi", "Chỉ tôi cách chọn vị trí", "Cho ví dụ về tìm phòng", "Giới thiệu bạn đi"],
+  "reset": ["Xóa toàn bộ yêu cầu trước", "Mình tìm lại từ đầu nhé", "Khởi động lại bộ lọc tìm nhà", "Bỏ hết các điều kiện cũ đi", "Reset bộ lọc", "Quên ngữ cảnh tìm kiếm"],
+  "unsupported": ["Giúp tôi đổi ảnh hồ sơ", "Xuất file hợp đồng thuê phòng", "Mua gói PLUS cho tôi", "Viết nội dung quảng cáo nhà", "Gọi cho người cho thuê", "Chỉnh sửa tài khoản"],
+  "unknown": ["Thời tiết hôm nay có mưa không", "Làm món bánh pizza", "Bóng đá hôm qua ai thắng", "abcdefgh 123456", "Chứng minh định lý toán học", "Mua cổ phiếu nào"]
+}

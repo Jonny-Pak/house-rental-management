@@ -1,0 +1,182 @@
+{
+  "method": "Character TF-IDF (2-5) + Logistic Regression",
+  "data_source": "Manually authored synthetic Vietnamese seed sentences; not real user evaluation",
+  "split_sizes": {
+    "train": 105,
+    "validation": 36,
+    "test": 42
+  },
+  "threshold": 0.4,
+  "validation_macro_f1": 0.8645687645687645,
+  "test": {
+    "search": {
+      "precision": 1.0,
+      "recall": 0.875,
+      "f1-score": 0.9333333333333333,
+      "support": 8.0
+    },
+    "refine": {
+      "precision": 0.7777777777777778,
+      "recall": 0.875,
+      "f1-score": 0.8235294117647058,
+      "support": 8.0
+    },
+    "help": {
+      "precision": 0.8,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.7272727272727273,
+      "support": 6.0
+    },
+    "reset": {
+      "precision": 1.0,
+      "recall": 0.8333333333333334,
+      "f1-score": 0.9090909090909091,
+      "support": 6.0
+    },
+    "unsupported": {
+      "precision": 0.6666666666666666,
+      "recall": 0.3333333333333333,
+      "f1-score": 0.4444444444444444,
+      "support": 6.0
+    },
+    "unknown": {
+      "precision": 0.38461538461538464,
+      "recall": 0.625,
+      "f1-score": 0.47619047619047616,
+      "support": 8.0
+    },
+    "accuracy": 0.7142857142857143,
+    "macro avg": {
+      "precision": 0.7715099715099716,
+      "recall": 0.701388888888889,
+      "f1-score": 0.7189768836827661,
+      "support": 42.0
+    },
+    "weighted avg": {
+      "precision": 0.7642653642653643,
+      "recall": 0.7142857142857143,
+      "f1-score": 0.7226017679799193,
+      "support": 42.0
+    }
+  },
+  "labels": [
+    "search",
+    "refine",
+    "help",
+    "reset",
+    "unsupported",
+    "unknown"
+  ],
+  "confusion_matrix": [
+    [
+      7,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      7,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      4,
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      0,
+      0,
+      5,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      2,
+      4
+    ],
+    [
+      0,
+      1,
+      1,
+      0,
+      1,
+      5
+    ]
+  ],
+  "errors": [
+    {
+      "text": "thue nha dien tich it nhat 60m2 o binh tan",
+      "expected": "search",
+      "actual": "refine"
+    },
+    {
+      "text": "tim tiep o thu duc thay vi cho cu",
+      "expected": "refine",
+      "actual": "unknown"
+    },
+    {
+      "text": "chi cach su dung cho nguoi moi",
+      "expected": "help",
+      "actual": "unknown"
+    },
+    {
+      "text": "chi minh cach nhap muc tien",
+      "expected": "help",
+      "actual": "unknown"
+    },
+    {
+      "text": "quen het nhung gi da loc",
+      "expected": "reset",
+      "actual": "unknown"
+    },
+    {
+      "text": "toi can doi lai mat khau",
+      "expected": "unsupported",
+      "actual": "unknown"
+    },
+    {
+      "text": "gui thong bao den chu nha ho toi",
+      "expected": "unsupported",
+      "actual": "unknown"
+    },
+    {
+      "text": "sua noi dung bai cho thue giup minh",
+      "expected": "unsupported",
+      "actual": "unknown"
+    },
+    {
+      "text": "xuat tien thue sang excel",
+      "expected": "unsupported",
+      "actual": "unknown"
+    },
+    {
+      "text": "cach nau bun bo",
+      "expected": "unknown",
+      "actual": "help"
+    },
+    {
+      "text": "hoc tieng anh giao tiep",
+      "expected": "unknown",
+      "actual": "refine"
+    },
+    {
+      "text": "goi y dien thoai chup anh",
+      "expected": "unknown",
+      "actual": "unsupported"
+    }
+  ]
+}

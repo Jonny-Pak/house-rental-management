@@ -4,7 +4,7 @@
 
 ## Cấu trúc
 
-- `backend/`: ứng dụng Java 21, cấu hình Maven và migration Flyway.
+- `backend/`: ứng dụng Java 21, cấu hình Maven và file khởi tạo `database.sql`.
 - `frontend/`: ứng dụng Flutter và thư viện giao diện cục bộ `packages/kite_ui`.
 - `docs/architecture.md`: quy ước tổ chức mã nguồn và ranh giới module.
 - `docs/nearby-search-workflow.md`: tìm nhà quanh vị trí theo bán kính và khoảng cách.
@@ -22,6 +22,8 @@
 ## Chạy cục bộ
 
 Từ thư mục gốc, chạy `docker compose up -d` để khởi tạo cơ sở dữ liệu. Kiểm tra cấu hình backend trong `backend/src/main/resources/application.yml` và `application.properties` trước khi chạy.
+
+Với database mới, import `backend/database.sql` một lần trước khi chạy backend. Phiên bản này dùng 23 bảng tiếng Việt không dấu. Database hiện có cần sao lưu rồi chạy script đổi tên (nếu còn tên tiếng Anh) và script rút gọn theo [backend/README.md](backend/README.md); không import lại file khởi tạo lên dữ liệu hiện có.
 
 Backend:
 
@@ -59,3 +61,5 @@ flutter test
 Các chức năng chưa hoàn thành được đánh giá riêng với cấu trúc mã nguồn; xem tài liệu kiến trúc để biết các giới hạn còn lại.
 
 - [Đăng nhập / đăng ký Google và cấu hình OAuth](docs/google-login-workflow.md)
+
+- [Chatbot tìm nhà chạy nội bộ và hướng dẫn huấn luyện](docs/chatbot-workflow.md)

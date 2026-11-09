@@ -5,38 +5,39 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "membership_packages")
+@Table(name = "goi_dich_vu")
 public class MembershipPackage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "package_id")
+    @Column(name = "ma_goi_dich_vu")
     private Short id;
 
-    @Column(name = "package_name", nullable = false, length = 20)
+    @Column(name = "ten_goi_dich_vu", nullable = false, length = 20)
     private String packageName;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(name = "gia", nullable = false, precision = 10, scale = 2)
     private BigDecimal price = BigDecimal.ZERO;
 
-    @Column(name = "standard_post_quota", nullable = false)
+    @Column(name = "han_muc_tin_thuong", nullable = false)
     private Short standardPostQuota;
 
-    @Column(name = "vip_post_quota", nullable = false)
+    @Column(name = "han_muc_tin_uu_tien", nullable = false)
     private Short vipPostQuota = 0;
 
-    @Column(name = "refresh_quota", nullable = false)
+    @Column(name = "han_muc_lam_moi", nullable = false)
     private Short refreshQuota = 0;
 
-    @Column(length = 255)
+    @Column(name = "mo_ta", length = 255)
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "dang_su_dung", nullable = false)
     private boolean active = true;
-    @Column(name = "is_default", nullable = false)
+    @Column(name = "la_goi_mac_dinh", nullable = false)
     private boolean defaultPackage;
     public boolean isDefaultPackage() { return defaultPackage; }
     public void setDefaultPackage(boolean value) { defaultPackage = value; }
+    @Column(name = "phien_ban_du_lieu")
     @Version private Long version;
     public boolean isActive() { return active; }
     public void setActive(boolean value) { active = value; }

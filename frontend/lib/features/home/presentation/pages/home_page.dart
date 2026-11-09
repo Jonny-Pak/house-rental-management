@@ -1,3 +1,6 @@
+import '../../../chatbot/presentation/chatbot_page.dart';
+import '../../../chatbot/data/chat_repository.dart';
+
 import 'dart:async';
 
 import '../widgets/home_recent_listings.dart';
@@ -40,9 +43,11 @@ class HomePage extends StatelessWidget {
     this.incidentRepository,
     this.userName,
     this.listingRepository,
+    this.chatRepository,
   });
   final String? userName;
   final ListingRepository? listingRepository;
+  final ChatRepository? chatRepository;
   final SystemContentRepository? contentRepository;
   final IncidentRepository? incidentRepository;
   final VoidCallback? onMenu;
@@ -113,6 +118,11 @@ class HomePage extends StatelessWidget {
   ];
 
   List<_Action> _secondary(BuildContext context) => [
+    _Action(
+      'Trợ Lý AI',
+      Symbols.smart_toy,
+      () => _open(context, ChatbotPage(repository: chatRepository)),
+    ),
     _Action(
       'Giới Thiệu',
       Symbols.menu_book,

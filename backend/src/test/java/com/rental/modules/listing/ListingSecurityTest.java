@@ -21,13 +21,38 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({com.rental.modules.user.controller.GoogleAuthController.class,com.rental.modules.user.qr.QrLoginController.class,com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
+@WebMvcTest({com.rental.modules.chatbot.ChatbotController.class,com.rental.modules.user.controller.GoogleAuthController.class,com.rental.modules.user.qr.QrLoginController.class,com.rental.modules.subscription.controller.SubscriptionBenefitController.class,com.rental.modules.amenity.controller.AdminAmenityController.class, com.rental.modules.amenity.controller.AmenityController.class, com.rental.modules.contract.controller.AdminContractController.class, com.rental.modules.subscription.controller.AdminPackageController.class, com.rental.modules.payment.controller.PaymentController.class, com.rental.modules.incident.controller.IncidentController.class, com.rental.modules.incident.controller.AdminIncidentController.class, com.rental.modules.user.controller.PasswordController.class, com.rental.modules.report.ReportController.class, com.rental.modules.content.controller.AdminContentController.class, com.rental.modules.content.controller.ContentController.class, com.rental.modules.admin.controller.AdminAreaController.class, com.rental.modules.admin.controller.AdminUserController.class, com.rental.modules.notification.controller.NotificationController.class, ListingController.class, AdminListingController.class,
         com.rental.modules.listing.controller.ListingExcelController.class,
         com.rental.modules.contract.controller.ContractExcelController.class,
         com.rental.modules.favorite.controller.ListingFavoriteController.class,
         com.rental.modules.contract.controller.ContractController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class ListingSecurityTest {
+    @MockBean com.rental.modules.chatbot.ChatHistoryService chatbot;
+    @Test void chatbotRequiresAuthenticationUsesCurrentUserAndValidatesMessages() throws Exception {
+        String body = "{\"message\":\"Tìm phòng trọ\"}";
+        mvc.perform(post("/api/v1/chatbot/messages").contentType("application/json").content(body)).andExpect(status().isForbidden());
+        when(chatbot.send(eq(1L),any())).thenReturn(new com.rental.modules.chatbot.ChatReply("Chào bạn",com.rental.modules.chatbot.ChatFilters.empty(),java.util.List.of(),java.util.List.of(),0,false));
+        mvc.perform(post("/api/v1/chatbot/messages").header("Authorization","Bearer owner").contentType("application/json").content(body))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.message").value("Chào bạn"));
+        verify(chatbot).send(eq(1L),any());
+        for(String invalid : java.util.List.of("{\"message\":\" \"}","{\"message\":\"Tìm\",\"context\":{\"maxPrice\":-1}}","{\"message\":\"Tìm\",\"latitude\":91}")) {
+            mvc.perform(post("/api/v1/chatbot/messages").header("Authorization","Bearer owner").contentType("application/json").content(invalid)).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test void chatbotHistoryRequiresAuthenticationAndAlwaysUsesCurrentAccount() throws Exception {
+        mvc.perform(get("/api/v1/chatbot/history")).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/chatbot/history")).andExpect(status().isForbidden());
+        when(chatbot.history(1L, 12L)).thenReturn(new com.rental.modules.chatbot.ChatHistoryService.Page(java.util.List.of(), false));
+        mvc.perform(get("/api/v1/chatbot/history?beforeId=12&userId=999").header("Authorization", "Bearer owner"))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        verify(chatbot).history(1L, 12L);
+        mvc.perform(delete("/api/v1/chatbot/history?userId=999").header("Authorization", "Bearer owner"))
+            .andExpect(status().isNoContent()).andExpect(header().string("Cache-Control", "no-store"));
+        verify(chatbot).clear(1L);
+    }
+
     @MockBean com.rental.modules.user.service.GoogleAuthService googleAuth;
     @Test void googleLoginIsPublicValidatesInputAndDoesNotCacheTokens() throws Exception {
         when(googleAuth.login("google-id-token")).thenReturn(new com.rental.modules.user.dto.response.AuthResponse("access", "refresh", 1L, "MEMBER"));

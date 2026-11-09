@@ -3,14 +3,15 @@ package com.rental.modules.amenity.domain.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "amenities")
+@Table(name = "danh_muc_tien_ich")
 public class Amenity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "amenity_id") private Long id;
-    @Column(nullable = false, length = 100) private String name;
-    @Column(nullable = false, length = 20) private String category;
-    @Column(nullable = false, length = 255) private String description = "";
-    @Column(nullable = false) private boolean active = true;
+    @Column(name = "ma_tien_ich") private Long id;
+    @Column(name = "ten_hien_thi", nullable = false, length = 100) private String name;
+    @Column(name = "nhom_phan_loai", nullable = false, length = 20) private String category;
+    @Column(name = "mo_ta", nullable = false, length = 255) private String description = "";
+    @Column(name = "dang_su_dung", nullable = false) private boolean active = true;
+    @Column(name = "phien_ban_du_lieu")
     @Version private Long version;
 
     public Long getId() { return id; }

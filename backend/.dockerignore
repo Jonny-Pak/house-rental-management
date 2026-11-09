@@ -1,0 +1,7 @@
+target/
+local-backups/
+config/local-secrets.properties
+*.sql
+README.md
+.git
+.gitignore

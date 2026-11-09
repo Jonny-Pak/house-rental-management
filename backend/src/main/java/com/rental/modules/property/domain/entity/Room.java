@@ -6,36 +6,37 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "rooms")
+@Table(name = "phong_cho_thue")
 public class Room {
 
+    @Column(name = "ma_ban_ghi")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "property_id", nullable = false)
+    @JoinColumn(name = "ma_tai_san", nullable = false)
     private Property property;
 
-    @Column(nullable = false)
+    @Column(name = "ten_hien_thi", nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "dien_tich", nullable = false)
     private Double area;
 
-    @Column(nullable = false)
+    @Column(name = "gia", nullable = false)
     private BigDecimal price;
 
-    @Column(name = "max_capacity", nullable = false)
+    @Column(name = "suc_chua_toi_da", nullable = false)
     private Integer maxCapacity;
 
-    @Column(length = 50)
+    @Column(name = "trang_thai", length = 50)
     private String status;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "thoi_diem_cap_nhat")
     private LocalDateTime updatedAt;
 
     @PrePersist

@@ -7,54 +7,55 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "properties")
+@Table(name = "tai_san_cho_thue")
 public class Property {
 
+    @Column(name = "ma_ban_ghi")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "landlord_id", nullable = false)
+    @JoinColumn(name = "ma_ben_cho_thue", nullable = false)
     private User landlord;
 
-    @Column(nullable = false)
+    @Column(name = "ten_hien_thi", nullable = false)
     private String name;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "mo_ta", columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "dia_chi", nullable = false)
     private String address;
 
-    @Column(name = "province_id", nullable = false)
+    @Column(name = "ma_tinh_thanh", nullable = false)
     private Long provinceId;
 
-    @Column(name = "district_id")
+    @Column(name = "ma_quan_huyen")
     private Long districtId;
 
-    @Column(name = "ward_id", nullable = false)
+    @Column(name = "ma_phuong_xa", nullable = false)
     private Long wardId;
 
-    @Column(name = "electricity_price")
+    @Column(name = "don_gia_dien")
     private BigDecimal electricityPrice;
 
-    @Column(name = "water_price")
+    @Column(name = "don_gia_nuoc")
     private BigDecimal waterPrice;
 
-    @Column(name = "property_type", length = 50)
+    @Column(name = "loai_tai_san", length = 50)
     private String propertyType;
 
-    @Column(length = 50)
+    @Column(name = "trang_thai", length = 50)
     private String status;
 
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<Room> rooms;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "thoi_diem_cap_nhat")
     private LocalDateTime updatedAt;
 
     @PrePersist

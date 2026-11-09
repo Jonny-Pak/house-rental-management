@@ -1,4 +1,5 @@
 import 'home_listings_fixture.dart';
+import 'chatbot_test.dart' show FakeChat;
 import 'notification_test.dart' show MemoryNotifications;
 
 import 'dart:io';
@@ -105,7 +106,12 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(430, 860));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(home: HomePage(listingRepository: HomeListings())),
+      MaterialApp(
+        home: HomePage(
+          listingRepository: HomeListings(),
+          chatRepository: FakeChat(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('home-slide-1')));
@@ -118,8 +124,12 @@ void main() {
     await tester.tap(find.text('Xem tất cả').first);
     await tester.pumpAndSettle();
     expect(find.text('Tất cả chức năng'), findsOneWidget);
-    expect(find.text('Trợ Lý AI'), findsNothing);
-    expect(find.byIcon(Symbols.smart_toy), findsNothing);
+    expect(find.text('Trợ Lý AI'), findsWidgets);
+    await tester.ensureVisible(find.text('Trợ Lý AI').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trợ Lý AI').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Trợ lý AI tìm nhà'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

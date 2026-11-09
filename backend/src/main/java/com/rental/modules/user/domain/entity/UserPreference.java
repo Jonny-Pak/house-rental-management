@@ -3,11 +3,11 @@ package com.rental.modules.user.domain.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "user_preferences")
+@Table(name = "so_thich_nguoi_dung")
 public class UserPreference {
     @ElementCollection
-    @CollectionTable(name = "user_preference_interests", joinColumns = @JoinColumn(name = "preference_id"))
-    @Column(name = "interest_code", nullable = false, length = 32)
+    @CollectionTable(name = "so_thich_da_chon", joinColumns = @JoinColumn(name = "ma_ho_so_so_thich"))
+    @Column(name = "ma_so_thich", nullable = false, length = 32)
     private java.util.List<String> interests = new java.util.ArrayList<>();
 
     public java.util.List<String> getInterests() { return interests; }
@@ -16,23 +16,23 @@ public class UserPreference {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "preference_id")
+    @Column(name = "ma_ho_so_so_thich")
     private Long preferenceId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "ma_nguoi_dung", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "min_budget")
+    @Column(name = "ngan_sach_toi_thieu")
     private Double minBudget;
 
-    @Column(name = "max_budget")
+    @Column(name = "ngan_sach_toi_da")
     private Double maxBudget;
 
-    @Column(name = "has_pet")
+    @Column(name = "co_thu_cung")
     private Boolean hasPet;
 
-    @Column(name = "preferred_area", length = 150)
+    @Column(name = "khu_vuc_mong_muon", length = 150)
     private String preferredArea;
 
     public UserPreference() {}
