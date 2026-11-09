@@ -9,52 +9,52 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "nguoi_dung")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
+    @Column(name = "ma_nguoi_dung")
     private Long userId;
 
-    @Column(name = "full_name", length = 150, nullable = false)
+    @Column(name = "ho_va_ten", length = 150, nullable = false)
     private String fullName;
 
-    @Column(name = "email", length = 150, unique = true, nullable = false)
+    @Column(name = "dia_chi_thu_dien_tu", length = 150, unique = true, nullable = false)
     private String email;
 
-    @Column(name = "phone_number", length = 15, unique = true)
+    @Column(name = "so_dien_thoai", length = 15, unique = true)
     private String phoneNumber;
 
-    @Column(name = "password_hash")
+    @Column(name = "mat_khau_da_bam")
     private String passwordHash;
 
-    @Column(name = "google_id", length = 100, unique = true)
+    @Column(name = "ma_tai_khoan_google", length = 100, unique = true)
     private String googleId;
 
-    @Column(name = "avatar_url")
+    @Column(name = "duong_dan_anh_dai_dien")
     private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 10)
+    @Column(name = "vai_tro", nullable = false, length = 10)
     private Role role;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 10)
+    @Column(name = "trang_thai", nullable = false, length = 10)
     private UserStatus status;
 
-    @Column(name = "is_verified")
+    @Column(name = "da_xac_thuc_thu_dien_tu")
     private Boolean isVerified;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "thoi_diem_cap_nhat")
     private LocalDateTime updatedAt;
 
-    @Column(name = "password_version", nullable = false)
+    @Column(name = "phien_ban_mat_khau", nullable = false)
     private int passwordVersion = 0;
 
     public int getPasswordVersion() { return passwordVersion; }

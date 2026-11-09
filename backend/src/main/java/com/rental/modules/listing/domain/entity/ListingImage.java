@@ -3,19 +3,19 @@ package com.rental.modules.listing.domain.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "listing_images")
+@Table(name = "hinh_anh_tin_dang")
 public class ListingImage {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "image_id")
+    @Column(name = "ma_hinh_anh")
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = false)
+    @JoinColumn(name = "ma_tin_dang", nullable = false)
     private Listing listing;
-    @Column(name = "image_url", nullable = false, length = 255)
+    @Column(name = "duong_dan_hinh_anh", nullable = false, length = 255)
     private String imageUrl;
-    @Column(name = "is_thumbnail")
+    @Column(name = "la_anh_dai_dien")
     private boolean thumbnail;
-    @Column(name = "sort_order")
+    @Column(name = "thu_tu_hien_thi")
     private short sortOrder;
 
     public ListingImage() {}

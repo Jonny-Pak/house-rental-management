@@ -24,6 +24,6 @@ public interface AmenityRepository extends JpaRepository<Amenity, Long> {
     @Query("select a from Amenity a where a.id in :ids order by a.id")
     List<Amenity> findSelectedForUpdate(@Param("ids") List<Long> ids);
 
-    @Query(value = "select count(*) from listing_amenities where amenity_id=:id", nativeQuery = true)
+    @Query(value = "select count(*) from tien_ich_cua_tin_dang where ma_tien_ich=:id", nativeQuery = true)
     long countListings(@Param("id") Long id);
 }

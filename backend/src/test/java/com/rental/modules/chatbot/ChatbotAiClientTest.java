@@ -38,7 +38,7 @@ class ChatbotAiClientTest {
             status.set(503); output.set("{\"detail\":{\"code\":\"LOCAL_MODEL_NOT_READY\"}}");
             var unavailable = assertThrows(ResponseStatusException.class,()->ai.analyze(request,List.of()));
             assertEquals(503,unavailable.getStatusCode().value());
-            assertTrue(unavailable.getReason().contains("train.py"));
+            assertTrue(unavailable.getReason().contains("Ollama"));
             status.set(429);
             assertEquals(429,assertThrows(ResponseStatusException.class,()->ai.analyze(request,List.of())).getStatusCode().value());
 

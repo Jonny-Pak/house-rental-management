@@ -15,15 +15,15 @@ public class ChatHistoryStore {
     public record Row(long id, String requestJson, String replyJson, String createdAt) {}
 
     public void save(Long userId, String request, String reply) {
-        jdbc.update("INSERT INTO chatbot_history(user_id, request_json, reply_json) VALUES (?, ?, ?)", userId, request, reply);
+        jdbc.update("INSERT INTO lich_su_tro_chuyen(ma_nguoi_dung, yeu_cau_hoi_thoai_json, phan_hoi_hoi_thoai_json) VALUES (?, ?, ?)", userId, request, reply);
     }
 
     public List<Row> find(Long userId, long beforeId) {
-        return jdbc.query("SELECT id, request_json, reply_json, created_at FROM chatbot_history WHERE user_id = ? AND id < ? ORDER BY id DESC LIMIT 31",
-            (row, index) -> new Row(row.getLong("id"), row.getString("request_json"), row.getString("reply_json"), row.getTimestamp("created_at").toInstant().toString()), userId, beforeId);
+        return jdbc.query("SELECT ma_ban_ghi, yeu_cau_hoi_thoai_json, phan_hoi_hoi_thoai_json, thoi_diem_tao FROM lich_su_tro_chuyen WHERE ma_nguoi_dung = ? AND ma_ban_ghi < ? ORDER BY ma_ban_ghi DESC LIMIT 31",
+            (row, index) -> new Row(row.getLong("ma_ban_ghi"), row.getString("yeu_cau_hoi_thoai_json"), row.getString("phan_hoi_hoi_thoai_json"), row.getTimestamp("thoi_diem_tao").toInstant().toString()), userId, beforeId);
     }
 
     public void clear(Long userId) {
-        jdbc.update("DELETE FROM chatbot_history WHERE user_id = ?", userId);
+        jdbc.update("DELETE FROM lich_su_tro_chuyen WHERE ma_nguoi_dung = ?", userId);
     }
 }

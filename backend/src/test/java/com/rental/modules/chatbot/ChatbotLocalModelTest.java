@@ -15,7 +15,7 @@ import static org.mockito.Mockito.*;
 
 @EnabledIfEnvironmentVariable(named = "RENTAL_LOCAL_AI_TESTS", matches = "true")
 class ChatbotLocalModelTest {
-    @Test void javaCallsRealLocalTrainedModelAndSearchesOnlyEligibleListings() {
+    @Test void javaCallsRealLocalLlmAndSearchesOnlyEligibleListings() {
         try (var validation = Validation.buildDefaultValidatorFactory()) {
             var ai = new ChatbotAiClient("http://127.0.0.1:8001", System.getenv("AI_SERVICE_TOKEN"),
                 validation.getValidator(), new ObjectMapper());

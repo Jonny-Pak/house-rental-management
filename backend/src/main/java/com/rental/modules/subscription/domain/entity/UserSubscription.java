@@ -6,41 +6,41 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_subscriptions")
+@Table(name = "dang_ky_goi_dich_vu")
 public class UserSubscription {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "subscription_id")
+    @Column(name = "ma_dang_ky_goi")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "ma_nguoi_dung", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "package_id", nullable = false)
+    @JoinColumn(name = "ma_goi_dich_vu", nullable = false)
     private MembershipPackage membershipPackage;
 
-    @Column(name = "purchased_at", updatable = false)
+    @Column(name = "thoi_diem_mua_goi", updatable = false)
     private LocalDateTime purchasedAt = LocalDateTime.now();
 
-    @Column(name = "remaining_standard_quota")
+    @Column(name = "luot_tin_thuong_con_lai")
     private Integer remainingStandardQuota;
 
-    @Column(name = "remaining_vip_quota")
+    @Column(name = "luot_tin_uu_tien_con_lai")
     private Integer remainingVipQuota;
 
-    @Column(name = "remaining_refresh_quota")
+    @Column(name = "luot_lam_moi_con_lai")
     private Integer remainingRefreshQuota;
 
-    @Column(name = "quota_reset_at")
+    @Column(name = "moc_dat_lai_han_muc")
     private LocalDateTime quotaResetAt;
 
-    @Column(nullable = false, length = 10)
+    @Column(name = "trang_thai", nullable = false, length = 10)
     private String status = "ACTIVE";
 
-    @Column(name = "package_name_snapshot", length = 20)
+    @Column(name = "ten_goi_tai_thoi_diem_mua", length = 20)
     private String packageNameSnapshot;
     public String getPackageNameSnapshot() { return packageNameSnapshot; }
     public void setPackageNameSnapshot(String value) { packageNameSnapshot = value; }

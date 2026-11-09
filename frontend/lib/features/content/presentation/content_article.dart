@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_html_table/flutter_html_table.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/models/system_content.dart';
+import 'help_widgets.dart';
+import 'content_links.dart';
 
 class ContentArticle extends StatelessWidget {
   const ContentArticle({
@@ -27,76 +28,23 @@ class ContentArticle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final accent = colors.primary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                accent.withValues(alpha: .14),
-                accent.withValues(alpha: .04),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: accent.withValues(alpha: .14)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(contentIcon(slug), color: iconColor, size: 34),
-              ),
-              const SizedBox(height: 22),
-              Text(
-                'RENTAL • ${contentPages[slug] ?? 'Thông tin'}',
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 10),
-              SelectableText(
-                title,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  height: 1.3,
-                ),
-              ),
-              if (publishedAt != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Icon(
-                        Icons.update_rounded,
-                        size: 16,
-                        color: colors.onSurfaceVariant,
-                      ),
-                      Text(
-                        'Cập nhật: ${DateFormat('dd/MM/yyyy HH:mm').format(publishedAt!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+        HelpHero(
+          title: title,
+          caption: contentCaption(slug),
+          icon: contentIcon(slug),
+          accent: iconColor,
+          footer: publishedAt == null
+              ? null
+              : Text(
+                  'Cập nhật ${DateFormat('dd/MM/yyyy').format(publishedAt!.toLocal())}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
-            ],
-          ),
         ),
         const SizedBox(height: 20),
         Container(
@@ -117,6 +65,7 @@ class ContentArticle extends StatelessWidget {
                     'html',
                     'p',
                     'br',
+                    'h1',
                     'h2',
                     'h3',
                     'h4',
@@ -141,16 +90,8 @@ class ContentArticle extends StatelessWidget {
                     'th',
                     'a',
                   },
-                  onLinkTap: (url, attributes, element) async {
-                    final uri = Uri.tryParse(url ?? '');
-                    if (uri != null &&
-                        ['https', 'http', 'mailto'].contains(uri.scheme)) {
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    }
-                  },
+                  onLinkTap: (url, attributes, element) =>
+                      openContentLink(context, url ?? ''),
                   extensions: [
                     TagWrapExtension(
                       tagsToWrap: {'table'},

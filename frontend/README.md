@@ -2,6 +2,8 @@
 
 Website chỉ chạy giao diện Admin. App Android/iOS và Windows chạy giao diện người dùng, không có màn hình chọn hoặc chuyển sang Admin.
 
+Backend hiện dùng 23 bảng tiếng Việt không dấu. API và trường JSON giữ nguyên nên frontend không phụ thuộc tên bảng SQL. Nội thất và tiện ích dùng chung danh mục có phân nhóm; nội dung và đăng nhập QR dùng API hiện tại. Nhóm khu trọ, phòng và sở thích vẫn được giữ. Không cần xóa các màn hình này khi rút gọn database.
+
 Chạy từ thư mục `frontend`, mỗi giao diện dùng một terminal:
 
 ```powershell

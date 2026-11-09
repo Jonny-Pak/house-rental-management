@@ -23,15 +23,15 @@ public class AdminAreaService {
     private final JdbcTemplate jdbc;
     private static final List<String> TYPES = List.of("PROVINCE", "DISTRICT", "WARD", "COMMUNE", "SPECIAL");
     private static final String SELECT = """
-        SELECT a.area_id, a.area_name, a.area_type, a.code, a.parent_id, p.area_name AS parent_name, a.is_active,
-          (SELECT count(*) FROM administrative_areas c WHERE c.parent_id=a.area_id) AS children,
-          (SELECT count(*) FROM listings l WHERE l.area_id=a.area_id) AS listing_count,
-          (SELECT count(*) FROM properties r WHERE r.province_id=a.area_id OR r.district_id=a.area_id OR r.ward_id=a.area_id) AS property_count
-        FROM administrative_areas a LEFT JOIN administrative_areas p ON p.area_id=a.parent_id
+        SELECT a.ma_khu_vuc, a.ten_khu_vuc, a.cap_hanh_chinh, a.ma_quan_ly, a.ma_khu_vuc_cap_tren, p.ten_khu_vuc AS parent_name, a.dang_su_dung,
+          (SELECT count(*) FROM khu_vuc_hanh_chinh c WHERE c.ma_khu_vuc_cap_tren=a.ma_khu_vuc) AS children,
+          (SELECT count(*) FROM tin_cho_thue l WHERE l.ma_khu_vuc=a.ma_khu_vuc) AS listing_count,
+          (SELECT count(*) FROM tai_san_cho_thue r WHERE r.ma_tinh_thanh=a.ma_khu_vuc OR r.ma_quan_huyen=a.ma_khu_vuc OR r.ma_phuong_xa=a.ma_khu_vuc) AS property_count
+        FROM khu_vuc_hanh_chinh a LEFT JOIN khu_vuc_hanh_chinh p ON p.ma_khu_vuc=a.ma_khu_vuc_cap_tren
         """;
     private static final RowMapper<AdminAreaResponse> ROW = (rs, index) -> new AdminAreaResponse(
-        rs.getLong("area_id"), rs.getString("area_name"), rs.getString("area_type"), rs.getString("code"),
-        rs.getObject("parent_id", Long.class), rs.getString("parent_name"), rs.getBoolean("is_active"),
+        rs.getLong("ma_khu_vuc"), rs.getString("ten_khu_vuc"), rs.getString("cap_hanh_chinh"), rs.getString("ma_quan_ly"),
+        rs.getObject("ma_khu_vuc_cap_tren", Long.class), rs.getString("parent_name"), rs.getBoolean("dang_su_dung"),
         rs.getLong("children"), rs.getLong("listing_count"), rs.getLong("property_count"));
 
     public AdminAreaService(AdministrativeAreaRepository areas, JdbcTemplate jdbc) {
@@ -47,26 +47,26 @@ public class AdminAreaService {
                 || (parentId != null && parentId < 1)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc khu vực không hợp lệ.");
         }
-        String where = " WHERE (position(lower(?) in lower(a.area_name)) > 0 OR position(lower(?) in lower(coalesce(a.code,''))) > 0)";
+        String where = " WHERE (position(lower(?) in lower(a.ten_khu_vuc)) > 0 OR position(lower(?) in lower(coalesce(a.ma_quan_ly,''))) > 0)";
         List<Object> parameters = new ArrayList<>();
         parameters.add(query.trim()); parameters.add(query.trim());
-        if (type != null) { where += " AND a.area_type=?"; parameters.add(type); }
-        if (parentId != null) { where += " AND a.parent_id=?"; parameters.add(parentId); }
-        if (active != null) { where += " AND a.is_active=?"; parameters.add(active); }
-        long total = jdbc.queryForObject("SELECT count(*) FROM administrative_areas a" + where, Long.class, parameters.toArray());
+        if (type != null) { where += " AND a.cap_hanh_chinh=?"; parameters.add(type); }
+        if (parentId != null) { where += " AND a.ma_khu_vuc_cap_tren=?"; parameters.add(parentId); }
+        if (active != null) { where += " AND a.dang_su_dung=?"; parameters.add(active); }
+        long total = jdbc.queryForObject("SELECT count(*) FROM khu_vuc_hanh_chinh a" + where, Long.class, parameters.toArray());
         parameters.add(20); parameters.add(page * 20);
-        var rows = jdbc.query(SELECT + where + " ORDER BY a.area_name, a.area_id LIMIT ? OFFSET ?", ROW, parameters.toArray());
+        var rows = jdbc.query(SELECT + where + " ORDER BY a.ten_khu_vuc, a.ma_khu_vuc LIMIT ? OFFSET ?", ROW, parameters.toArray());
         return new AreaPage(rows, total, page, (int) ((total + 19) / 20));
     }
 
     @Transactional(readOnly = true)
     public List<AdminAreaResponse> parents() {
-        return jdbc.query(SELECT + " WHERE a.area_type IN ('PROVINCE','DISTRICT') ORDER BY a.area_type, a.area_name, a.area_id", ROW);
+        return jdbc.query(SELECT + " WHERE a.cap_hanh_chinh IN ('PROVINCE','DISTRICT') ORDER BY a.cap_hanh_chinh, a.ten_khu_vuc, a.ma_khu_vuc", ROW);
     }
 
     @Transactional(readOnly = true)
     public AdminAreaResponse detail(Long id) {
-        var rows = jdbc.query(SELECT + " WHERE a.area_id=?", ROW, id);
+        var rows = jdbc.query(SELECT + " WHERE a.ma_khu_vuc=?", ROW, id);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy khu vực.");
         return rows.get(0);
     }
@@ -105,7 +105,7 @@ public class AdminAreaService {
         if (active && area.getParent() != null && !area.getParent().isAvailable()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy kích hoạt đơn vị cấp trên trước.");
         }
-        if (!active && jdbc.queryForObject("SELECT count(*) FROM administrative_areas WHERE parent_id=? AND is_active=true", Long.class, id) > 0) {
+        if (!active && jdbc.queryForObject("SELECT count(*) FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc_cap_tren=? AND dang_su_dung=true", Long.class, id) > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy ngừng sử dụng các đơn vị con trước.");
         }
         area.setActive(active);
@@ -146,8 +146,8 @@ public class AdminAreaService {
             }
         }
         long id = area.getAreaId() == null ? -1 : area.getAreaId();
-        long duplicateCode = jdbc.queryForObject("SELECT count(*) FROM administrative_areas WHERE lower(trim(code))=lower(?) AND area_id<>?", Long.class, code, id);
-        long duplicateName = jdbc.queryForObject("SELECT count(*) FROM administrative_areas WHERE lower(trim(area_name))=lower(?) AND coalesce(parent_id,0)=? AND area_id<>?", Long.class, name, request.parentId() == null ? 0 : request.parentId(), id);
+        long duplicateCode = jdbc.queryForObject("SELECT count(*) FROM khu_vuc_hanh_chinh WHERE lower(trim(ma_quan_ly))=lower(?) AND ma_khu_vuc<>?", Long.class, code, id);
+        long duplicateName = jdbc.queryForObject("SELECT count(*) FROM khu_vuc_hanh_chinh WHERE lower(trim(ten_khu_vuc))=lower(?) AND coalesce(ma_khu_vuc_cap_tren,0)=? AND ma_khu_vuc<>?", Long.class, name, request.parentId() == null ? 0 : request.parentId(), id);
         if (duplicateCode > 0 || duplicateName > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Mã khu vực hoặc tên trong cùng đơn vị cấp trên đã tồn tại.");
         }
@@ -159,6 +159,6 @@ public class AdminAreaService {
     }
 
     private void lockAreas() {
-        jdbc.execute("LOCK TABLE administrative_areas IN SHARE ROW EXCLUSIVE MODE");
+        jdbc.execute("LOCK TABLE khu_vuc_hanh_chinh IN SHARE ROW EXCLUSIVE MODE");
     }
 }

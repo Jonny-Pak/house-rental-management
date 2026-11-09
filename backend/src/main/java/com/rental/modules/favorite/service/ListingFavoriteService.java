@@ -22,7 +22,7 @@ public class ListingFavoriteService {
     }
     public boolean isSaved(Long userId, Long listingId) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS(SELECT 1 FROM user_favorites WHERE user_id=? AND listing_id=?)",
+                "SELECT EXISTS(SELECT 1 FROM tin_yeu_thich WHERE ma_nguoi_dung=? AND ma_tin_dang=?)",
                 Boolean.class, userId, listingId));
     }
     @Transactional
@@ -35,17 +35,17 @@ public class ListingFavoriteService {
         if (!"APPROVED".equals(listing.getApprovalStatus()) || !"AVAILABLE".equals(listing.getRentalStatus())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tin đăng không còn khả dụng.");
         }
-        jdbc.update("INSERT INTO user_favorites(user_id, listing_id) VALUES (?, ?) ON CONFLICT (user_id, listing_id) DO NOTHING",
+        jdbc.update("INSERT INTO tin_yeu_thich(ma_nguoi_dung, ma_tin_dang) VALUES (?, ?) ON CONFLICT (ma_nguoi_dung, ma_tin_dang) DO NOTHING",
                 userId, listingId);
     }
     @Transactional
     public void remove(Long userId, Long listingId) {
-        jdbc.update("DELETE FROM user_favorites WHERE user_id=? AND listing_id=?", userId, listingId);
+        jdbc.update("DELETE FROM tin_yeu_thich WHERE ma_nguoi_dung=? AND ma_tin_dang=?", userId, listingId);
     }
     public List<ListingResponse> getSaved(Long userId) {
         List<Long> listingIds = jdbc.queryForList(
-                "SELECT f.listing_id FROM user_favorites f JOIN listings l ON l.listing_id=f.listing_id "
-                + "WHERE f.user_id=? AND l.approval_status='APPROVED' AND l.rental_status='AVAILABLE' ORDER BY f.created_at DESC, f.id DESC",
+                "SELECT f.ma_tin_dang FROM tin_yeu_thich f JOIN tin_cho_thue l ON l.ma_tin_dang=f.ma_tin_dang "
+                + "WHERE f.ma_nguoi_dung=? AND l.trang_thai_kiem_duyet='APPROVED' AND l.trang_thai_cho_thue='AVAILABLE' ORDER BY f.thoi_diem_tao DESC, f.ma_ban_ghi DESC",
                 Long.class, userId);
         List<ListingResponse> result = new ArrayList<>();
         for (Long listingId : listingIds) {

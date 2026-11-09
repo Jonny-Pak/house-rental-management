@@ -4,20 +4,20 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "thong_bao")
 public class Notification {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "notification_id") private Long id;
-    @Column(name = "user_id", nullable = false) private Long userId;
-    @Column(name = "notification_type", nullable = false, length = 30) private String type;
-    @Column(length = 150) private String title;
-    @Column(length = 500) private String content;
-    @Column(name = "listing_id") private Long listingId;
-    @Column(name = "contract_id") private Long contractId;
-    @Column(name = "is_read", nullable = false) private boolean read;
-    @Column(name = "created_at") private LocalDateTime createdAt;
+    @Column(name = "ma_thong_bao") private Long id;
+    @Column(name = "ma_nguoi_dung", nullable = false) private Long userId;
+    @Column(name = "loai_thong_bao", nullable = false, length = 30) private String type;
+    @Column(name = "tieu_de", length = 150) private String title;
+    @Column(name = "noi_dung", length = 500) private String content;
+    @Column(name = "ma_tin_dang") private Long listingId;
+    @Column(name = "ma_hop_dong") private Long contractId;
+    @Column(name = "da_doc", nullable = false) private boolean read;
+    @Column(name = "thoi_diem_tao") private LocalDateTime createdAt;
 
-    @Column(name = "incident_id") private Long incidentId;
+    @Column(name = "ma_bao_cao_su_co") private Long incidentId;
     public Long getIncidentId() { return incidentId; }
     public void setIncidentId(Long value) { incidentId = value; }
 

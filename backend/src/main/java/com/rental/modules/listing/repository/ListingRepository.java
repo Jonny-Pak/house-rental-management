@@ -23,15 +23,15 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> findListingsWithinBoundingBox(@Param("bbox") Polygon bbox);
 
     @Query(value = """
-        SELECT l.* FROM listings l
-        WHERE l.location IS NOT NULL
-          AND l.approval_status = 'APPROVED'
-          AND l.rental_status = 'AVAILABLE'
-          AND ST_DWithin(CAST(l.location AS geography),
+        SELECT l.* FROM tin_cho_thue l
+        WHERE l.toa_do_vi_tri IS NOT NULL
+          AND l.trang_thai_kiem_duyet = 'APPROVED'
+          AND l.trang_thai_cho_thue = 'AVAILABLE'
+          AND ST_DWithin(CAST(l.toa_do_vi_tri AS geography),
               CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography),
               :radiusMeters, false)
-        ORDER BY ST_Distance(CAST(l.location AS geography),
-            CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography), false), l.listing_id
+        ORDER BY ST_Distance(CAST(l.toa_do_vi_tri AS geography),
+            CAST(ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326) AS geography), false), l.ma_tin_dang
         """, nativeQuery = true)
     List<Listing> findNearby(@Param("latitude") double latitude,
             @Param("longitude") double longitude, @Param("radiusMeters") double radiusMeters);

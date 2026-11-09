@@ -57,12 +57,11 @@ class ListingPostgisTest {
              var statement = connection.createStatement()) {
             statement.execute("CREATE SCHEMA " + SCHEMA);
             created = true;
+            statement.execute("SET search_path TO " + SCHEMA + ", public");
+            statement.execute(java.nio.file.Files.readString(java.nio.file.Path.of("database.sql")));
         }
         String baseUrl = configuration.getProperty("spring.datasource.url");
         registry.add("spring.datasource.url", () -> baseUrl + (baseUrl.contains("?") ? "&" : "?") + "currentSchema=" + SCHEMA + ",public");
-        registry.add("spring.flyway.schemas", () -> SCHEMA);
-        registry.add("spring.flyway.default-schema", () -> SCHEMA);
-        registry.add("spring.flyway.baseline-on-migrate", () -> "false");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 
@@ -114,7 +113,7 @@ class ListingPostgisTest {
         assertTrue(saved.getIsVerified()); assertNull(saved.getPasswordHash());
         assertEquals("google-integration-123", saved.getGoogleId());
         assertEquals("googleintegration@gmail.com", qrJwt.extractEmail(first.getAccessToken()));
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM user_subscriptions WHERE user_id = ?", Integer.class, first.getUserId()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM dang_ky_goi_dich_vu WHERE ma_nguoi_dung = ?", Integer.class, first.getUserId()));
     }
 
     @Test void googleLoginLinksCaseInsensitiveEmailWithoutChangingRoleOrExistingPassword() {
@@ -137,11 +136,11 @@ class ListingPostgisTest {
     @Autowired com.rental.modules.subscription.repository.MembershipPackageRepository packageRepository;
     @org.junit.jupiter.api.AfterEach
     void removeCommittedBenefitFixtures() {
-        String owners = "SELECT user_id FROM users WHERE email IN ('concurrentBenefits@example.com','excelQuotaOwner@example.com')";
-        jdbc.update("DELETE FROM notifications WHERE user_id IN (" + owners + ") OR listing_id IN (SELECT listing_id FROM listings WHERE owner_id IN (" + owners + "))");
-        jdbc.update("DELETE FROM listings WHERE owner_id IN (" + owners + ")");
-        jdbc.update("DELETE FROM user_subscriptions WHERE user_id IN (" + owners + ")");
-        jdbc.update("DELETE FROM users WHERE user_id IN (" + owners + ")");
+        String owners = "SELECT ma_nguoi_dung FROM nguoi_dung WHERE dia_chi_thu_dien_tu IN ('concurrentBenefits@example.com','excelQuotaOwner@example.com')";
+        jdbc.update("DELETE FROM thong_bao WHERE ma_nguoi_dung IN (" + owners + ") OR ma_tin_dang IN (SELECT ma_tin_dang FROM tin_cho_thue WHERE ma_chu_tin IN (" + owners + "))");
+        jdbc.update("DELETE FROM tin_cho_thue WHERE ma_chu_tin IN (" + owners + ")");
+        jdbc.update("DELETE FROM dang_ky_goi_dich_vu WHERE ma_nguoi_dung IN (" + owners + ")");
+        jdbc.update("DELETE FROM nguoi_dung WHERE ma_nguoi_dung IN (" + owners + ")");
     }
 
     @Autowired com.rental.modules.subscription.service.SubscriptionBenefitService benefits;
@@ -215,8 +214,8 @@ class ListingPostgisTest {
             assertEquals("CONSUMED", qrSessions.findById(session.id()).orElseThrow().getStatus());
         } finally {
             executor.shutdownNow();
-            jdbc.update("DELETE FROM admin_qr_logins WHERE id=?", session.id());
-            jdbc.update("DELETE FROM users WHERE user_id=?", adminId);
+            jdbc.update("DELETE FROM phien_dang_nhap_qr_quan_tri WHERE ma_ban_ghi=?", session.id());
+            jdbc.update("DELETE FROM nguoi_dung WHERE ma_nguoi_dung=?", adminId);
         }
     }
     @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
@@ -259,9 +258,9 @@ class ListingPostgisTest {
         var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS,
             List.of(ListingExcelTest.listingRow("Quota row A"), ListingExcelTest.listingRow("Quota row B")));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listingExcel.importListings(ownerId, file));
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, ownerId));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=?", Integer.class, ownerId));
         assertEquals(1, transaction.execute(status -> benefits.getBenefits(ownerId).standard()).intValue());
-        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE user_id=?", Integer.class, ownerId));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM thong_bao WHERE ma_nguoi_dung=?", Integer.class, ownerId));
     }
 
     @Test void postingConsumesQuotaAndEditingOrDeletingDoesNotRefillIt() {
@@ -276,7 +275,7 @@ class ListingPostgisTest {
         assertEquals(0, subscription.getRemainingStandardQuota());
         assertEquals(409, assertThrows(org.springframework.web.server.ResponseStatusException.class,
             () -> listings.createListing(owner.getUserId(), benefitRequest("Out of quota"))).getStatusCode().value());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, owner.getUserId()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=?", Integer.class, owner.getUserId()));
     }
 
     @Test void vipAndRefreshRequirePublicOwnedListingsAndConsumeOnlyOneQuota() {
@@ -358,7 +357,7 @@ class ListingPostgisTest {
             var results = new java.util.ArrayList<>(List.of(first.get(30, java.util.concurrent.TimeUnit.SECONDS), second.get(30, java.util.concurrent.TimeUnit.SECONDS)));
             java.util.Collections.sort(results);
             assertEquals(List.of(201, 409), results);
-            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM listings WHERE owner_id=?", Integer.class, ownerId));
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_chu_tin=?", Integer.class, ownerId));
             assertEquals(0, transaction.execute(status -> benefits.getBenefits(ownerId).standard()).intValue());
         } finally {
             executor.shutdownNow();
@@ -389,7 +388,7 @@ class ListingPostgisTest {
         entityManager.flush(); entityManager.clear();
         var reloaded = users.findById(member.getUserId()).orElseThrow();
         assertEquals(0, subscriptions.findByUser(reloaded).orElseThrow().getRemainingStandardQuota());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM user_subscriptions WHERE user_id=?", Long.class, member.getUserId()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM dang_ky_goi_dich_vu WHERE ma_nguoi_dung=?", Long.class, member.getUserId()));
     }
 
     @Test void defaultPlanCannotBeRepurchasedRemovedDisabledOrMadePaid() {
@@ -434,14 +433,14 @@ class ListingPostgisTest {
         Long hidden = listings.createListing(owner.getUserId(), request).getId();
         Long deleted = listings.createListing(owner.getUserId(), request).getId();
         entityManager.flush();
-        jdbc.update("UPDATE listings SET approval_status='APPROVED' WHERE listing_id IN (?,?,?)", visible, hidden, deleted);
-        jdbc.update("UPDATE listings SET rental_status='HIDDEN' WHERE listing_id=?", hidden);
-        jdbc.update("UPDATE listings SET rental_status='DELETED' WHERE listing_id=?", deleted);
+        jdbc.update("UPDATE tin_cho_thue SET trang_thai_kiem_duyet='APPROVED' WHERE ma_tin_dang IN (?,?,?)", visible, hidden, deleted);
+        jdbc.update("UPDATE tin_cho_thue SET trang_thai_cho_thue='HIDDEN' WHERE ma_tin_dang=?", hidden);
+        jdbc.update("UPDATE tin_cho_thue SET trang_thai_cho_thue='DELETED' WHERE ma_tin_dang=?", deleted);
         for (Long id : List.of(visible, hidden, deleted)) {
-            jdbc.update("INSERT INTO user_favorites(user_id,listing_id) VALUES (?,?)", renter.getUserId(), id);
+            jdbc.update("INSERT INTO tin_yeu_thich(ma_nguoi_dung,ma_tin_dang) VALUES (?,?)", renter.getUserId(), id);
         }
-        jdbc.update("INSERT INTO contracts(listing_id,landlord_id,tenant_id,start_date,end_date,monthly_rent,deposit_amount,status) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'ACTIVE')", visible, owner.getUserId(), renter.getUserId());
-        jdbc.update("INSERT INTO contracts(listing_id,landlord_id,tenant_id,start_date,end_date,monthly_rent,deposit_amount,status) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'DRAFT')", visible, renter.getUserId(), other.getUserId());
+        jdbc.update("INSERT INTO hop_dong_thue(ma_tin_dang,ma_ben_cho_thue,ma_ben_thue,ngay_bat_dau,ngay_ket_thuc,tien_thue_moi_thang,tien_dat_coc,trang_thai) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'ACTIVE')", visible, owner.getUserId(), renter.getUserId());
+        jdbc.update("INSERT INTO hop_dong_thue(ma_tin_dang,ma_ben_cho_thue,ma_ben_thue,ngay_bat_dau,ngay_ket_thuc,tien_thue_moi_thang,tien_dat_coc,trang_thai) VALUES (?,?,?,CURRENT_DATE,CURRENT_DATE+30,3000000,0,'DRAFT')", visible, renter.getUserId(), other.getUserId());
         entityManager.clear();
         var ownerProfile = userService.getMyProfile(owner.getEmail());
         assertEquals(2L, ownerProfile.getListingCount()); assertEquals(1L, ownerProfile.getContractCount()); assertEquals(0L, ownerProfile.getSavedListingCount());
@@ -578,7 +577,7 @@ class ListingPostgisTest {
         var item = adminPackages.create(new com.rental.modules.subscription.dto.SavePackageRequest("Gói chờ", new BigDecimal("50000"), 8, 2, 3, "", true, null));
         var http = new org.springframework.mock.web.MockHttpServletRequest(); http.setRemoteAddr("127.0.0.1");
         payments.createPaymentUrl(buyer.getEmail(), item.getId(), http);
-        String ref = jdbc.queryForObject("SELECT vnpay_transaction_ref FROM payment_transactions WHERE user_id=?", String.class, buyer.getUserId());
+        String ref = jdbc.queryForObject("SELECT tham_chieu_giao_dich_vnpay FROM giao_dich_thanh_toan WHERE ma_nguoi_dung=?", String.class, buyer.getUserId());
         var changed = adminPackages.update(item.getId(), new com.rental.modules.subscription.dto.SavePackageRequest("Gói khác", new BigDecimal("90000"), 99, 8, 9, "", false, item.getVersion()));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> payments.createPaymentUrl(buyer.getEmail(), item.getId(), http));
         java.util.Map<String,String> callback = new java.util.HashMap<>();
@@ -595,7 +594,7 @@ class ListingPostgisTest {
         var subscription = subscriptions.findByUser(buyer).orElseThrow();
         assertEquals(8, subscription.getRemainingStandardQuota()); assertEquals(2, subscription.getRemainingVipQuota());
         assertEquals("Gói chờ", subscription.getPackageNameSnapshot());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM payment_transactions WHERE user_id=? AND status='SUCCESS'", Long.class, buyer.getUserId()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM giao_dich_thanh_toan WHERE ma_nguoi_dung=? AND trang_thai='SUCCESS'", Long.class, buyer.getUserId()));
     }
 
     @Autowired com.rental.modules.incident.service.IncidentService incidents;
@@ -614,7 +613,7 @@ class ListingPostgisTest {
             () -> incidents.detail(created.id(), other.getUserId())).getStatusCode().value());
         assertEquals(created.id(), incidents.create(reporter.getUserId(), request).id());
         assertEquals(1, incidents.search(reporter.getUserId(), "", null, null, 0).total());
-        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE incident_id=? AND user_id=? AND notification_type='INCIDENT_CREATED'", Long.class, created.id(), admin.getUserId()));
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM thong_bao WHERE ma_bao_cao_su_co=? AND ma_nguoi_dung=? AND loai_thong_bao='INCIDENT_CREATED'", Long.class, created.id(), admin.getUserId()));
         assertEquals(429, assertThrows(org.springframework.web.server.ResponseStatusException.class,
             () -> incidents.create(reporter.getUserId(), new com.rental.modules.incident.dto.CreateIncidentRequest("request-2", "Khác", "OTHER", "Mô tả khác"))).getStatusCode().value());
         var pending = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("IN_PROGRESS", "Đã tiếp nhận, đang kiểm tra.", created.version()));
@@ -624,7 +623,7 @@ class ListingPostgisTest {
             () -> incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Cũ", created.version()))).getStatusCode().value());
         var resolved = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("RESOLVED", "Đã khắc phục lỗi bản đồ.", pending.version()));
         assertEquals("RESOLVED", resolved.status()); assertEquals(3, incidents.detail(created.id(), reporter.getUserId()).history().size());
-        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM notifications WHERE incident_id=? AND user_id=? AND notification_type='INCIDENT_UPDATED'", Long.class, created.id(), reporter.getUserId()));
+        assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM thong_bao WHERE ma_bao_cao_su_co=? AND ma_nguoi_dung=? AND loai_thong_bao='INCIDENT_UPDATED'", Long.class, created.id(), reporter.getUserId()));
         assertEquals(1, incidents.search(null, "", "RESOLVED", "TECHNICAL", 0).total());
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("REJECTED", "Không hợp lệ", resolved.version())));
         var reopened = incidents.update(created.id(), admin.getUserId(), new com.rental.modules.incident.dto.UpdateIncidentRequest("IN_PROGRESS", "Mở lại để kiểm tra thêm.", resolved.version()));
@@ -637,7 +636,7 @@ class ListingPostgisTest {
         User reporter = user("incidentPages", Role.MEMBER), admin = user("incidentPagesAdmin", Role.ADMIN);
         Long first = null;
         for (int i = 0; i < 22; i++) {
-            Long id = jdbc.queryForObject("INSERT INTO incident_reports(reporter_id,request_key,title,category,description) VALUES (?,?,'Lỗi kiểm thử','OTHER','Nội dung') RETURNING id", Long.class, reporter.getUserId(), "page-" + i);
+            Long id = jdbc.queryForObject("INSERT INTO bao_cao_su_co(ma_nguoi_bao_su_co,khoa_doi_chieu_yeu_cau,tieu_de,nhom_phan_loai,mo_ta) VALUES (?,?,'Lỗi kiểm thử','OTHER','Nội dung') RETURNING ma_ban_ghi", Long.class, reporter.getUserId(), "page-" + i);
             if (first == null) first = id;
         }
         assertEquals(22, incidents.search(reporter.getUserId(), "kiểm thử", null, null, 0).total());
@@ -661,7 +660,7 @@ class ListingPostgisTest {
             .thenAnswer(call -> encoder.encode(call.getArgument(0)));
         org.mockito.Mockito.when(adminPasswords.matches(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
             .thenAnswer(call -> encoder.matches(call.getArgument(0), call.getArgument(1)));
-        Long id = jdbc.queryForObject("INSERT INTO users(full_name,email,role,status,is_verified,password_hash) VALUES ('Password test','password-flow@test.local','MEMBER','ACTIVE',true,?) RETURNING user_id", Long.class, adminPasswords.encode("OldPassword123"));
+        Long id = jdbc.queryForObject("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,da_xac_thuc_thu_dien_tu,mat_khau_da_bam) VALUES ('Password test','password-flow@test.local','MEMBER','ACTIVE',true,?) RETURNING ma_nguoi_dung", Long.class, adminPasswords.encode("OldPassword123"));
         passwords.requestReset("password-flow@test.local");
         var code = org.mockito.ArgumentCaptor.forClass(String.class);
         org.mockito.Mockito.verify(adminEmail).sendPasswordResetEmail(org.mockito.ArgumentMatchers.eq("password-flow@test.local"), code.capture());
@@ -681,13 +680,13 @@ class ListingPostgisTest {
     @Test void reportsAggregateRealDataBoundariesStatusesAndExport() throws Exception {
         java.time.LocalDate from = java.time.LocalDate.of(2090, 1, 1);
         java.time.LocalDate to = from.plusDays(2);
-        Long member = jdbc.queryForObject("INSERT INTO users(full_name,email,role,status,created_at) VALUES ('Report member','report-member@test.local','MEMBER','ACTIVE','2090-01-01 00:00:00') RETURNING user_id", Long.class);
-        Long admin = jdbc.queryForObject("INSERT INTO users(full_name,email,role,status,created_at) VALUES ('Report admin','report-admin@test.local','ADMIN','ACTIVE','2090-01-02 12:00:00') RETURNING user_id", Long.class);
-        jdbc.update("INSERT INTO users(full_name,email,role,status,created_at) VALUES ('Outside','outside@test.local','MEMBER','ACTIVE','2090-01-04 00:00:00')");
-        Long area = jdbc.queryForObject("SELECT MIN(area_id) FROM administrative_areas", Long.class);
-        Long listing = jdbc.queryForObject("INSERT INTO listings(owner_id,area_id,title,listing_type,rent_price,approval_status,created_at) VALUES (?,?,'Report listing','WHOLE_HOUSE',9000000,'APPROVED','2090-01-03 23:59:59.999999') RETURNING listing_id", Long.class, member, area);
-        jdbc.update("INSERT INTO contracts(listing_id,landlord_id,tenant_id,start_date,end_date,monthly_rent,deposit_amount,status,created_at) VALUES (?,?,?,'2090-01-01','2091-01-01',9000000,0,'DRAFT','2090-01-02 12:00:00')", listing, member, admin);
-        jdbc.update("INSERT INTO payment_transactions(user_id,amount,status,transaction_date) VALUES (?,123456.78,'SUCCESS','2090-01-01 00:00:00'), (?,200000,'SUCCESS','2090-01-03 23:59:59.999999'), (?,900000,'FAILED','2090-01-02'), (?,800000,'PENDING','2090-01-02'), (?,700000,'SUCCESS','2090-01-04 00:00:00')", member, member, member, member, member);
+        Long member = jdbc.queryForObject("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,thoi_diem_tao) VALUES ('Report member','report-member@test.local','MEMBER','ACTIVE','2090-01-01 00:00:00') RETURNING ma_nguoi_dung", Long.class);
+        Long admin = jdbc.queryForObject("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,thoi_diem_tao) VALUES ('Report admin','report-admin@test.local','ADMIN','ACTIVE','2090-01-02 12:00:00') RETURNING ma_nguoi_dung", Long.class);
+        jdbc.update("INSERT INTO nguoi_dung(ho_va_ten,dia_chi_thu_dien_tu,vai_tro,trang_thai,thoi_diem_tao) VALUES ('Outside','outside@test.local','MEMBER','ACTIVE','2090-01-04 00:00:00')");
+        Long area = jdbc.queryForObject("SELECT MIN(ma_khu_vuc) FROM khu_vuc_hanh_chinh", Long.class);
+        Long listing = jdbc.queryForObject("INSERT INTO tin_cho_thue(ma_chu_tin,ma_khu_vuc,tieu_de,loai_tin_dang,gia_cho_thue,trang_thai_kiem_duyet,thoi_diem_tao) VALUES (?,?,'Report listing','WHOLE_HOUSE',9000000,'APPROVED','2090-01-03 23:59:59.999999') RETURNING ma_tin_dang", Long.class, member, area);
+        jdbc.update("INSERT INTO hop_dong_thue(ma_tin_dang,ma_ben_cho_thue,ma_ben_thue,ngay_bat_dau,ngay_ket_thuc,tien_thue_moi_thang,tien_dat_coc,trang_thai,thoi_diem_tao) VALUES (?,?,?,'2090-01-01','2091-01-01',9000000,0,'DRAFT','2090-01-02 12:00:00')", listing, member, admin);
+        jdbc.update("INSERT INTO giao_dich_thanh_toan(ma_nguoi_dung,so_tien,trang_thai,thoi_diem_giao_dich) VALUES (?,123456.78,'SUCCESS','2090-01-01 00:00:00'), (?,200000,'SUCCESS','2090-01-03 23:59:59.999999'), (?,900000,'FAILED','2090-01-02'), (?,800000,'PENDING','2090-01-02'), (?,700000,'SUCCESS','2090-01-04 00:00:00')", member, member, member, member, member);
         var report = reports.report(from, to);
         assertEquals(1, report.members()); assertEquals(1, report.listings()); assertEquals(1, report.contracts());
         assertEquals(2, report.successfulPayments());
@@ -710,6 +709,11 @@ class ListingPostgisTest {
     }
 
     @Autowired com.rental.modules.content.service.SystemContentService contentService;
+
+    @Test void defaultHelpContentDescribesTheWorkingIncidentFlow() {
+        assertTrue(contentService.published("support").body().contains("Gửi báo cáo mới"));
+        assertFalse(contentService.published("support").body().contains("chưa được kết nối"));
+    }
 
     @Test void systemContentDraftPublishAndUnpublishKeepPublicContentSeparate() {
         assertEquals(5, contentService.list().size());
@@ -832,18 +836,18 @@ class ListingPostgisTest {
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.delete(6L));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> adminAreas.update(6L,
             new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường Bến Nghé", "WARD", "BN", 1L)));
-        jdbc.update("UPDATE administrative_areas SET boundary=ST_GeomFromText('POLYGON((106 10,107 10,107 11,106 10))',4326) WHERE area_id=6");
+        jdbc.update("UPDATE khu_vuc_hanh_chinh SET ranh_gioi_khu_vuc=ST_GeomFromText('POLYGON((106 10,107 10,107 11,106 10))',4326) WHERE ma_khu_vuc=6");
         var renamed = adminAreas.update(6L, new com.rental.modules.admin.dto.request.AdminAreaRequest("Phường đã đổi tên", "WARD", "BN", 2L));
         assertEquals("Phường đã đổi tên", renamed.name());
-        assertNotNull(jdbc.queryForObject("SELECT ST_AsText(boundary) FROM administrative_areas WHERE area_id=6", String.class));
+        assertNotNull(jdbc.queryForObject("SELECT ST_AsText(ranh_gioi_khu_vuc) FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc=6", String.class));
         adminAreas.changeStatus(6L, false);
         assertTrue(areas.getWardsByDistrict(2L).stream().noneMatch(w -> w.getId().equals(6L)));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> listings.createListing(owner.getUserId(), request));
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> properties.createProperty(owner.getEmail(), propertyRequest));
-        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM properties WHERE id=?", Long.class, property.getId()));
+        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM tai_san_cho_thue WHERE ma_ban_ghi=?", Long.class, property.getId()));
         var file = ListingExcelTest.file("TinDang", com.rental.modules.listing.service.ListingExcelService.HEADERS, List.of(ListingExcelTest.listingRow("Tin không hợp lệ")));
         assertFalse(listingExcel.preview(owner.getUserId(), file).errors().isEmpty());
-        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM listings WHERE listing_id=?", Long.class, listingId));
+        assertEquals(1L, jdbc.queryForObject("SELECT count(*) FROM tin_cho_thue WHERE ma_tin_dang=?", Long.class, listingId));
         assertEquals(listingId, listings.getPublicListing(listingId).getId());
         try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(listingExcel.template()))) {
             var sheet = book.getSheet("KhuVuc");
@@ -1121,7 +1125,7 @@ class ListingPostgisTest {
         }
         entityManager.flush();
         Long version = expired.getVersion();
-        long notices = jdbc.queryForObject("select count(*) from notifications", Long.class);
+        long notices = jdbc.queryForObject("select count(*) from thong_bao", Long.class);
         var page = adminContracts.search("", "", "", 0);
         assertEquals(23, page.total()); assertEquals(20, page.items().size());
         assertEquals(3, adminContracts.search("", "", "", 1).items().size());
@@ -1140,7 +1144,7 @@ class ListingPostgisTest {
         entityManager.flush(); entityManager.refresh(expired); entityManager.refresh(listing);
         assertEquals("ACTIVE", expired.getStatus()); assertEquals(version, expired.getVersion());
         assertEquals("RENTED", listing.getRentalStatus());
-        assertEquals(notices, jdbc.queryForObject("select count(*) from notifications", Long.class));
+        assertEquals(notices, jdbc.queryForObject("select count(*) from thong_bao", Long.class));
         final Long inaccessible = expired.getId();
         assertEquals(403, assertThrows(org.springframework.web.server.ResponseStatusException.class,
             () -> leases.getContract(owner.getEmail(), inaccessible)).getStatusCode().value());
@@ -1171,7 +1175,7 @@ class ListingPostgisTest {
         assertEquals("ROOM", draft.contractType());
         assertTrue(draft.documentText().contains("HỢP ĐỒNG THUÊ PHÒNG TRỌ"));
         entityManager.flush();
-        jdbc.update("update contracts set document_text=null where contract_id=?", draft.id());
+        jdbc.update("update hop_dong_thue set noi_dung_hop_dong=null where ma_hop_dong=?", draft.id());
         var legacy = leases.getContract(renter.getEmail(), draft.id());
         assertNull(legacy.documentText());
         assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", legacy.version()));
@@ -1181,7 +1185,7 @@ class ListingPostgisTest {
         var active = leases.changeStatus(renter.getEmail(), draft.id(), "ACTIVE", updated.version());
         assertNotNull(active.acceptedAt());
         assertEquals("ACTIVE", active.status());
-        assertEquals("RENTED", jdbc.queryForObject("select rental_status from listings where listing_id=?", String.class, listingId));
+        assertEquals("RENTED", jdbc.queryForObject("select trang_thai_cho_thue from tin_cho_thue where ma_tin_dang=?", String.class, listingId));
         String agreedDocument = active.documentText();
         owner.setFullName("Tên chủ nhà đã thay đổi"); users.saveAndFlush(owner);
         assertEquals(agreedDocument, leases.getContract(renter.getEmail(), draft.id()).documentText());
@@ -1229,10 +1233,10 @@ class ListingPostgisTest {
         request.setDetails(contractDetails(today));
         assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(outsider.getEmail(),request));
         assertEquals(renter.getUserId(),leases.findTenant(owner.getEmail(),renter.getEmail(),listingId).get("id"));
-        long countBeforePreview = jdbc.queryForObject("select count(*) from contracts", Long.class);
+        long countBeforePreview = jdbc.queryForObject("select count(*) from hop_dong_thue", Long.class);
         var preview = leases.previewContract(owner.getEmail(), request);
         assertTrue(preview.get("content").contains("HỢP ĐỒNG THUÊ NHÀ Ở"));
-        assertEquals(countBeforePreview, jdbc.queryForObject("select count(*) from contracts", Long.class));
+        assertEquals(countBeforePreview, jdbc.queryForObject("select count(*) from hop_dong_thue", Long.class));
         var draft=leases.createContract(owner.getEmail(),request);
         assertNotNull(draft.documentText());
         assertEquals("HOUSE", draft.contractType());
@@ -1258,7 +1262,7 @@ class ListingPostgisTest {
         assertEquals("CANCELLED",cancelled.status());
         var third=leases.createContract(owner.getEmail(),request);
         leases.changeStatus(renter.getEmail(),third.id(),"ACTIVE",third.version());
-        jdbc.update("UPDATE contracts SET start_date=?, end_date=? WHERE contract_id=?",today.minusDays(5),today.minusDays(1),third.id());
+        jdbc.update("UPDATE hop_dong_thue SET ngay_bat_dau=?, ngay_ket_thuc=? WHERE ma_hop_dong=?",today.minusDays(5),today.minusDays(1),third.id());
         entityManager.clear();
         assertEquals("EXPIRED",leases.getContract(owner.getEmail(),third.id()).status());
         assertEquals("HIDDEN",listings.getMyListings(owner.getUserId()).get(0).getRentalStatus());
@@ -1273,21 +1277,9 @@ class ListingPostgisTest {
         assertThrows(org.springframework.web.server.ResponseStatusException.class,()->leases.createContract(owner.getEmail(),request));
     }
 
-    @Test void areaNameRepairRestoresVietnameseAndPreservesCustomNamesAndIds() {
-        int areaCount = jdbc.queryForObject("SELECT count(*) FROM administrative_areas", Integer.class);
-        jdbc.update("UPDATE administrative_areas SET area_name = ? WHERE area_id = 1", "Th??nh ph??? H??? Ch?? Minh");
-        jdbc.update("UPDATE administrative_areas SET area_name = ? WHERE area_id = 6", "Ph?????ng B???n Ngh??");
-        jdbc.update("UPDATE administrative_areas SET area_name = ? WHERE area_id = 2", "Tên khu vực tùy chỉnh");
-        var repair = new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(
-                new ClassPathResource("db/migration/V9__repair_seed_area_names_utf8.sql"));
-        repair.execute(dataSource);
-        assertEquals("Thành phố Hồ Chí Minh", jdbc.queryForObject("SELECT area_name FROM administrative_areas WHERE area_id=1", String.class));
-        assertEquals("Phường Bến Nghé", jdbc.queryForObject("SELECT area_name FROM administrative_areas WHERE area_id=6", String.class));
-        assertEquals("Tên khu vực tùy chỉnh", jdbc.queryForObject("SELECT area_name FROM administrative_areas WHERE area_id=2", String.class));
-        assertEquals(2L, jdbc.queryForObject("SELECT parent_id FROM administrative_areas WHERE area_id=6", Long.class));
-        assertEquals(areaCount, jdbc.queryForObject("SELECT count(*) FROM administrative_areas", Integer.class));
-        repair.execute(dataSource);
-        assertEquals("Tên khu vực tùy chỉnh", jdbc.queryForObject("SELECT area_name FROM administrative_areas WHERE area_id=2", String.class));
+    @Test void seededAreaNamesUseVietnamese() {
+        assertEquals("Thành phố Hồ Chí Minh", jdbc.queryForObject("SELECT ten_khu_vuc FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc=1", String.class));
+        assertEquals("Phường Bến Nghé", jdbc.queryForObject("SELECT ten_khu_vuc FROM khu_vuc_hanh_chinh WHERE ma_khu_vuc=6", String.class));
     }
 
     @Test void postMergerAreasAreCompleteAndSupportTwoLevelAddresses() {
@@ -1303,8 +1295,6 @@ class ListingPostgisTest {
         assertTrue(units.stream().anyMatch(w -> w.getName().equals("Phường Vũng Tàu")));
         assertEquals("Phường Bến Nghé", areas.getWardsByDistrict(2L).stream()
                 .filter(w -> w.getId().equals(6L)).findFirst().orElseThrow().getName());
-        new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(new ClassPathResource(
-                "db/migration/V10__hcm_post_merger_commune_level_areas.sql")).execute(dataSource);
         assertEquals(168, areas.getWardsByProvince(1L).size());
 
         User owner = user("newareas", Role.MEMBER);
@@ -1355,16 +1345,16 @@ class ListingPostgisTest {
             .stream().map(item -> item.getId()).toList());
         assertEquals(3, listings.findNearby(10.78, 106.7, 50).size());
         Number meters = (Number) entityManager.createNativeQuery(
-            "SELECT ST_Distance(CAST(location AS geography), CAST(ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) AS geography), false) FROM listings WHERE listing_id = :id")
+            "SELECT ST_Distance(CAST(toa_do_vi_tri AS geography), CAST(ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) AS geography), false) FROM tin_cho_thue WHERE ma_tin_dang = :id")
             .setParameter("id", ids.get(1)).getSingleResult();
         assertEquals(1, listings.findNearby(10.78, 106.7, meters.doubleValue() / 1000 - 0.001).size());
         assertEquals(2, listings.findNearby(10.78, 106.7, meters.doubleValue() / 1000 + 0.001).size());
         assertTrue(listings.findNearby(0, 0, 50).isEmpty());
-        entityManager.createNativeQuery("UPDATE listings SET location = ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) WHERE listing_id = :id")
+        entityManager.createNativeQuery("UPDATE tin_cho_thue SET toa_do_vi_tri = ST_SetSRID(ST_MakePoint(106.7, 10.78), 4326) WHERE ma_tin_dang = :id")
             .setParameter("id", ids.get(2)).executeUpdate();
         entityManager.flush(); entityManager.clear();
         assertEquals(2, listings.findNearby(10.78, 106.7, 0.1).size());
-        entityManager.createNativeQuery("UPDATE listings SET location = NULL WHERE listing_id = :id")
+        entityManager.createNativeQuery("UPDATE tin_cho_thue SET toa_do_vi_tri = NULL WHERE ma_tin_dang = :id")
             .setParameter("id", ids.get(2)).executeUpdate();
         entityManager.flush(); entityManager.clear();
         assertEquals(1, listings.findNearby(10.78, 106.7, 0.1).size());

@@ -9,63 +9,64 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "contracts")
+@Table(name = "hop_dong_thue")
 public class Contract {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "contract_id")
+    @Column(name = "ma_hop_dong")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = false)
+    @JoinColumn(name = "ma_tin_dang", nullable = false)
     private Listing listing;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "landlord_id", nullable = false)
+    @JoinColumn(name = "ma_ben_cho_thue", nullable = false)
     private User landlord;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
+    @JoinColumn(name = "ma_ben_thue", nullable = false)
     private User tenant;
 
-    @Column(name = "start_date", nullable = false)
+    @Column(name = "ngay_bat_dau", nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "end_date", nullable = false)
+    @Column(name = "ngay_ket_thuc", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "monthly_rent", nullable = false, precision = 12, scale = 2)
+    @Column(name = "tien_thue_moi_thang", nullable = false, precision = 12, scale = 2)
     private BigDecimal monthlyRent;
 
-    @Column(name = "deposit_amount", precision = 12, scale = 2)
+    @Column(name = "tien_dat_coc", precision = 12, scale = 2)
     private BigDecimal depositAmount;
 
-    @Column(nullable = false, length = 15)
+    @Column(name = "trang_thai", nullable = false, length = 15)
     private String status = "DRAFT";
 
-    @Column(name = "contract_file_url", length = 255)
+    @Column(name = "duong_dan_tep_hop_dong", length = 255)
     private String contractFileUrl;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "thoi_diem_tao", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(length=2000)
+    @Column(name = "ghi_chu", length=2000)
     private String note;
     public String getNote() {
         return note;
     }
     public void setNote(String value) { note=value; }
 
+    @Column(name = "phien_ban_du_lieu")
     @Version
     private Long version;
     public Long getVersion() {
         return version;
     }
 
-    @Column(name="listing_title",length=255)
+    @Column(name = "tieu_de_tin_trong_hop_dong",length=255)
     private String listingTitle;
-    @Column(name="listing_address",length=255)
+    @Column(name = "dia_chi_tin_trong_hop_dong",length=255)
     private String listingAddress;
     public String getListingTitle() {
         return listingTitle;
@@ -74,13 +75,13 @@ public class Contract {
         return listingAddress;
     }
 
-    @Column(name = "contract_type", length = 20)
+    @Column(name = "loai_hop_dong", length = 20)
     private String contractType;
-    @Column(name = "details_json", columnDefinition = "text")
+    @Column(name = "chi_tiet_dang_json", columnDefinition = "text")
     private String detailsJson;
-    @Column(name = "document_text", columnDefinition = "text")
+    @Column(name = "noi_dung_hop_dong", columnDefinition = "text")
     private String documentText;
-    @Column(name = "accepted_at")
+    @Column(name = "thoi_diem_xac_nhan")
     private LocalDateTime acceptedAt;
     public String getContractType() { return contractType; }
     public void setContractType(String value) { contractType = value; }

@@ -68,7 +68,7 @@ class ChatRepository {
       'latitude': location?.point.latitude,
       'longitude': location?.point.longitude,
       'locationName': location?.name,
-    }, options: Options(receiveTimeout: const Duration(seconds: 40)));
+    }, options: Options(receiveTimeout: const Duration(seconds: 110)));
     return ChatReply.fromJson(Map<String, dynamic>.from(response.data));
   }
 

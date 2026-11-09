@@ -40,14 +40,14 @@ public class ChatbotAiClient {
         body.put("amenityNames", amenityNames);
         try {
             var httpRequest = HttpRequest.newBuilder(URI.create(baseUrl + "/analyze"))
-                .timeout(Duration.ofSeconds(32)).header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(100)).header("Content-Type", "application/json")
                 .header("X-Service-Token", token).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build();
             var response = http.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 429) {
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "AI đang giới hạn lượt dùng. Vui lòng thử lại sau.");
             }
             if (response.statusCode() == 504) throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT, "AI phản hồi chậm. Vui lòng thử lại.");
-            if (response.statusCode() != 200) throw unavailable("Dịch vụ tìm nhà chưa sẵn sàng. Kiểm tra ai-service và huấn luyện mô hình nội bộ bằng python train.py.");
+            if (response.statusCode() != 200) throw unavailable("Dịch vụ tìm nhà chưa sẵn sàng. Kiểm tra ai-service, Ollama và mô hình LLM đã tải.");
             if (response.body().length() > 20000) throw unavailable("Phản hồi AI không hợp lệ. Vui lòng thử lại.");
             SearchPlan plan = json.readValue(response.body(), SearchPlan.class);
             if (plan == null || !validator.validate(plan).isEmpty()) throw unavailable("AI trả điều kiện không hợp lệ. Hãy viết lại yêu cầu.");
