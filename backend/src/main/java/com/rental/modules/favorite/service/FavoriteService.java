@@ -34,13 +34,13 @@ public class FavoriteService {
     public boolean toggleFavorite(String email, Long propertyId) {
         java.util.Optional<User> userResult = userRepository.findByEmail(email);
         if (userResult.isEmpty()) {
-            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+            throw new IllegalArgumentException("Không tìm thấy người dùng với email: " + email);
         }
         User user = userResult.get();
 
         java.util.Optional<Property> propertyResult = propertyRepository.findById(propertyId);
         if (propertyResult.isEmpty()) {
-            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
+            throw new IllegalArgumentException("Không tìm thấy khu trọ với ID: " + propertyId);
         }
         Property property = propertyResult.get();
 
@@ -60,7 +60,7 @@ public class FavoriteService {
     public List<PropertyResponse> getMyFavoriteProperties(String email) {
         java.util.Optional<User> userResult = userRepository.findByEmail(email);
         if (userResult.isEmpty()) {
-            throw new IllegalArgumentException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+            throw new IllegalArgumentException("Không tìm thấy người dùng với email: " + email);
         }
         User user = userResult.get();
 

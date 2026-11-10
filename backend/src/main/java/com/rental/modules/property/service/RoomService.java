@@ -32,18 +32,18 @@ public class RoomService {
     public RoomResponse addRoom(String email, Long propertyId, RoomRequest request) {
         java.util.Optional<User> userResult = userRepository.findByEmail(email);
         if (userResult.isEmpty()) {
-            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+            throw new RuntimeException("Không tìm thấy người dùng với email: " + email);
         }
         User user = userResult.get();
 
         java.util.Optional<Property> propertyResult = propertyRepository.findById(propertyId);
         if (propertyResult.isEmpty()) {
-            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
+            throw new RuntimeException("Không tìm thấy khu trọ với ID: " + propertyId);
         }
         Property property = propertyResult.get();
 
         if (!property.getLandlord().getUserId().equals(user.getUserId())) {
-            throw new AccessDeniedException("Báº¡n khÃ´ng cÃ³ quyá»n thÃªm phÃ²ng vÃ o khu trá» nÃ y");
+            throw new AccessDeniedException("Bạn không có quyền thêm phòng vào khu trọ này");
         }
 
         Room room = new Room();
@@ -61,7 +61,7 @@ public class RoomService {
     public List<RoomResponse> getRoomsByProperty(Long propertyId) {
 
         if (!propertyRepository.existsById(propertyId)) {
-            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + propertyId);
+            throw new RuntimeException("Không tìm thấy khu trọ với ID: " + propertyId);
         }
 
         List<RoomResponse> result = new ArrayList<>();

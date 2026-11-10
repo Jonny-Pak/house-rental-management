@@ -60,7 +60,7 @@ public class PropertyService {
         }
         java.util.Optional<User> landlordResult = userRepository.findByEmail(email);
         if (landlordResult.isEmpty()) {
-            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+            throw new RuntimeException("Không tìm thấy người dùng với email: " + email);
         }
         User landlord = landlordResult.get();
 
@@ -96,7 +96,7 @@ public class PropertyService {
     public List<PropertyResponse> getMyProperties(String email) {
         java.util.Optional<User> landlordResult = userRepository.findByEmail(email);
         if (landlordResult.isEmpty()) {
-            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng vá»›i email: " + email);
+            throw new RuntimeException("Không tìm thấy người dùng với email: " + email);
         }
         User landlord = landlordResult.get();
 
@@ -108,7 +108,7 @@ public class PropertyService {
     public PropertyResponse getPropertyById(Long id) {
         java.util.Optional<Property> propertyResult = propertyRepository.findById(id);
         if (propertyResult.isEmpty()) {
-            throw new RuntimeException("KhÃ´ng tÃ¬m tháº¥y khu trá» vá»›i ID: " + id);
+            throw new RuntimeException("Không tìm thấy khu trọ với ID: " + id);
         }
         Property property = propertyResult.get();
         return mapToResponse(property);

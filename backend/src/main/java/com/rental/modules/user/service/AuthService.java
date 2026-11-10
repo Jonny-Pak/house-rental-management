@@ -117,7 +117,7 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
         if (userResult.isEmpty()) {
-            throw new IllegalArgumentException("NgÆ°á»i dÃ¹ng khÃ´ng tá»“n táº¡i vá»›i email: " + request.getEmail());
+            throw new IllegalArgumentException("Người dùng không tồn tại với email: " + request.getEmail());
         }
         User user = userResult.get();
 

@@ -27,9 +27,9 @@ public class FavoriteController {
 
         boolean isFavorite = favoriteService.toggleFavorite(principal.getName(), propertyId);
 
-        String message = "ÄÃ£ xÃ³a khu trá» khá»i danh sÃ¡ch yÃªu thÃ­ch.";
+        String message = "Đã xóa khu trọ khỏi danh sách yêu thích.";
         if (isFavorite) {
-            message = "ÄÃ£ thÃªm khu trá» vÃ o danh sÃ¡ch yÃªu thÃ­ch.";
+            message = "Đã thêm khu trọ vào danh sách yêu thích.";
         }
 
         return ResponseEntity.ok(ApiResponse.success(message, Map.of("isFavorite", isFavorite)));
@@ -38,6 +38,6 @@ public class FavoriteController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<PropertyResponse>>> getMyFavorites(Principal principal) {
         List<PropertyResponse> favorites = favoriteService.getMyFavoriteProperties(principal.getName());
-        return ResponseEntity.ok(ApiResponse.success("Láº¥y danh sÃ¡ch yÃªu thÃ­ch thÃ nh cÃ´ng.", favorites));
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách yêu thích thành công.", favorites));
     }
 }

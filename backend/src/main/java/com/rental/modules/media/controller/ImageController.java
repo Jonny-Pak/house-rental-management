@@ -22,9 +22,9 @@ public class ImageController {
     public ResponseEntity<ApiResponse<String>> uploadImage(@RequestParam("file") MultipartFile file) {
         try {
             String imageUrl = imageService.uploadImage(file);
-            return ResponseEntity.ok(ApiResponse.success("Upload áº£nh thÃ nh cÃ´ng", imageUrl));
+            return ResponseEntity.ok(ApiResponse.success("Upload ảnh thành công", imageUrl));
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(ApiResponse.error("Lá»—i khi upload áº£nh: " + e.getMessage()));
+            return ResponseEntity.status(500).body(ApiResponse.error("Lỗi khi upload ảnh: " + e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }

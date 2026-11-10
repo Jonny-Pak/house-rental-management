@@ -21,11 +21,11 @@ public class ChatbotAiClient {
     private final String token;
     private final Validator validator;
     private final ObjectMapper json;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(60)).build();
 
     public ChatbotAiClient(@Value("${app.chatbot.url:http://127.0.0.1:8001}") String baseUrl,
                            @Value("${app.chatbot.service-token:}") String token, Validator validator, ObjectMapper json) {
-        this.baseUrl = baseUrl;
+        this.baseUrl = baseUrl.replaceAll("/+$", "");
         this.token = token;
         this.validator = validator;
         this.json = json.copy().enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);

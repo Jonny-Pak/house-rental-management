@@ -27,19 +27,19 @@ public class PropertyController {
             @Valid @RequestBody PropertyRequest request) {
 
         PropertyResponse response = propertyService.createProperty(principal.getName(), request);
-        return ResponseEntity.ok(ApiResponse.success("Táº¡o khu trá» thÃ nh cÃ´ng", response));
+        return ResponseEntity.ok(ApiResponse.success("Tạo khu trọ thành công", response));
     }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<PropertyResponse>>> getMyProperties(Principal principal) {
         List<PropertyResponse> properties = propertyService.getMyProperties(principal.getName());
-        return ResponseEntity.ok(ApiResponse.success("Láº¥y danh sÃ¡ch khu trá» thÃ nh cÃ´ng", properties));
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách khu trọ thành công", properties));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PropertyResponse>> getPropertyById(@PathVariable Long id) {
         PropertyResponse response = propertyService.getPropertyById(id);
-        return ResponseEntity.ok(ApiResponse.success("Láº¥y thÃ´ng tin khu trá» thÃ nh cÃ´ng", response));
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin khu trọ thành công", response));
     }
 
     @GetMapping
@@ -53,6 +53,6 @@ public class PropertyController {
 
         List<PropertyResponse> properties = propertyService.getAllProperties(
                 provinceId, districtId, wardId, propertyType, minPrice, maxPrice);
-        return ResponseEntity.ok(ApiResponse.success("Láº¥y danh sÃ¡ch táº¥t cáº£ khu trá» thÃ nh cÃ´ng", properties));
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tất cả khu trọ thành công", properties));
     }
 }
