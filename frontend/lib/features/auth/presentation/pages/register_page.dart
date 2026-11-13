@@ -30,7 +30,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -38,6 +40,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
@@ -63,7 +66,9 @@ class _RegisterPageState extends State<RegisterPage> {
     required String hintText,
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
-    bool isPassword = false,
+    TextInputAction textInputAction = TextInputAction.next,
+    bool obscureText = false,
+    VoidCallback? onToggleObscure,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -81,11 +86,9 @@ class _RegisterPageState extends State<RegisterPage> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          textInputAction: isPassword
-              ? TextInputAction.done
-              : TextInputAction.next,
+          textInputAction: textInputAction,
           onFieldSubmitted: (_) {
-            if (isPassword) {
+            if (textInputAction == TextInputAction.done) {
               if (context.read<AuthBloc>().state is! AuthLoading) {
                 _onRegister(context);
               }
@@ -93,7 +96,7 @@ class _RegisterPageState extends State<RegisterPage> {
               FocusScope.of(context).nextFocus();
             }
           },
-          obscureText: isPassword ? _obscurePassword : false,
+          obscureText: obscureText,
           style: const TextStyle(fontSize: 15, color: kPrimaryDark),
           decoration: InputDecoration(
             hintText: hintText,
@@ -120,15 +123,11 @@ class _RegisterPageState extends State<RegisterPage> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
             ),
-            suffixIcon: isPassword
+            suffixIcon: onToggleObscure != null
                 ? IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    onPressed: onToggleObscure,
                     icon: Icon(
-                      _obscurePassword
+                      obscureText
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: kSubText,
@@ -227,9 +226,14 @@ class _RegisterPageState extends State<RegisterPage> {
                           label: 'Họ và tên',
                           hintText: 'Nhập họ và tên...',
                           controller: _fullNameCtrl,
-                          validator: (v) => v == null || v.isEmpty
-                              ? 'Vui lòng nhập họ tên'
-                              : null,
+                          validator: (v) {
+                            final trimmed = v?.trim() ?? '';
+                            if (trimmed.isEmpty) return 'Vui lòng nhập họ tên';
+                            if (trimmed.length > 150) {
+                              return 'Họ tên không được vượt quá 150 ký tự';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
 
@@ -238,9 +242,16 @@ class _RegisterPageState extends State<RegisterPage> {
                           hintText: 'Nhập số điện thoại...',
                           controller: _phoneCtrl,
                           keyboardType: TextInputType.phone,
-                          validator: (v) => v == null || v.isEmpty
-                              ? 'Vui lòng nhập SĐT'
-                              : null,
+                          validator: (v) {
+                            final trimmed = v?.trim() ?? '';
+                            if (trimmed.isEmpty) return 'Vui lòng nhập SĐT';
+                            if (trimmed.length < 9 ||
+                                trimmed.length > 15 ||
+                                !RegExp(r'^[0-9+]+$').hasMatch(trimmed)) {
+                              return 'Số điện thoại không hợp lệ (9-15 chữ số)';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
 
@@ -249,10 +260,17 @@ class _RegisterPageState extends State<RegisterPage> {
                           hintText: 'Nhập địa chỉ email...',
                           controller: _emailCtrl,
                           keyboardType: TextInputType.emailAddress,
-                          validator: (v) =>
-                              v == null || v.isEmpty || !v.contains('@')
-                              ? 'Email không hợp lệ'
-                              : null,
+                          validator: (v) {
+                            final trimmed = v?.trim() ?? '';
+                            if (trimmed.isEmpty ||
+                                trimmed.length > 150 ||
+                                !RegExp(
+                                  r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                                ).hasMatch(trimmed)) {
+                              return 'Email không hợp lệ';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
 
@@ -260,10 +278,39 @@ class _RegisterPageState extends State<RegisterPage> {
                           label: 'Mật khẩu',
                           hintText: 'Tạo mật khẩu...',
                           controller: _passwordCtrl,
-                          isPassword: true,
-                          validator: (v) => v == null || v.length < 8
+                          obscureText: _obscurePassword,
+                          onToggleObscure: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty || v.length < 8
                               ? 'Mật khẩu ít nhất 8 ký tự'
                               : null,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildTextField(
+                          label: 'Xác nhận mật khẩu',
+                          hintText: 'Nhập lại mật khẩu...',
+                          controller: _confirmPasswordCtrl,
+                          textInputAction: TextInputAction.done,
+                          obscureText: _obscureConfirmPassword,
+                          onToggleObscure: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
+                            });
+                          },
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return 'Vui lòng xác nhận mật khẩu';
+                            }
+                            if (v != _passwordCtrl.text) {
+                              return 'Mật khẩu xác nhận không khớp';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 32),
 

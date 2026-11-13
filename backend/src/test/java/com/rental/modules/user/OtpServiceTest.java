@@ -33,4 +33,20 @@ class OtpServiceTest {
         when(clock.millis()).thenReturn(60000L);
         assertDoesNotThrow(()->service.generateAndStoreOtp("tenant@example.com"));
     }
+
+    @Test void locksAfterFiveWrongAttemptsAndNormalizesEmailAndOtp() {
+        Clock clock = mock(Clock.class);
+        when(clock.millis()).thenReturn(0L);
+        OtpService service = new OtpService(clock);
+        String code = service.generateAndStoreOtp(" Tenant@Example.COM ");
+
+        for (int i = 0; i < 5; i++) {
+            assertFalse(service.validateOtp("tenant@example.com", "000000"));
+        }
+        assertFalse(service.validateOtp("tenant@example.com", code));
+
+        when(clock.millis()).thenReturn(60000L);
+        String freshCode = service.generateAndStoreOtp("tenant@example.com");
+        assertTrue(service.validateOtp("TENANT@example.com", " " + freshCode + " "));
+    }
 }

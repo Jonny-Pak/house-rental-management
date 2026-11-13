@@ -16,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -39,11 +40,13 @@ public class AuthService {
         this.defaultMembership = defaultMembership;
     }
 
+    @Transactional
     public String register(RegisterRequest request) {
         if (request.getRole() == Role.ADMIN) {
             throw new IllegalArgumentException("Không thể tự đăng ký tài khoản Admin.");
         }
-        Optional<User> existing = userRepository.findByEmail(request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+        Optional<User> existing = findUserByEmail(email);
         if (existing.isPresent()) {
             User user = existing.get();
             if (Boolean.TRUE.equals(user.getIsVerified())) {
@@ -52,30 +55,35 @@ public class AuthService {
             if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
                 throw new IllegalArgumentException("Email đã được đăng ký. Hãy dùng mật khẩu ban đầu để nhận lại mã.");
             }
-            return resendOtp(request.getEmail());
+            return resendOtp(user.getEmail());
+        }
+
+        String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
+        if (phoneNumber != null && userRepository.findByPhoneNumber(phoneNumber).isPresent()) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng.");
         }
 
         User user = new User();
-        user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
+        user.setFullName(request.getFullName().trim());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setPhoneNumber(request.getPhoneNumber());
+        user.setPhoneNumber(phoneNumber);
         user.setRole(request.getRole());
         user.setStatus(UserStatus.ACTIVE);
         user.setIsVerified(false);
         userRepository.save(user);
-        sendVerificationCode(request.getEmail());
+        sendVerificationCode(email);
         return "Đã gửi mã xác thực. Vui lòng kiểm tra email và thư mục Spam.";
     }
 
     public String resendOtp(String email) {
-        User user = findUnverifiedUser(email);
+        User user = findUnverifiedUser(normalizeEmail(email));
         sendVerificationCode(user.getEmail());
         return "Đã gửi lại mã xác thực. Vui lòng kiểm tra email và thư mục Spam.";
     }
 
     private User findUnverifiedUser(String email) {
-        Optional<User> result = userRepository.findByEmail(email);
+        Optional<User> result = findUserByEmail(email);
         if (result.isEmpty()) throw new IllegalArgumentException("Không tìm thấy tài khoản.");
         User user = result.get();
         if (Boolean.TRUE.equals(user.getIsVerified())) {
@@ -85,25 +93,28 @@ public class AuthService {
     }
 
     private void sendVerificationCode(String email) {
-        String otp = otpService.generateAndStoreOtp(email);
+        String normalizedEmail = normalizeEmail(email);
+        String otp = otpService.generateAndStoreOtp(normalizedEmail);
         try {
-            emailService.sendOtpEmail(email, otp);
+            emailService.sendOtpEmail(normalizedEmail, otp);
         } catch (RuntimeException exception) {
-            otpService.discardOtp(email);
+            otpService.discardOtp(normalizedEmail);
             throw exception;
         }
     }
 
     @Transactional
     public String verifyOtp(VerifyOtpRequest request) {
-        boolean valid = otpService.validateOtp(request.getEmail(), request.getOtp());
+        String email = normalizeEmail(request.getEmail());
+        String otp = request.getOtp() == null ? "" : request.getOtp().trim();
+        boolean valid = otpService.validateOtp(email, otp);
         if (!valid) {
-            throw new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn.");
+            throw new IllegalArgumentException("Mã xác thực không hợp lệ, đã hết hạn hoặc đã nhập sai 5 lần.");
         }
 
-        java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
+        java.util.Optional<User> userResult = findUserByEmail(email);
         if (userResult.isEmpty()) {
-            throw new IllegalArgumentException("User not found with email: " + request.getEmail());
+            throw new IllegalArgumentException("User not found with email: " + email);
         }
         User user = userResult.get();
 
@@ -115,9 +126,10 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        java.util.Optional<User> userResult = userRepository.findByEmail(request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+        java.util.Optional<User> userResult = findUserByEmail(email);
         if (userResult.isEmpty()) {
-            throw new IllegalArgumentException("Người dùng không tồn tại với email: " + request.getEmail());
+            throw new IllegalArgumentException("Người dùng không tồn tại với email: " + email);
         }
         User user = userResult.get();
 
@@ -126,10 +138,25 @@ public class AuthService {
         }
 
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(user.getEmail(), request.getPassword())
         );
 
         return createAuthResponse(user);
+    }
+
+    private Optional<User> findUserByEmail(String normalizedEmail) {
+        return userRepository.findByEmail(normalizedEmail)
+                .or(() -> userRepository.findByEmailIgnoreCase(normalizedEmail));
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null) return null;
+        String trimmed = phoneNumber.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private AuthResponse createAuthResponse(User user) {

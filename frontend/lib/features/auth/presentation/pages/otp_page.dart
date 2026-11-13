@@ -94,6 +94,7 @@ class _OtpPageState extends State<OtpPage> {
         child: SafeArea(
           child: BlocConsumer<AuthBloc, AuthState>(
             listener: (context, state) {
+              if (ModalRoute.of(context)?.isCurrent == false) return;
               if (state is AuthError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -179,6 +180,11 @@ class _OtpPageState extends State<OtpPage> {
                             TextFormField(
                               controller: _otpCtrl,
                               keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.oneTimeCode],
+                              onFieldSubmitted: (_) {
+                                if (!isLoading) _onVerify(context);
+                              },
                               textAlign: TextAlign.center,
                               maxLength: 6,
                               inputFormatters: [
@@ -255,6 +261,7 @@ class _OtpPageState extends State<OtpPage> {
                                       ),
                                     ),
                             ),
+                            const SizedBox(height: 12),
                             TextButton(
                               onPressed: isLoading || _resendSeconds > 0
                                   ? null

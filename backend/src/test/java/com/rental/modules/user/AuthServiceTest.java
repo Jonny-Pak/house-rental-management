@@ -104,4 +104,85 @@ class AuthServiceTest {
         verifyNoInteractions(users, membership);
     }
 
+    @Test void duplicatePhoneNumberIsRejectedBeforeSavingOrSendingOtp() {
+        var request = new com.rental.modules.user.dto.request.RegisterRequest(
+                "Tenant", "tenant@example.com", "password123", "0912345678", Role.MEMBER);
+        when(users.findByEmail("tenant@example.com")).thenReturn(Optional.empty());
+        when(users.findByEmailIgnoreCase("tenant@example.com")).thenReturn(Optional.empty());
+        when(users.findByPhoneNumber("0912345678")).thenReturn(Optional.of(new User()));
+
+        var error = assertThrows(IllegalArgumentException.class, () -> service.register(request));
+        assertEquals("Số điện thoại đã được sử dụng.", error.getMessage());
+        verify(users, never()).save(any());
+        verifyNoInteractions(otp, mail);
+    }
+
+    @Test void blankPhoneNormalizesToNullAndEmailNormalizesToLowercase() {
+        var request = new com.rental.modules.user.dto.request.RegisterRequest(
+                "  Nguyen Van A  ", "  NewUser@Example.COM ", "password123", "   ", Role.MEMBER);
+        when(users.findByEmail("newuser@example.com")).thenReturn(Optional.empty());
+        when(users.findByEmailIgnoreCase("newuser@example.com")).thenReturn(Optional.empty());
+        when(encoder.encode("password123")).thenReturn("encoded-pw");
+        when(otp.generateAndStoreOtp("newuser@example.com")).thenReturn("654321");
+
+        service.register(request);
+
+        var savedUser = org.mockito.ArgumentCaptor.forClass(User.class);
+        verify(users).save(savedUser.capture());
+        assertEquals("Nguyen Van A", savedUser.getValue().getFullName());
+        assertEquals("newuser@example.com", savedUser.getValue().getEmail());
+        assertNull(savedUser.getValue().getPhoneNumber());
+        verify(mail).sendOtpEmail("newuser@example.com", "654321");
+    }
+
+    @Test void endToEndRegisterOtpVerificationAndLoginFlow() {
+        OtpService realOtp = new OtpService();
+        AuthService flowService = new AuthService(users, encoder, realOtp, mail, authentication, jwt, membership);
+
+        java.util.concurrent.atomic.AtomicReference<User> stored = new java.util.concurrent.atomic.AtomicReference<>();
+        when(users.findByEmail("flow@example.com")).thenAnswer(inv -> Optional.ofNullable(stored.get()));
+        when(users.findByEmailIgnoreCase("flow@example.com")).thenAnswer(inv -> Optional.ofNullable(stored.get()));
+        when(users.findByPhoneNumber("0987654321")).thenReturn(Optional.empty());
+        when(encoder.encode("secret123")).thenReturn("hashed-secret");
+        when(users.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            if (u.getUserId() == null) u.setUserId(42L);
+            stored.set(u);
+            return u;
+        });
+        when(jwt.generateAccessToken(any())).thenReturn("jwt-access");
+        when(jwt.generateRefreshToken(any())).thenReturn("jwt-refresh");
+
+        var regRequest = new com.rental.modules.user.dto.request.RegisterRequest(
+                "Flow User", "Flow@Example.com", "secret123", "0987654321", Role.MEMBER);
+        String regMsg = flowService.register(regRequest);
+        assertTrue(regMsg.contains("Đã gửi mã xác thực"));
+        assertFalse(stored.get().getIsVerified());
+
+        var sentOtp = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(mail).sendOtpEmail(eq("flow@example.com"), sentOtp.capture());
+        String code = sentOtp.getValue();
+        assertTrue(code.matches("[0-9]{6}"));
+
+        // Unverified user cannot log in yet
+        assertThrows(IllegalStateException.class,
+                () -> flowService.login(new LoginRequest("FLOW@example.com", "secret123")));
+
+        // Verify with mixed-case email and whitespace-padded OTP
+        String verifyMsg = flowService.verifyOtp(
+                new com.rental.modules.user.dto.request.VerifyOtpRequest(" FLOW@Example.com ", " " + code + " "));
+        assertTrue(verifyMsg.contains("xác thực thành công"));
+        assertTrue(stored.get().getIsVerified());
+        verify(membership).assignIfMissing(42L);
+
+        // OTP cannot be reused
+        assertThrows(IllegalArgumentException.class,
+                () -> flowService.verifyOtp(new com.rental.modules.user.dto.request.VerifyOtpRequest("flow@example.com", code)));
+
+        // Verified user can log in
+        var authResp = flowService.login(new LoginRequest("Flow@Example.com", "secret123"));
+        assertEquals("jwt-access", authResp.getAccessToken());
+        assertEquals(42L, authResp.getUserId());
+    }
+
 }

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -22,36 +23,45 @@ public class OtpService {
     }
 
     public synchronized String generateAndStoreOtp(String email) {
+        String key = normalizeKey(email);
         for (java.util.Map.Entry<String, OtpEntry> item : codes.entrySet()) {
             if (clock.millis() - item.getValue().createdAt >= 300000) codes.remove(item.getKey(), item.getValue());
         }
-        OtpEntry previous = codes.get(email);
+        OtpEntry previous = codes.get(key);
         long now = clock.millis();
         if (previous != null && now - previous.createdAt < 60000) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Vui lòng chờ 60 giây trước khi gửi lại mã.");
         }
         String code = String.format("%06d", random.nextInt(1000000));
-        codes.put(email, new OtpEntry(code, now));
+        codes.put(key, new OtpEntry(code, now));
         return code;
     }
 
     public synchronized boolean validateOtp(String email, String code) {
-        OtpEntry entry = codes.get(email);
+        if (email == null || code == null) return false;
+        String key = normalizeKey(email);
+        String trimmedCode = code.trim();
+        OtpEntry entry = codes.get(key);
         if (entry == null) return false;
         if (clock.millis() - entry.createdAt >= 300000) {
-            codes.remove(email, entry);
+            codes.remove(key, entry);
             return false;
         }
         if (entry.attempts >= 5) return false;
-        if (!entry.code.equals(code)) {
+        if (!entry.code.equals(trimmedCode)) {
             entry.attempts++;
             return false;
         }
-        return codes.remove(email, entry);
+        return codes.remove(key, entry);
     }
 
     public void discardOtp(String email) {
-        codes.remove(email);
+        if (email == null) return;
+        codes.remove(normalizeKey(email));
+    }
+
+    private static String normalizeKey(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     private static class OtpEntry {

@@ -99,6 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ResendOtpRequested event,
     Emitter<AuthState> emit,
   ) async {
+    if (state is AuthLoading) return;
     emit(const AuthLoading());
     try {
       await _authRepository.resendOtp(event.email);
@@ -114,6 +115,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     VerifyOtpRequested event,
     Emitter<AuthState> emit,
   ) async {
+    if (state is AuthLoading) return;
     emit(const AuthLoading());
     try {
       await _authRepository.verifyOtp(event.request);
@@ -130,10 +132,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final responseData = e.response?.data;
       if (responseData is Map<String, dynamic>) {
-        return responseData['message'] as String? ??
-            'Có lỗi xảy ra. Vui lòng thử lại.';
+        final message = responseData['message'] as String?;
+        final data = responseData['data'];
+        if (data is Map && data.isNotEmpty) {
+          final fieldErrors = data.values
+              .whereType<String>()
+              .where((value) => value.trim().isNotEmpty)
+              .toList();
+          if (fieldErrors.isNotEmpty &&
+              (message == null ||
+                  message.isEmpty ||
+                  message == 'Validation failed')) {
+            return fieldErrors.join('\n');
+          }
+        }
+        if (message != null && message.isNotEmpty) {
+          return message;
+        }
+        return 'Có lỗi xảy ra. Vui lòng thử lại.';
       }
     } catch (_) {}
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return 'Kết nối máy chủ quá thời gian chờ. Vui lòng thử lại.';
+    }
     return 'Không kết nối được máy chủ. Vui lòng thử lại.';
   }
 }
