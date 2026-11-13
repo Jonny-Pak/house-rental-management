@@ -58,6 +58,7 @@ class _LoginPageState extends State<LoginPage> {
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
     bool isPassword = false,
+    IconData? prefixIcon,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -96,6 +97,13 @@ class _LoginPageState extends State<LoginPage> {
               fontSize: 14,
               fontWeight: FontWeight.w400,
             ),
+            prefixIcon: prefixIcon != null
+                ? Icon(
+                    prefixIcon,
+                    color: kSubText,
+                    size: 20,
+                  )
+                : null,
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
@@ -113,6 +121,14 @@ class _LoginPageState extends State<LoginPage> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: kPrimaryAccent, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.2),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
             ),
             suffixIcon: isPassword
                 ? IconButton(
@@ -186,181 +202,213 @@ class _LoginPageState extends State<LoginPage> {
                   vertical: 32,
                 ),
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: kPrimaryAccent.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.home_work_rounded,
-                              size: 48,
-                              color: kPrimaryAccent,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Đăng nhập',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: kPrimaryDark,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Chào mừng bạn quay trở lại.\nHãy đăng nhập để tiếp tục.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: kSubText,
-                            fontSize: 15,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-
-                        _buildTextField(
-                          label: 'Email',
-                          hintText: 'Nhập địa chỉ email...',
-                          controller: _emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (v) =>
-                              v == null || v.isEmpty || !v.contains('@')
-                              ? 'Email không hợp lệ'
-                              : null,
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextField(
-                          label: 'Mật khẩu',
-                          hintText: 'Nhập mật khẩu...',
-                          controller: _passwordCtrl,
-                          isPassword: true,
-                          validator: (v) => v == null || v.length < 8
-                              ? 'Mật khẩu ít nhất 8 ký tự'
-                              : null,
-                        ),
-
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PasswordPage(
-                                  initialEmail: _emailCtrl.text.trim(),
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isCard = constraints.maxWidth >= 380;
+                      return Container(
+                        padding: isCard
+                            ? const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 32,
+                              )
+                            : EdgeInsets.zero,
+                        decoration: isCard
+                            ? BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: kBorderColor.withValues(alpha: 0.8),
                                 ),
-                              ),
-                            ),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Quên mật khẩu?',
-                              style: TextStyle(
-                                color: kPrimaryAccent,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        ElevatedButton(
-                          onPressed: isLoading ? null : () => _onLogin(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimaryAccent,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF15803D)
+                                        .withValues(alpha: 0.04),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
                                   ),
-                                )
-                              : const Text(
-                                  'Đăng nhập',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Divider(color: kBorderColor, thickness: 1),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'Hoặc',
-                                style: TextStyle(color: kSubText, fontSize: 13),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(color: kBorderColor, thickness: 1),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-
-                        GoogleLoginButton(loading: isLoading),
-                        const SizedBox(height: 32),
-
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          children: [
-                            const Text(
-                              'Chưa có tài khoản? ',
-                              style: TextStyle(color: kSubText, fontSize: 15),
-                            ),
-                            InkWell(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterPage(),
-                                ),
-                              ),
-                              child: const Text(
-                                'Đăng ký',
+                                ],
+                              )
+                            : null,
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Đăng nhập',
                                 style: TextStyle(
-                                  color: kPrimaryAccent,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  color: kPrimaryDark,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Chào mừng bạn quay trở lại.\nHãy đăng nhập để tiếp tục.',
+                                style: TextStyle(
+                                  color: kSubText,
+                                  fontSize: 15,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+
+                              _buildTextField(
+                                label: 'Email',
+                                hintText: 'Nhập địa chỉ email...',
+                                controller: _emailCtrl,
+                                keyboardType: TextInputType.emailAddress,
+                                prefixIcon: Icons.email_outlined,
+                                validator: (v) =>
+                                    v == null || v.isEmpty || !v.contains('@')
+                                    ? 'Email không hợp lệ'
+                                    : null,
+                              ),
+                              const SizedBox(height: 20),
+                              _buildTextField(
+                                label: 'Mật khẩu',
+                                hintText: 'Nhập mật khẩu...',
+                                controller: _passwordCtrl,
+                                isPassword: true,
+                                prefixIcon: Icons.lock_outline_rounded,
+                                validator: (v) => v == null || v.length < 8
+                                    ? 'Mật khẩu ít nhất 8 ký tự'
+                                    : null,
+                              ),
+
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PasswordPage(
+                                        initialEmail: _emailCtrl.text.trim(),
+                                      ),
+                                    ),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    'Quên mật khẩu?',
+                                    style: TextStyle(
+                                      color: kPrimaryAccent,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
+                              ElevatedButton(
+                                onPressed: isLoading ? null : () => _onLogin(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kPrimaryAccent,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Đăng nhập',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(height: 32),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: kBorderColor,
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Text(
+                                      'Hoặc',
+                                      style: TextStyle(
+                                        color: kSubText,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: kBorderColor,
+                                      thickness: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 32),
+
+                              GoogleLoginButton(loading: isLoading),
+                              const SizedBox(height: 32),
+
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  const Text(
+                                    'Chưa có tài khoản? ',
+                                    style: TextStyle(
+                                      color: kSubText,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const RegisterPage(),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Đăng ký',
+                                      style: TextStyle(
+                                        color: kPrimaryAccent,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
               ),
