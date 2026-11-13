@@ -42,6 +42,7 @@ app:
   demo-data:
     enabled: ${APP_DEMO_DATA_ENABLED:false}
     gmail-base: ${APP_DEMO_DATA_GMAIL_BASE:}
+    owner-email: ${APP_DEMO_DATA_OWNER_EMAIL:}
   jwt:
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
     access-expiration: 86400000   # 1 day in ms

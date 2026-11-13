@@ -86,6 +86,13 @@ public class DemoDataSeeder implements ApplicationRunner {
             DemoListing.shared("Tìm một bạn nữ ở ghép, chia sẻ chi phí", "Phòng đang có một người ở, còn một chỗ; ưu tiên bạn gọn gàng, không hút thuốc.", 1_800_000, 24, 1, 2, "FEMALE", true, false, 1),
             DemoListing.shared("Tìm bạn ở ghép thân thiện, gần khu trung tâm", "Còn một chỗ trong căn hộ có bếp và máy giặt dùng chung; chi phí điện nước chia đều.", 2_100_000, 27, 1, 3, "ANY", false, false, 3));
 
+    private static final List<DemoListing> PRIMARY_ACCOUNT_LISTINGS = List.of(
+            DemoListing.house("Nhà nguyên căn mẫu, khu dân cư thuận tiện", "Tin mẫu cho thuê nhà nguyên căn, diện tích phù hợp gia đình nhỏ, có khu vực sinh hoạt riêng.", 12_500_000, 68, 2, 2, 2, "NGO_HEM", 1),
+            DemoListing.room("Phòng trọ mẫu có cửa sổ và chỗ để xe", "Tin mẫu phòng trọ riêng, không gian thoáng, gần các tiện ích sinh hoạt cơ bản.", 3_500_000, 24, 1, 1, 1, 2),
+            DemoListing.shared("Tìm người ở ghép mẫu, chia sẻ chi phí", "Tin mẫu tìm một người ở ghép, cùng chia sẻ tiền thuê và giữ gìn không gian chung.", 1_800_000, 24, 1, 2, "ANY", false, false, 3));
+    private static final List<String> PRIMARY_ACCOUNT_LISTING_TITLES = PRIMARY_ACCOUNT_LISTINGS.stream()
+            .map(DemoListing::title).toList();
+
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
     private final TransactionTemplate transactionTemplate;
@@ -94,6 +101,9 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     @Value("${app.demo-data.gmail-base:}")
     private String gmailBase;
+
+    @Value("${app.demo-data.owner-email:}")
+    private String ownerEmail;
 
     public DemoDataSeeder(JdbcTemplate jdbc, PasswordEncoder passwordEncoder,
                           PlatformTransactionManager transactionManager) {
@@ -105,17 +115,20 @@ public class DemoDataSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         String baseEmail = validateGmailBase(gmailBase);
-        transactionTemplate.executeWithoutResult(status -> seed(baseEmail));
+        String listingOwnerEmail = ownerEmail == null || ownerEmail.isBlank()
+                ? baseEmail : validateGmailBase(ownerEmail);
+        transactionTemplate.executeWithoutResult(status -> seed(baseEmail, listingOwnerEmail));
     }
 
-    private void seed(String baseEmail) {
+    private void seed(String baseEmail, String listingOwnerEmail) {
         List<String> emails = demoEmails(baseEmail);
         String placeholders = String.join(",", java.util.Collections.nCopies(emails.size(), "?"));
         Long existing = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM nguoi_dung WHERE dia_chi_thu_dien_tu IN (" + placeholders + ")",
                 Long.class, emails.toArray());
         if (existing != null && existing == ACCOUNTS.size()) {
-            log.info("Demo data already exists; no changes made.");
+            seedPrimaryAccountListings(listingOwnerEmail);
+            log.info("The 10 demo accounts already exist; account-specific listing seeding was checked.");
             return;
         }
         if (existing != null && existing > 0) {
@@ -130,9 +143,43 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
         for (int i = 0; i < LISTINGS.size(); i++) {
             AreaCandidate area = wards.get(i % wards.size());
-            insertListing(userIds.get(i), adminId, area, LISTINGS.get(i), i);
+            insertListing(userIds.get(i), adminId, area, LISTINGS.get(i), i, true);
         }
+        seedPrimaryAccountListings(listingOwnerEmail);
         log.info("Inserted 10 verified demo accounts, 10 approved listings, 30 personal interests, and 50 listing photos.");
+    }
+
+    private void seedPrimaryAccountListings(String accountEmail) {
+        List<Long> userIds = jdbc.query(
+                "SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(dia_chi_thu_dien_tu) = LOWER(?)",
+                (rs, row) -> rs.getLong(1), accountEmail);
+        if (userIds.isEmpty()) {
+            log.warn("Primary account {} was not found; its three sample listings were not created.", accountEmail);
+            return;
+        }
+
+        long userId = userIds.get(0);
+        String titlePlaceholders = String.join(",", java.util.Collections.nCopies(PRIMARY_ACCOUNT_LISTING_TITLES.size(), "?"));
+        List<Object> queryArgs = new ArrayList<>();
+        queryArgs.add(userId);
+        queryArgs.addAll(PRIMARY_ACCOUNT_LISTING_TITLES);
+        Long existing = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM tin_cho_thue WHERE ma_chu_tin = ? AND tieu_de IN (" + titlePlaceholders + ")",
+                Long.class, queryArgs.toArray());
+        if (existing != null && existing == PRIMARY_ACCOUNT_LISTINGS.size()) {
+            log.info("Three primary-account sample listings already exist; no changes made.");
+            return;
+        }
+        if (existing != null && existing > 0) {
+            throw new IllegalStateException("Some primary-account sample listings already exist. Remove the partial sample set before retrying.");
+        }
+
+        List<AreaCandidate> areas = loadDemoAreas();
+        Long adminId = findAdminId();
+        for (int i = 0; i < PRIMARY_ACCOUNT_LISTINGS.size(); i++) {
+            insertListing(userId, adminId, areas.get(i % areas.size()), PRIMARY_ACCOUNT_LISTINGS.get(i), 10 + i, false);
+        }
+        log.info("Inserted three pending sample listings for account {}.", accountEmail);
     }
 
     private List<AreaCandidate> loadDemoAreas() {
@@ -190,7 +237,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return userId;
     }
 
-    private void insertListing(Long userId, Long adminId, AreaCandidate area, DemoListing listing, int index) {
+    private void insertListing(Long userId, Long adminId, AreaCandidate area, DemoListing listing, int index, boolean approved) {
         Point point = randomPoint(area);
         LocalDateTime createdAt = LocalDateTime.now().minusDays(2 + random.nextInt(26)).minusHours(random.nextInt(24));
         String address = streetFor(index) + ", " + area.areaName() + ", " + area.parentName() + ", TP. Hồ Chí Minh";
@@ -205,14 +252,15 @@ public class DemoDataSeeder implements ApplicationRunner {
                      yeu_cau_gioi_tinh_nguoi_o, cho_phep_nuoi_thu_cung, cho_phep_hut_thuoc,
                      yeu_cau_nguoi_o_ghep)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?, ?, ?, ?,
-                        ?, ?, ?, ?, 'CA_NHAN', 'APPROVED', 'AVAILABLE', FALSE, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ?, ?, ?, ?, 'CA_NHAN', ?, 'AVAILABLE', FALSE, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING ma_tin_dang
                 """, Long.class,
-                userId, area.areaId(), adminId, listing.title(), listing.description(), listing.type(),
+                userId, area.areaId(), approved ? adminId : null, listing.title(), listing.description(), listing.type(),
                 BigDecimal.valueOf(listing.price()), BigDecimal.valueOf(listing.areaSqm()), address,
                 point.getX(), point.getY(), listing.houseType(), listing.bedrooms(), listing.bathrooms(),
                 listing.floors(), "Đông Nam", "Sổ hồng riêng", listing.furnished(),
-                BigDecimal.valueOf(listing.price()), 8 + random.nextInt(210), createdAt, createdAt,
+                BigDecimal.valueOf(listing.price()), approved ? "APPROVED" : "PENDING",
+                8 + random.nextInt(210), createdAt, createdAt,
                 listing.currentOccupants(), listing.maxOccupants(), listing.genderPreference(),
                 listing.allowPets(), listing.allowSmoking(), listing.roommateRequirements());
 
