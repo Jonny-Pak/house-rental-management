@@ -35,7 +35,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await _apiClient.post(
       '/auth/register',
       request.toJson(),
-      options: Options(receiveTimeout: const Duration(seconds: 60)),
+      options: Options(receiveTimeout: const Duration(seconds: 240)),
     );
   }
 

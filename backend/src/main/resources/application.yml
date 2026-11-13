@@ -25,23 +25,13 @@ spring:
     init:
       mode: never
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: lnthuan1907@gmail.com
-    password: ${GMAIL_APP_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          connectiontimeout: 15000
-          timeout: 15000
-          writetimeout: 15000
-          starttls:
-            enable: true
-
 server:
   port: ${PORT:8080}
+
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  sender-email: ${BREVO_SENDER_EMAIL:}
+  sender-name: ${BREVO_SENDER_NAME:Rental Management}
 
 logging:
   level:

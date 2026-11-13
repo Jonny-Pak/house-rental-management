@@ -83,12 +83,6 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- ==================== MAIL ==================== -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-
         <!-- ==================== JWT (JJWT 0.12.5) ==================== -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

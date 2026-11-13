@@ -16,8 +16,9 @@ class ApiClient {
     : _dio = Dio(
         BaseOptions(
           baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 60),
-          receiveTimeout: const Duration(seconds: 60),
+          // Render Free may take a few minutes to wake a sleeping backend.
+          connectTimeout: const Duration(seconds: 240),
+          receiveTimeout: const Duration(seconds: 240),
         ),
       ) {
     _dio.interceptors.add(
