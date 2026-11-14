@@ -52,7 +52,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success("ÄÄƒng nháº­p thÃ nh cÃ´ng.", authResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công.", authResponse));
     }
 
 }

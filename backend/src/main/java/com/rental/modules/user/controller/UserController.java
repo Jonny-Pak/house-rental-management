@@ -60,6 +60,6 @@ public class UserController {
             @Valid @RequestBody UpdateAvatarRequest request) {
         String email = principal.getName();
         UserProfileResponse profileResponse = userService.updateAvatar(email, request);
-        return ResponseEntity.ok(ApiResponse.success("ÄÃ£ cáº­p nháº­t avatar thÃ nh cÃ´ng.", profileResponse));
+        return ResponseEntity.ok(ApiResponse.success("Đã cập nhật avatar thành công.", profileResponse));
     }
 }

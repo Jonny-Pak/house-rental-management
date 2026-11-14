@@ -28,12 +28,12 @@ public class RoomController {
             @Valid @RequestBody RoomRequest request) {
 
         RoomResponse response = roomService.addRoom(principal.getName(), propertyId, request);
-        return ResponseEntity.ok(ApiResponse.success("ThÃªm phÃ²ng thÃ nh cÃ´ng", response));
+        return ResponseEntity.ok(ApiResponse.success("Thêm phòng thành công", response));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<RoomResponse>>> getRoomsByProperty(@PathVariable Long propertyId) {
         List<RoomResponse> rooms = roomService.getRoomsByProperty(propertyId);
-        return ResponseEntity.ok(ApiResponse.success("Láº¥y danh sÃ¡ch phÃ²ng thÃ nh cÃ´ng", rooms));
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách phòng thành công", rooms));
     }
 }
