@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/models/subscription_benefits.dart';
 import '../../data/repositories/membership_repository.dart';
 import 'membership_state.dart';
 
@@ -11,7 +12,13 @@ class MembershipCubit extends Cubit<MembershipState> {
     emit(MembershipLoading());
     try {
       final packages = await repository.getPackages();
-      emit(MembershipLoaded(packages));
+      SubscriptionBenefits? benefits;
+      try {
+        benefits = await repository.getCurrentBenefits();
+      } catch (_) {
+        // Keep the package catalog available; the payment API also enforces duplicate prevention.
+      }
+      emit(MembershipLoaded(packages, currentBenefits: benefits));
     } catch (e) {
       emit(MembershipError(e.toString()));
     }

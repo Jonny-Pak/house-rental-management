@@ -12,10 +12,14 @@ class MembershipOffers extends StatefulWidget {
     required this.packages,
     required this.busy,
     required this.onSubscribe,
+    this.currentPackageId,
+    this.currentPackageActive = false,
   });
   final List<MembershipPackage> packages;
   final bool busy;
   final ValueChanged<MembershipPackage> onSubscribe;
+  final int? currentPackageId;
+  final bool currentPackageActive;
   @override
   State<MembershipOffers> createState() => _MembershipOffersState();
 }
@@ -144,6 +148,13 @@ class _MembershipOffersState extends State<MembershipOffers> {
   Widget _card(MembershipPackage package) {
     final free = package.price == 0;
     final vip = package.vipPostQuota > 0;
+    final normalizedName = package.packageName.toUpperCase();
+    final isPlusOrPro =
+        normalizedName.contains('PLUS') || normalizedName.contains('PRO');
+    final currentPackage =
+        isPlusOrPro &&
+        widget.currentPackageActive &&
+        widget.currentPackageId == package.id;
     final color = _color(package);
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 14, 10, 10),
@@ -276,7 +287,25 @@ class _MembershipOffersState extends State<MembershipOffers> {
             style: const TextStyle(fontSize: 10, color: AppColors.muted),
           ),
           const SizedBox(height: 14),
-          if (package.defaultPackage)
+          if (currentPackage)
+            Container(
+              key: ValueKey('membership-current-plan-${package.id}'),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE6F4EA),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Text(
+                'Gói hiện tại',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            )
+          else if (package.defaultPackage)
             Container(
               key: const ValueKey('membership-default-plan'),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),

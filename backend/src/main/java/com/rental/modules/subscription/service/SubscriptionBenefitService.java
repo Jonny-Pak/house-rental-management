@@ -26,13 +26,13 @@ public class SubscriptionBenefitService {
         this.defaults = defaults;
     }
 
-    public record Benefits(String packageName, String status, int standard, int vip, int refresh,
+    public record Benefits(Short packageId, String packageName, String status, int standard, int vip, int refresh,
             LocalDateTime expiresAt) {}
 
     public Benefits getBenefits(Long userId) {
         UserSubscription subscription = findSubscription(userId);
         boolean active = isActive(subscription);
-        return new Benefits(subscription.getPackageNameSnapshot(), active ? "ACTIVE" : "EXPIRED",
+        return new Benefits(subscription.getMembershipPackage().getId(), subscription.getPackageNameSnapshot(), active ? "ACTIVE" : "EXPIRED",
                 active ? value(subscription.getRemainingStandardQuota()) : 0,
                 active ? value(subscription.getRemainingVipQuota()) : 0,
                 active ? value(subscription.getRemainingRefreshQuota()) : 0,

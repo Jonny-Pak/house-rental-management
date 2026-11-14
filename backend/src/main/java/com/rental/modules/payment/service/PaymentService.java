@@ -58,6 +58,21 @@ public class PaymentService {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Gói dịch vụ đã ngừng bán. Vui lòng tải lại danh sách gói.");
         }
 
+        boolean tierPackage = isPlusOrPro(membershipPackage.getPackageName());
+        if (tierPackage) userSubscriptionRepository.findByUser(user).ifPresent(subscription -> {
+            boolean active = "ACTIVE".equals(subscription.getStatus())
+                    && (subscription.getQuotaResetAt() == null || subscription.getQuotaResetAt().isAfter(LocalDateTime.now()));
+            if (active && subscription.getMembershipPackage().getId().equals(packageId)) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                        "Bạn đang sử dụng gói " + subscription.getPackageNameSnapshot() + ". Không thể mua trùng gói này khi gói hiện tại còn hạn.");
+            }
+        });
+        if (tierPackage && paymentTransactionRepository.existsByUser_UserIdAndPurchasedPackage_IdAndStatusAndTransactionDateAfter(
+                user.getUserId(), packageId, "PENDING", LocalDateTime.now().minusMinutes(15))) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
+                    "Bạn đang có giao dịch gói này chờ xử lý. Hãy kiểm tra lịch sử thanh toán trước khi tạo giao dịch mới.");
+        }
+
         if (membershipPackage.getPrice().signum() > 0 &&
                 (vnPayConfig.getVnp_TmnCode() == null || vnPayConfig.getVnp_TmnCode().isBlank()
                 || vnPayConfig.getVnp_HashSecret() == null || vnPayConfig.getVnp_HashSecret().isBlank()
@@ -100,6 +115,11 @@ public class PaymentService {
         }
 
         return buildVnPayUrl(user, packageId, vnp_TxnRef, amount, request);
+    }
+
+    private boolean isPlusOrPro(String packageName) {
+        String normalized = packageName == null ? "" : packageName.toUpperCase(Locale.ROOT);
+        return normalized.contains("PLUS") || normalized.contains("PRO");
     }
 
     private String buildVnPayUrl(User user, Short packageId, String vnp_TxnRef,

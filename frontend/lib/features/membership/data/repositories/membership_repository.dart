@@ -1,5 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../models/membership_package_model.dart';
+import '../models/subscription_benefits.dart';
 
 class MembershipRepository {
   final ApiClient apiClient;
@@ -12,5 +13,12 @@ class MembershipRepository {
       return (response.data as List).map((json) => MembershipPackage.fromJson(json)).toList();
     }
     return [];
+  }
+
+  Future<SubscriptionBenefits> getCurrentBenefits() async {
+    final response = await apiClient.get('/memberships/me');
+    return SubscriptionBenefits.fromJson(
+      Map<String, dynamic>.from(response.data),
+    );
   }
 }

@@ -1,5 +1,6 @@
 class SubscriptionBenefits {
   const SubscriptionBenefits({
+    this.packageId,
     required this.packageName,
     required this.status,
     required this.standard,
@@ -7,12 +8,14 @@ class SubscriptionBenefits {
     required this.refresh,
     this.expiresAt,
   });
+  final int? packageId;
   final String packageName, status;
   final int standard, vip, refresh;
   final DateTime? expiresAt;
 
   factory SubscriptionBenefits.fromJson(Map<String, dynamic> json) =>
       SubscriptionBenefits(
+        packageId: (json['packageId'] as num?)?.toInt(),
         packageName: json['packageName'] as String? ?? 'Gói dịch vụ',
         status: json['status'] as String? ?? 'EXPIRED',
         standard: (json['standard'] as num?)?.toInt() ?? 0,

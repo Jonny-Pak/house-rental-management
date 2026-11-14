@@ -234,6 +234,10 @@ class MembershipView extends StatelessWidget {
                             MembershipOffers(
                               packages: packages,
                               busy: busy,
+                              currentPackageId:
+                                  state.currentBenefits?.packageId,
+                              currentPackageActive:
+                                  state.currentBenefits?.status == 'ACTIVE',
                               onSubscribe: (package) => context
                                   .read<PaymentCubit>()
                                   .initiatePayment(package.id),
