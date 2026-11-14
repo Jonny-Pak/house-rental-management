@@ -43,6 +43,11 @@ public class ContractDetails {
     private String tenantName;
     @jakarta.validation.constraints.Size(max=30)
     private String tenantPhone;
+    @jakarta.validation.constraints.Size(max=30)
+    private String landlordBirthDate;
+    @jakarta.validation.constraints.Size(max=30)
+    private String tenantBirthDate;
+    private String listingAreaSqmSnapshot;
     @jakarta.validation.constraints.Min(1)
     @jakarta.validation.constraints.Max(28)
     private int paymentDay = 5;
@@ -88,6 +93,12 @@ public class ContractDetails {
     public void setTenantName(String value) { tenantName = value; }
     public String getTenantPhone() { return tenantPhone; }
     public void setTenantPhone(String value) { tenantPhone = value; }
+    public String getLandlordBirthDate() { return landlordBirthDate; }
+    public void setLandlordBirthDate(String value) { landlordBirthDate = value; }
+    public String getTenantBirthDate() { return tenantBirthDate; }
+    public void setTenantBirthDate(String value) { tenantBirthDate = value; }
+    public String getListingAreaSqmSnapshot() { return listingAreaSqmSnapshot; }
+    public void setListingAreaSqmSnapshot(String value) { listingAreaSqmSnapshot = value; }
     public int getPaymentDay() { return paymentDay; }
     public void setPaymentDay(int value) { paymentDay = value; }
 }

@@ -20,7 +20,7 @@ import static com.rental.core.excel.ExcelWorkbook.*;
 public class ContractExcelService {
     public static final List<String> HEADERS = List.of("Mã tin", "Điện thoại người thuê", "Ngày bắt đầu", "Ngày kết thúc", "Tiền thuê tháng", "Tiền cọc", "Ghi chú",
         "Giấy tờ chủ nhà", "Địa chỉ chủ nhà", "Giấy tờ người thuê", "Địa chỉ người thuê", "Nơi lập hợp đồng", "Ngày lập", "Ngày bàn giao",
-        "Thanh toán", "Chi phí điện", "Chi phí nước", "Ngày trả tiền", "Phí dịch vụ", "Hiện trạng", "Thiết bị", "Nội quy", "Điều khoản cọc", "Chấm dứt", "Vi phạm");
+        "Thanh toán", "Chi phí điện", "Chi phí nước", "Ngày trả tiền", "Phí dịch vụ", "Hiện trạng", "Thiết bị", "Nội quy", "Điều khoản cọc", "Chấm dứt", "Vi phạm", "Ngày sinh chủ nhà", "Ngày sinh người thuê");
     private final ContractService contracts;
     private final ContractRepository repository;
     private final ListingService listings;
@@ -68,7 +68,8 @@ public class ContractExcelService {
                 "Ngày nhập dạng yyyy-MM-dd (ví dụ 2027-01-01), hoặc ô ngày Excel. Ngày kết thúc phải sau ngày bắt đầu và ngày hiện tại.",
                 "Các cột từ Mã tin đến Chi phí nước đều bắt buộc, trừ Ghi chú. Tiền thuê > 0, tiền cọc >= 0, đơn vị VND, không kèm dấu phân cách hàng nghìn.",
                 "Ngày trả tiền từ 1–28, mặc định 5. Ngày bàn giao nằm trong kỳ thuê. Ngày lập không sau ngày kết thúc.",
-                "Các cột từ Phí dịch vụ đến Vi phạm có thể để trống để dùng điều khoản mặc định theo mẫu hợp đồng của ứng dụng.",
+                "Các cột từ Phí dịch vụ đến Vi phạm và Ngày sinh có thể để trống để dùng thông tin mặc định/không cung cấp theo mẫu hợp đồng của ứng dụng.",
+                "Ứng dụng tự chọn mẫu Word thuê nhà hoặc thuê phòng trọ theo loại tin đăng; dữ liệu Excel được điền vào các trường tương ứng của mẫu.",
                 "Có dòng lỗi thì chưa nhập bất kỳ hợp đồng nào. Cần kiểm tra dữ liệu và nội dung hợp đồng trước khi xác nhận nhập.",
                 "Mã hợp đồng, Trạng thái, Tên tin, Chủ nhà, Người thuê là cột chỉ xem. Không nhập công thức Excel.");
             for (int i = 0; i < notes.size(); i++) help.createRow(i).createCell(0).setCellValue(notes.get(i));
@@ -83,7 +84,8 @@ public class ContractExcelService {
         return Arrays.asList(c.listingId(), d.getTenantPhone(), String.valueOf(c.startDate()), String.valueOf(c.endDate()), c.monthlyRent(), c.depositAmount(), c.note(),
             d.getLandlordIdentity(), d.getLandlordAddress(), d.getTenantIdentity(), d.getTenantAddress(), d.getSigningPlace(), d.getSigningDate(), d.getHandoverDate(),
             d.getPaymentMethod(), d.getElectricityTerms(), d.getWaterTerms(), d.getPaymentDay(), d.getServiceFees(), d.getConditionDescription(), d.getEquipment(),
-            d.getUseRules(), d.getDepositTerms(), d.getTerminationTerms(), d.getViolationTerms(), c.id(), c.status(), c.listingName(), c.landlordName(), c.tenantName());
+            d.getUseRules(), d.getDepositTerms(), d.getTerminationTerms(), d.getViolationTerms(), d.getLandlordBirthDate(), d.getTenantBirthDate(),
+            c.id(), c.status(), c.listingName(), c.landlordName(), c.tenantName());
     }
 
     private Parsed read(String email, Long ownerId, MultipartFile file) {
@@ -145,6 +147,8 @@ public class ContractExcelService {
         if (text(row, 22) != null) d.setDepositTerms(text(row, 22));
         if (text(row, 23) != null) d.setTerminationTerms(text(row, 23));
         if (text(row, 24) != null) d.setViolationTerms(text(row, 24));
+        d.setLandlordBirthDate(text(row, 25));
+        d.setTenantBirthDate(text(row, 26));
         r.setDetails(d);
         return r;
     }

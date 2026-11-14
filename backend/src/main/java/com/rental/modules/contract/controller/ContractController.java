@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +46,15 @@ public class ContractController {
     @GetMapping("/{id}")
     public ContractResponse getContract(@PathVariable Long id, Principal principal) {
         return contractService.getContract(principal.getName(), id);
+    }
+
+    @GetMapping("/{id}/word")
+    public ResponseEntity<byte[]> getContractWord(@PathVariable Long id, Principal principal) {
+        byte[] bytes = contractService.getContractWord(principal.getName(), id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=hop-dong-" + id + ".docx")
+                .body(bytes);
     }
 
     @GetMapping("/tenant")

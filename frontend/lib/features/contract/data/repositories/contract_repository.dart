@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../../../core/network/api_client.dart';
 import '../models/contract_model.dart';
 
@@ -33,8 +35,9 @@ class ContractRepository {
     return ContractModel.fromJson(response.data);
   }
 
-  Future<void> update(int id, CreateContractRequest request) async {
-    await _apiClient.put('/contracts/$id', request.toJson());
+  Future<Uint8List> wordDocument(int id) async {
+    final response = await _apiClient.getBytes('/contracts/$id/word');
+    return Uint8List.fromList(List<int>.from(response.data as List));
   }
 
   Future<void> status(int id, String status, int version) async {

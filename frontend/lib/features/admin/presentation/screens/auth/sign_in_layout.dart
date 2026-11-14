@@ -30,29 +30,6 @@ class SignInLayout extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.home_work_rounded,
-                          size: 32,
-                          color: colors.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            'Rental Admin',
-                            style: TextStyle(
-                              color: colors.onSurface,
-                              fontSize: 25,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
                     Container(
                       padding: EdgeInsets.all(box.maxWidth < 400 ? 24 : 32),
                       decoration: BoxDecoration(

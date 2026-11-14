@@ -20,8 +20,10 @@ class ContractTermsFormState extends State<ContractTermsForm> {
     final defaults = <String, String>{
       'landlordIdentity': '',
       'landlordAddress': '',
+      'landlordBirthDate': '',
       'tenantIdentity': '',
       'tenantAddress': '',
+      'tenantBirthDate': '',
       'signingPlace': '',
       'signingDate': DateFormat('yyyy-MM-dd').format(DateTime.now()),
       'handoverDate': '',
@@ -120,8 +122,20 @@ class ContractTermsFormState extends State<ContractTermsForm> {
       const SizedBox(height: 12),
       _field('landlordIdentity', 'Giấy tờ tùy thân chủ nhà'),
       _field('landlordAddress', 'Địa chỉ chủ nhà'),
+      _field(
+        'landlordBirthDate',
+        'Ngày sinh chủ nhà (nếu có)',
+        lines: 1,
+        optional: true,
+      ),
       _field('tenantIdentity', 'Giấy tờ tùy thân người thuê'),
       _field('tenantAddress', 'Địa chỉ người thuê'),
+      _field(
+        'tenantBirthDate',
+        'Ngày sinh người thuê (nếu có)',
+        lines: 1,
+        optional: true,
+      ),
       _heading('Lập hợp đồng và bàn giao'),
       _field('signingPlace', 'Địa điểm lập hợp đồng'),
       ResponsiveCards(

@@ -23,11 +23,13 @@ class ExcelFiles {
   }
 
   Future<bool> save(Uint8List bytes, String name) async {
+    final mimeType = name.toLowerCase().endsWith('.docx')
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     final uri = await FilePicker.saveFile(
       fileName: name,
       bytes: bytes,
-      mimeType:
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      mimeType: mimeType,
     );
     return uri != null;
   }

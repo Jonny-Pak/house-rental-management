@@ -86,6 +86,12 @@ public class ContractService {
         return toResponse(contract, user);
     }
 
+    public byte[] getContractWord(String email, Long contractId) {
+        User user = findUserByEmail(email);
+        Contract contract = getAccessibleContract(user, contractId);
+        return documents.generateWord(contract);
+    }
+
     public List<ContractResponse> getMyContracts(String email) {
         User user = findUserByEmail(email);
 
@@ -201,35 +207,7 @@ public class ContractService {
     }
 
     public ContractResponse updateContract(String email, Long contractId, CreateContractRequest request) {
-        validateRequest(request);
-        User landlord = findUserByEmail(email);
-        Contract contract = getAccessibleContract(landlord, contractId);
-
-        if (!isLandlord(contract, landlord)) {
-            throw error(HttpStatus.FORBIDDEN, "Chỉ chủ nhà được sửa bản nháp.");
-        }
-        if (!"DRAFT".equals(contract.getStatus())) {
-            throw error(HttpStatus.CONFLICT, "Chỉ sửa được hợp đồng chờ xác nhận.");
-        }
-        if (!contract.getListing().getId().equals(request.getListingId())) {
-            throw error(HttpStatus.BAD_REQUEST, "Không đổi tin đăng của hợp đồng; hãy hủy và tạo bản mới.");
-        }
-
-        checkListingAvailable(contract.getListing(), contractId);
-        User tenant = getValidTenant(request.getTenantId(), landlord);
-        Long previousTenant = contract.getTenant().getUserId();
-        contract.setTenant(tenant);
-        contract.setStartDate(request.getStartDate());
-        contract.setEndDate(request.getEndDate());
-        contract.setMonthlyRent(request.getMonthlyRent());
-        contract.setDepositAmount(request.getDepositAmount());
-        contract.setNote(request.getNote());
-        documents.prepare(contract, request.getDetails());
-        notifications.send(tenant.getUserId(), "CONTRACT_UPDATED", "Hợp đồng đã được cập nhật", "Hãy kiểm tra lại nội dung trước khi xác nhận: " + contract.getListingTitle(), null, contract.getId());
-        if (!previousTenant.equals(tenant.getUserId())) {
-            notifications.send(previousTenant, "CONTRACT_UPDATED", "Hợp đồng đã thay đổi người thuê", "Bạn không còn tham gia hợp đồng cho " + contract.getListingTitle(), null, null);
-        }
-        return toResponse(contract, landlord);
+        throw error(HttpStatus.CONFLICT, "Hợp đồng đã tạo không thể chỉnh sửa. Hãy hủy bản nháp và tạo hợp đồng mới nếu cần thay đổi.");
     }
 
     public ContractResponse changeStatus(String email, Long contractId, String status, Long version) {

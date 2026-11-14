@@ -1,5 +1,6 @@
 import 'package:frontend/core/theme/app_colors.dart';
 
+import '../../../../core/excel/excel_files.dart';
 import '../../../../core/excel/excel_page.dart';
 import '../../../../core/layout/app_layout.dart';
 
@@ -558,6 +559,31 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
     }
   }
 
+  Future<void> _downloadWord() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final bytes = await widget.repository.wordDocument(widget.id);
+      final saved = await ExcelFiles().save(
+        bytes,
+        'hop-dong-${widget.id}.docx',
+      );
+      if (mounted && saved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã lưu bản hợp đồng Word.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ListingRepository.errorMessage(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Widget _row(String name, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Text('$name: $value'),
@@ -596,6 +622,18 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
         _row('Tiền cọc', contractMoney(contract.depositAmount)),
         if (contract.note?.isNotEmpty == true) _row('Ghi chú', contract.note!),
         const SizedBox(height: 20),
+        if (contract.documentText?.isNotEmpty == true) ...[
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _downloadWord,
+            icon: const Icon(Icons.download_rounded),
+            label: const Text('Tải hợp đồng Word'),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Hợp đồng được lưu cố định sau khi tạo; các bên chỉ xem và xác nhận, không chỉnh sửa nội dung.',
+          ),
+          const SizedBox(height: 12),
+        ],
         if (contract.documentText?.isNotEmpty == true)
           ContractDocumentView(content: contract.documentText!)
         else
@@ -619,24 +657,6 @@ class _ContractDetailPageState extends State<ContractDetailPage> {
             onChanged: _busy
                 ? null
                 : (value) => setState(() => _readContract = value ?? false),
-          ),
-        if (contract.status == 'DRAFT' && contract.myRole == 'LANDLORD')
-          OutlinedButton(
-            onPressed: _busy
-                ? null
-                : () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ContractFormPage(
-                          repository: widget.repository,
-                          existing: contract,
-                        ),
-                      ),
-                    );
-                    if (mounted) await _load();
-                  },
-            child: const Text('Sửa bản nháp'),
           ),
         if (contract.status == 'DRAFT' && contract.myRole == 'TENANT')
           FilledButton(
