@@ -3,6 +3,7 @@ import 'package:frontend/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/excel/excel_page.dart';
 import '../../data/models/admin_area.dart';
 import '../../data/repositories/admin_area_repository.dart';
 import '../../data/repositories/admin_user_repository.dart' show adminUserError;
@@ -85,6 +86,27 @@ class _AdminAreasPageState extends State<AdminAreasPage> {
 
   void _message(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _excel() async {
+    final imported = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ExcelPage(
+          module: 'admin/areas',
+          title: 'khu vực hành chính',
+          fileNameBase: 'khu-vuc-hanh-chinh',
+          importNotice:
+              'Chỉ thêm khu vực mới. Đơn vị cấp trên phải tồn tại hoặc được nhập ở các dòng phía trên.',
+          importGuidance:
+              'Dùng đúng file mẫu .xlsx. Cấp hành chính nhận PROVINCE, WARD, COMMUNE hoặc SPECIAL; không hỗ trợ tạo mới quận/huyện cũ. Tối đa 500 dòng và 5 MB; file có lỗi sẽ không được nhập.',
+        ),
+      ),
+    );
+    if (imported != null && imported > 0 && mounted) {
+      _message('Đã nhập $imported khu vực hành chính.');
+      await _load(page: 0);
+    }
   }
 
   Future<void> _edit([AdminArea? row]) async {
@@ -237,6 +259,20 @@ class _AdminAreasPageState extends State<AdminAreasPage> {
         spacing: 10,
         runSpacing: 10,
         children: [
+          OutlinedButton.icon(
+            onPressed: _loading || _acting ? null : _excel,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: areaMuted(context),
+              backgroundColor: _surface,
+              side: BorderSide(color: areaBorder(context)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.table_view_outlined, size: 18),
+            label: const Text('Excel'),
+          ),
           OutlinedButton.icon(
             onPressed: _loading || _acting ? null : () => _load(page: _page),
             style: OutlinedButton.styleFrom(

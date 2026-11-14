@@ -3,6 +3,7 @@ import 'package:frontend/core/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/excel/excel_page.dart';
 import '../../data/models/admin_user.dart';
 import '../../data/repositories/admin_user_repository.dart';
 import '../widgets/admin_user_dialog.dart';
@@ -102,6 +103,27 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       await _load();
     } finally {
       if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  Future<void> _excel() async {
+    final imported = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ExcelPage(
+          module: 'admin/users',
+          title: 'người dùng',
+          fileNameBase: 'nguoi-dung',
+          importNotice:
+              'Mỗi dòng hợp lệ tạo một tài khoản Member mới; người dùng cần xác thực OTP qua email.',
+          importGuidance:
+              'Dùng đúng file mẫu .xlsx. Bắt buộc nhập họ tên, email và mật khẩu tạm thời (8–72 byte UTF-8); số điện thoại không bắt buộc. Không hỗ trợ nhập Admin hoặc cập nhật tài khoản cũ. Không chia sẻ file có mật khẩu. Tối đa 500 dòng và 5 MB; file có lỗi sẽ không được nhập.',
+        ),
+      ),
+    );
+    if (imported != null && imported > 0 && mounted) {
+      _message('Đã tạo $imported tài khoản Member. Người dùng cần xác thực OTP qua email.');
+      await _load(page: 0);
     }
   }
 
@@ -584,6 +606,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         spacing: 12,
         runSpacing: 12,
         children: [
+          OutlinedButton.icon(
+            onPressed: _loading || _acting ? null : _excel,
+            icon: const Icon(Icons.table_view_outlined, size: 18),
+            label: const Text('Excel'),
+          ),
           FilledButton.icon(
             onPressed: _loading || _acting ? null : _add,
             style: FilledButton.styleFrom(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/excel/excel_page.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../amenity/data/amenity_model.dart';
 import '../../../amenity/data/amenity_repository.dart';
@@ -64,6 +65,29 @@ class _AdminAmenitiesPageState extends State<AdminAmenitiesPage> {
       builder: (_) => AmenityEditor(repository: _repository, item: item),
     );
     if (saved == true && mounted) {
+      _page = 0;
+      await _load();
+    }
+  }
+
+  Future<void> _excel() async {
+    final imported = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ExcelPage(
+          module: 'admin/amenities',
+          title: 'nội thất và tiện ích',
+          fileNameBase: 'noi-that-tien-ich',
+          importNotice: 'Chỉ tạo danh mục mới. Mỗi tên phải duy nhất trong cùng nhóm.',
+          importGuidance:
+              'Dùng đúng file mẫu .xlsx. Nhóm dùng FURNITURE cho nội thất hoặc UTILITY cho tiện ích; trạng thái dùng TRUE/FALSE hoặc để trống để mặc định TRUE. Tối đa 500 dòng và 5 MB; file có lỗi sẽ không được nhập.',
+        ),
+      ),
+    );
+    if (imported != null && imported > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã nhập $imported mục nội thất/tiện ích.')),
+      );
       _page = 0;
       await _load();
     }
@@ -248,6 +272,11 @@ class _AdminAmenitiesPageState extends State<AdminAmenitiesPage> {
               spacing: 10,
               runSpacing: 8,
               children: [
+                OutlinedButton.icon(
+                  onPressed: _loading || _busy ? null : _excel,
+                  icon: const Icon(Icons.table_view_outlined),
+                  label: const Text('Excel'),
+                ),
                 OutlinedButton.icon(
                   onPressed: _loading || _busy ? null : _load,
                   icon: const Icon(Icons.refresh),

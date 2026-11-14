@@ -12,11 +12,17 @@ class ExcelPage extends StatefulWidget {
     required this.module,
     required this.title,
     this.allowImport = true,
+    this.fileNameBase,
+    this.importGuidance,
+    this.importNotice,
     this.repository,
     this.files,
   });
   final String module, title;
   final bool allowImport;
+  final String? fileNameBase;
+  final String? importGuidance;
+  final String? importNotice;
   final ExcelRepository? repository;
   final ExcelFiles? files;
   @override
@@ -40,8 +46,9 @@ class _ExcelPageState extends State<ExcelPage> {
     });
     try {
       final bytes = await _repository.download(template: template);
-      final name =
-          '${template ? 'mau-' : ''}${widget.module == 'contracts' ? 'hop-dong' : 'tin-dang'}.xlsx';
+      final base = widget.fileNameBase ??
+          (widget.module == 'contracts' ? 'hop-dong' : 'tin-dang');
+      final name = '${template ? 'mau-' : ''}$base.xlsx';
       final saved = await _files.save(bytes, name);
       if (mounted) {
         setState(
@@ -156,15 +163,12 @@ class _ExcelPageState extends State<ExcelPage> {
               label: const Text('Tải file mẫu'),
             ),
             const SizedBox(height: 24),
-            Text(
-              widget.module == 'contracts'
-                  ? 'Hợp đồng nhập mới sẽ chờ người thuê xác nhận; chưa có hiệu lực. Kiểm tra nội dung và thông tin hai bên trước khi nhập.'
-                  : 'Tin nhập mới luôn chờ Admin duyệt trước khi xuất hiện công khai.',
-            ),
+            Text(widget.importNotice ?? (widget.module == 'contracts'
+                ? 'Hợp đồng nhập mới sẽ chờ người thuê xác nhận; chưa có hiệu lực. Kiểm tra nội dung và thông tin hai bên trước khi nhập.'
+                : 'Tin nhập mới luôn chờ Admin duyệt trước khi xuất hiện công khai.')),
             const SizedBox(height: 10),
-            const Text(
-              'Dùng file mẫu .xlsx, tối đa 500 dòng và 5 MB. Nếu có dòng lỗi, toàn bộ file chưa được nhập. Không dùng Excel để cập nhật dữ liệu cũ.',
-            ),
+            Text(widget.importGuidance ??
+                'Dùng file mẫu .xlsx, tối đa 500 dòng và 5 MB. Nếu có dòng lỗi, toàn bộ file chưa được nhập. Không dùng Excel để cập nhật dữ liệu cũ.'),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _busy ? null : _pick,
