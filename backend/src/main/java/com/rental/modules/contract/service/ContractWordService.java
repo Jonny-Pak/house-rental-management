@@ -37,7 +37,8 @@ public class ContractWordService {
 
     private void fill(XWPFDocument doc, Contract c, ContractDetails d) {
         boolean room = "ROOM".equals(c.getContractType());
-        int[] party = {0};
+        // Counters: 0=party names, 1=identity numbers, 2=phones, 3=permanent addresses.
+        int[] party = {0, 0, 0, 0};
         for (XWPFParagraph paragraph : paragraphs(doc)) {
             String text = paragraph.getText();
             if (text == null || text.isBlank()) continue;
@@ -58,7 +59,7 @@ public class ContractWordService {
             return "Ông/bà: " + (landlord ? text(d.getLandlordName()) : text(d.getTenantName()))
                     + "; Sinh ngày: " + text(landlord ? d.getLandlordBirthDate() : d.getTenantBirthDate());
         }
-        if (s.startsWith("Nơi đăng ký HK")) return "Nơi đăng ký HK thường trú: " + (party[0] <= 1 ? text(d.getLandlordAddress()) : text(d.getTenantAddress()));
+        if (s.startsWith("Nơi đăng ký HK")) return "Nơi đăng ký HK thường trú: " + (party[3]++ == 0 ? text(d.getLandlordAddress()) : text(d.getTenantAddress()));
         if (s.startsWith("CMND số:") || s.startsWith("Số CMND:")) return s.substring(0, s.indexOf(':') + 1) + " " + (party[1]++ == 0 ? text(d.getLandlordIdentity()) : text(d.getTenantIdentity()));
         if (s.startsWith("Số điện thoại:")) return "Số điện thoại: " + (party[2]++ == 0 ? text(d.getLandlordPhone()) : text(d.getTenantPhone()));
         if (s.startsWith("Bên A đồng ý cho bên B thuê")) return "Bên A đồng ý cho bên B thuê 01 phòng ở tại địa chỉ: " + text(c.getListingAddress());
